@@ -1,0 +1,1 @@
+<div>Pagina inventarios</div>

@@ -3,16 +3,19 @@ import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
-const Login = () => {
+const SignUp = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
   const [formData, setFormData] = useState({
-    identifier: "", // puede ser username o email
+    username: "",
+    email: "",
     password: "",
+    nombre: "",
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleChange = (e) => {
     setFormData({
@@ -24,34 +27,38 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     try {
-      // Endpoint correcto en tu backend
-      const response = await api.post("/auth/login", formData);
+      const response = await api.post("/auth/register", formData);
 
+      // ✅ Si tu backend devuelve token tras registrarse
       if (response.data.token) {
         const { token, user } = response.data;
-
-        // Guardar token y datos del usuario en AuthContext
         login(token, user);
-
-        // Redirigir a home
         navigate("/home");
       } else {
-        setError("No se recibió token. Intenta nuevamente.");
+        // ✅ Si solo confirma registro
+        setSuccess("Usuario creado correctamente, ahora puedes iniciar sesión.");
+        setTimeout(() => navigate("/login"), 1500);
       }
     } catch (err) {
       console.error("Error completo:", err);
 
+      // 1️⃣ Error devuelto por el backend (ej: 400, 401)
       if (err.response && err.response.data) {
         setError(
           err.response.data.message ||
           err.response.data.error ||
-          "Usuario o contraseña incorrectos."
+          "Error al crear el usuario."
         );
-      } else if (err.request) {
+      } 
+      // 2️⃣ Problema de conexión o sin respuesta
+      else if (err.request) {
         setError("No se pudo conectar con el servidor. Intenta más tarde.");
-      } else {
+      } 
+      // 3️⃣ Otros errores de JS
+      else {
         setError(err.message || "Ocurrió un error inesperado.");
       }
     }
@@ -59,16 +66,31 @@ const Login = () => {
 
   return (
     <div style={{ maxWidth: "350px", margin: "50px auto", textAlign: "center" }}>
-      <h2>Iniciar sesión</h2>
+      <h2>Crear cuenta</h2>
       <form
         onSubmit={handleSubmit}
         style={{ display: "flex", flexDirection: "column", gap: "10px" }}
       >
         <input
           type="text"
-          name="identifier"
-          placeholder="Usuario o correo"
-          value={formData.identifier}
+          name="nombre"
+          placeholder="Nombre completo"
+          value={formData.nombre}
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="username"
+          placeholder="Nombre de usuario"
+          value={formData.username}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="Correo electrónico"
+          value={formData.email}
           onChange={handleChange}
           required
         />
@@ -80,19 +102,20 @@ const Login = () => {
           onChange={handleChange}
           required
         />
-        <button type="submit">Ingresar</button>
+        <button type="submit">Registrarse</button>
       </form>
 
       {error && <p style={{ color: "red", marginTop: "10px" }}>{error}</p>}
+      {success && <p style={{ color: "green", marginTop: "10px" }}>{success}</p>}
 
       <p style={{ marginTop: "10px" }}>
-        ¿No tienes cuenta?{" "}
-        <a href="/signup" style={{ color: "blue" }}>
-          Regístrate
+        ¿Ya tienes cuenta?{" "}
+        <a href="/login" style={{ color: "blue" }}>
+          Inicia sesión
         </a>
       </p>
     </div>
   );
 };
 
-export default Login;
+export default SignUp;

@@ -2,13 +2,24 @@ import { useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Link,
+  Paper,
+  Alert,
+} from "@mui/material";
+
+import Logo from "../assets/logo.png"; // Ruta de tu logo
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
   const [formData, setFormData] = useState({
-    identifier: "", // puede ser username o email
+    identifier: "",
     password: "",
   });
 
@@ -26,28 +37,22 @@ const Login = () => {
     setError("");
 
     try {
-      // Endpoint correcto en tu backend
       const response = await api.post("/auth/login", formData);
 
       if (response.data.token) {
         const { token, user } = response.data;
-
-        // Guardar token y datos del usuario en AuthContext
         login(token, user);
-
-        // Redirigir a home
         navigate("/home");
       } else {
         setError("No se recibió token. Intenta nuevamente.");
       }
     } catch (err) {
       console.error("Error completo:", err);
-
       if (err.response && err.response.data) {
         setError(
           err.response.data.message ||
-          err.response.data.error ||
-          "Usuario o contraseña incorrectos."
+            err.response.data.error ||
+            "Usuario o contraseña incorrectos."
         );
       } else if (err.request) {
         setError("No se pudo conectar con el servidor. Intenta más tarde.");
@@ -58,40 +63,81 @@ const Login = () => {
   };
 
   return (
-    <div style={{ maxWidth: "350px", margin: "50px auto", textAlign: "center" }}>
-      <h2>Iniciar sesión</h2>
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        backgroundColor: "#F8F9FA",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        fontFamily: "Poppins, sans-serif",
+      }}
+    >
+      <Paper
+        elevation={4}
+        sx={{
+          padding: 4,
+          borderRadius: 2,
+          maxWidth: 400,
+          width: "100%",
+          textAlign: "center",
+        }}
       >
-        <input
-          type="text"
-          name="identifier"
-          placeholder="Usuario o correo"
-          value={formData.identifier}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Contraseña"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
-        <button type="submit">Ingresar</button>
-      </form>
+        {/* Logo */}
+        <Box sx={{ mb: 2}}>
+          <img src={Logo} alt="SIMET Logo" style={{ width: "100px", height: "auto" }} />
+        </Box>
+        <Typography variant="subtitle1" sx={{ mb: 3, color: "#555" }}>
+          Inicia sesión en tu cuenta
+        </Typography>
 
-      {error && <p style={{ color: "red", marginTop: "10px" }}>{error}</p>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-      <p style={{ marginTop: "10px" }}>
-        ¿No tienes cuenta?{" "}
-        <a href="/signup" style={{ color: "blue" }}>
-          Regístrate
-        </a>
-      </p>
-    </div>
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField
+            label="Usuario o correo"
+            name="identifier"
+            value={formData.identifier}
+            onChange={handleChange}
+            variant="outlined"
+            fullWidth
+            required
+          />
+          <TextField
+            label="Contraseña"
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            variant="outlined"
+            fullWidth
+            required
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            sx={{
+              backgroundColor: "#9D3194",
+              ":hover": { backgroundColor: "#7a2473" },
+              mt: 1,
+            }}
+          >
+            Ingresar
+          </Button>
+        </Box>
+
+        <Typography sx={{ mt: 2, fontSize: "0.9rem", color: "#555" }}>
+          ¿No tienes cuenta?{" "}
+          <Link href="/signup" sx={{ color: "#9D3194", textDecoration: "none" }}>
+            Regístrate
+          </Link>
+        </Typography>
+      </Paper>
+    </Box>
   );
 };
 

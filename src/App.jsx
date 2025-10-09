@@ -10,6 +10,10 @@ import Disposals from "./pages/Disposals.jsx";
 import Maintenances from "./pages/Maintenances.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./Layouts/MainLayout.jsx";
+import EditDevice from "./pages/EditDevice.jsx";
+import EditDisposal from "./pages/EditDisposal.jsx";
+import EditMaintenance from "./pages/EditMaintenance.jsx";
+import EditUsers from "./pages/EditUser.jsx";
 
 function App() {
   return (
@@ -34,6 +38,8 @@ function App() {
           <Route path="/users" element={<UsersCrownP/>}></Route>
           <Route path="/maintenances" element={<Maintenances/>}></Route>
           <Route path="/disposals" element={<Disposals/>}></Route>
+          <Route path="/devices/edit/:id" element={<EditDevice />} />
+    
           {/* Más rutas protegidas se agregan aquí */}
         </Route>
       </Routes>

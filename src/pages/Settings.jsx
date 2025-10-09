@@ -36,7 +36,7 @@ const Settings = () => {
   };
 
   const handleManageUsers = () => {
-    navigate("/usuarios"); // Redirige a la página de gestión de usuarios
+    navigate("/user-manager"); // Redirige a la página de gestión de usuarios
   };
 
   return (

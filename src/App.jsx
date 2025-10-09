@@ -4,6 +4,10 @@ import SignUp from "./pages/SignUp";
 import Home from "./pages/Home";
 import Inventory from "./pages/Inventory";
 import Settings from "./pages/Settings.jsx";
+import UserManager from "./pages/UserManager.jsx"
+import UsersCrownP from "./pages/Users_Crown.jsx";
+import Disposals from "./pages/Disposals.jsx";
+import Maintenances from "./pages/Maintenances.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./Layouts/MainLayout.jsx";
 
@@ -26,6 +30,10 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/settings" element={<Settings/>}></Route>
+          <Route path="/user-manager" element={<UserManager/>}></Route>
+          <Route path="/users" element={<UsersCrownP/>}></Route>
+          <Route path="/maintenances" element={<Maintenances/>}></Route>
+          <Route path="/disposals" element={<Disposals/>}></Route>
           {/* Más rutas protegidas se agregan aquí */}
         </Route>
       </Routes>

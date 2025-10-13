@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
 import Home from "./pages/Home";
 import Inventory from "./pages/Inventory";
 import Settings from "./pages/Settings.jsx";
@@ -14,13 +13,13 @@ import EditDevice from "./pages/EditDevice.jsx";
 import EditDisposal from "./pages/EditDisposal.jsx";
 import EditMaintenance from "./pages/EditMaintenance.jsx";
 import EditUsers from "./pages/EditUser.jsx";
+import EditCrownUser from "./pages/EditCrownUser.jsx"; // 👈 Nueva importación
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/signup" />} />
-        <Route path="/signup" element={<SignUp />} />
+        <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
 
         {/* Ruta protegida con MainLayout */}
@@ -39,7 +38,8 @@ function App() {
           <Route path="/maintenances" element={<Maintenances/>}></Route>
           <Route path="/disposals" element={<Disposals/>}></Route>
           <Route path="/devices/edit/:id" element={<EditDevice />} />
-    
+          <Route path="/user-manager/edit/:id" element={<EditUsers />} />
+          <Route path="/users/edit/:id" element={<EditCrownUser />} /> {/* 👈 Nueva ruta */}
           {/* Más rutas protegidas se agregan aquí */}
         </Route>
       </Routes>

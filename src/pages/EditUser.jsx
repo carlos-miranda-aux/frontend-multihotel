@@ -1,9 +1,141 @@
-const EditUsers = () => {
+import React, { useState, useEffect, useContext } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Paper,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
+import api from "../api/axios";
+import { AuthContext } from "../context/AuthContext";
+
+const EditUser = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+
+  const [formData, setFormData] = useState({
+    nombre: "",
+    username: "",
+    email: "",
+    rol: "",
+    password: "",
+  });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await api.get(`/users/get/${id}`);
+        setFormData({
+          nombre: response.data.nombre || "",
+          username: response.data.username || "",
+          email: response.data.email || "",
+          rol: response.data.rol || "USER",
+          password: "",
+        });
+      } catch (err) {
+        setError(err.response?.data?.error || "Error al cargar los datos del usuario.");
+      }
+    };
+    fetchUser();
+  }, [id]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+
+    // Evitar cambiar el rol del superadministrador
+    if (formData.username === "superadmin" && formData.rol !== "ADMIN") {
+      setError("No se puede cambiar el rol del superadministrador.");
+      return;
+    }
+    
+    // Solo enviar los campos que se han modificado
+    const payload = {};
+    if (formData.nombre) payload.nombre = formData.nombre;
+    if (formData.email) payload.email = formData.email;
+    if (formData.rol) payload.rol = formData.rol;
+    if (formData.password) payload.password = formData.password;
+
+    try {
+      await api.put(`/auth/put/${id}`, payload);
+      setMessage("Usuario actualizado correctamente.");
+      setTimeout(() => navigate("/user-manager"), 2000);
+    } catch (err) {
+      setError(err.response?.data?.error || "Error al actualizar el usuario.");
+    }
+  };
+
   return (
-    <div style={{ padding: "2rem" }}>
-      editar usuarios
-    </div>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" sx={{ mb: 3 }}>
+        Editar Usuario: {formData.username}
+      </Typography>
+
+      {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <Paper sx={{ p: 3 }}>
+        <Box component="form" onSubmit={handleUpdateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <TextField
+            label="Nombre"
+            name="nombre"
+            value={formData.nombre}
+            onChange={handleChange}
+            fullWidth
+            required
+          />
+          <TextField
+            label="Correo electrónico"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            fullWidth
+            required
+          />
+          <FormControl fullWidth disabled={formData.username === "superadmin"}>
+            <InputLabel>Rol</InputLabel>
+            <Select
+              name="rol"
+              value={formData.rol}
+              onChange={handleChange}
+              label="Rol"
+            >
+              <MenuItem value="USER">USER</MenuItem>
+              <MenuItem value="EDITOR">EDITOR</MenuItem>
+              <MenuItem value="ADMIN">ADMIN</MenuItem>
+            </Select>
+          </FormControl>
+          <TextField
+            label="Nueva Contraseña"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            fullWidth
+            helperText="Dejar en blanco para no cambiar la contraseña."
+          />
+          <Button type="submit" variant="contained" color="primary">
+            Guardar cambios
+          </Button>
+        </Box>
+      </Paper>
+    </Box>
   );
 };
 
-export default EditUsers;
+export default EditUser;

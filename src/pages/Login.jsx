@@ -129,13 +129,6 @@ const Login = () => {
             Ingresar
           </Button>
         </Box>
-
-        <Typography sx={{ mt: 2, fontSize: "0.9rem", color: "#555" }}>
-          ¿No tienes cuenta?{" "}
-          <Link href="/signup" sx={{ color: "#9D3194", textDecoration: "none" }}>
-            Regístrate
-          </Link>
-        </Typography>
       </Paper>
     </Box>
   );

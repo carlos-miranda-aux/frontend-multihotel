@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
@@ -100,7 +101,7 @@ const UserManager = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>
-        Gestión de Usuarios
+        Gestión de Usuarios del Sistema
       </Typography>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
@@ -167,7 +168,7 @@ const UserManager = () => {
 
       {/* Tabla de usuarios */}
       <Typography variant="h5" sx={{ mb: 2 }}>
-        Lista de Usuarios
+        Lista de Usuarios del Sistema
       </Typography>
       <TableContainer component={Paper}>
         <Table>

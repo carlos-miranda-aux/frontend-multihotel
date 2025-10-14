@@ -6,7 +6,7 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
 const Settings = () => {
-  const { user } = useContext(AuthContext);
+  const { user, setUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -20,13 +20,15 @@ const Settings = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleChangePassword = async () => {
+  const handleUpdate = async (e) => {
+    e.preventDefault();
     setError("");
     setMessage("");
+
     try {
-      await api.put(`/users/change-password/${user.id}`, {
-        currentPassword: formData.password,
-        newPassword: formData.newPassword,
+      // Endpoint para cambiar la contraseña del usuario logueado
+      await api.put(`/auth/put/${user.id}/password`, {
+        password: formData.newPassword,
       });
       setMessage("Contraseña actualizada correctamente.");
       setFormData({ password: "", newPassword: "" });
@@ -36,7 +38,11 @@ const Settings = () => {
   };
 
   const handleManageUsers = () => {
-    navigate("/user-manager"); // Redirige a la página de gestión de usuarios
+    navigate("/user-manager");
+  };
+
+  const handleAdminSettings = () => {
+    navigate("/admin-settings"); // 👈 Nueva ruta para las configuraciones de admin
   };
 
   return (
@@ -51,7 +57,7 @@ const Settings = () => {
       {/* Cambiar contraseña */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
-          Cambiar contraseña
+          Cambiar mi contraseña
         </Typography>
         <TextField
           label="Contraseña actual"
@@ -71,7 +77,7 @@ const Settings = () => {
           fullWidth
           sx={{ mb: 2 }}
         />
-        <Button variant="contained" onClick={handleChangePassword}>
+        <Button variant="contained" onClick={handleUpdate}>
           Cambiar contraseña
         </Button>
       </Paper>
@@ -83,14 +89,14 @@ const Settings = () => {
             Gestión del sistema
           </Typography>
           <Typography sx={{ mb: 2 }}>
-            Como administrador, puedes acceder a la gestión de usuarios del sistema.
+            Como administrador, puedes gestionar las tablas de datos maestros del sistema.
           </Typography>
           <Button
             variant="contained"
             color="primary"
-            onClick={handleManageUsers}
+            onClick={handleAdminSettings}
           >
-            Ir a gestión de usuarios
+            Ir a configuración de administrador
           </Button>
         </Paper>
       )}

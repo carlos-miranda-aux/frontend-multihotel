@@ -24,7 +24,6 @@ const EditCrownUser = () => {
     nombre: "",
     correo: "",
     departamentoId: "",
-    ip_equipo: "",
     usuario_login: "",
     password_login: "",
   });
@@ -50,7 +49,6 @@ const EditCrownUser = () => {
         nombre: userData.nombre || "",
         correo: userData.correo || "",
         departamentoId: userData.departamentoId || "",
-        ip_equipo: userData.ip_equipo || "",
         usuario_login: userData.usuario_login || "",
         password_login: userData.password_login || "",
       });
@@ -133,13 +131,6 @@ const EditCrownUser = () => {
               ))}
             </Select>
           </FormControl>
-          <TextField
-            label="IP del equipo"
-            name="ip_equipo"
-            value={formData.ip_equipo}
-            onChange={handleChange}
-            fullWidth
-          />
           <TextField
             label="Usuario de Login"
             name="usuario_login"

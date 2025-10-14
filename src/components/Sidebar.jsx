@@ -8,7 +8,6 @@ import DevicesIcon from "@mui/icons-material/Devices";
 import PeopleIcon from "@mui/icons-material/People";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import EventNoteIcon from '@mui/icons-material/EventNote'; // 👈 Nueva importación de icono
 import LogoImg from "../assets/logo.png";
 import { AuthContext } from "../context/AuthContext";
 
@@ -27,7 +26,6 @@ const Sidebar = ({ open, onClose }) => {
 
   const adminItems = [
     { text: "Configuración Admin", icon: <AdminPanelSettingsIcon />, path: "/admin-settings" },
-    { text: "Bitácora de Cambios", icon: <EventNoteIcon />, path: "/audit-log" }, // 👈 Nuevo enlace
   ];
 
   return (

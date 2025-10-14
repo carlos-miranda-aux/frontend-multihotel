@@ -15,7 +15,6 @@ import EditMaintenance from "./pages/EditMaintenance.jsx";
 import EditUsers from "./pages/EditUser.jsx";
 import EditCrownUser from "./pages/EditCrownUser.jsx";
 import AdminSettings from "./pages/AdminSettings.jsx";
-import AuditLog from "./pages/AuditLog.jsx";
 
 function App() {
   return (
@@ -35,7 +34,6 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/settings" element={<Settings/>} />
-          <Route path="/audit-log" element={<AuditLog />} />
           <Route path="/users" element={<UsersCrownP />} />
           <Route path="/maintenances" element={<Maintenances />} />
           <Route path="/disposals" element={<Disposals />} />

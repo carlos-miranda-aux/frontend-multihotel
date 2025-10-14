@@ -14,11 +14,6 @@ import {
   TableRow,
   Paper,
   IconButton,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Alert,
   Modal,
   Fade,
@@ -33,7 +28,8 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import CrudTable from "../components/CrudTable";
-import CreateCrownUserForm from "../components/CreateCrownUserForm";
+// import CreateCrownUserForm from "../components/CreateCrownUserForm"; 👈 Quita esta línea
+import CreateSystemUserForm from "../components/CreateSystemUserForm"; // 👈 Agrega esta importación
 
 const modalStyle = {
   position: 'absolute',
@@ -52,7 +48,7 @@ const AdminSettings = () => {
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [openModal, setOpenModal] = useState(false); // 👈 Nuevo estado para el modal
+  const [openModal, setOpenModal] = useState(false);
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
@@ -96,8 +92,8 @@ const AdminSettings = () => {
     navigate(`/user-manager/edit/${id}`);
   };
   
-  const handleOpenModal = () => setOpenModal(true); // 👈 Función para abrir modal
-  const handleCloseModal = () => setOpenModal(false); // 👈 Función para cerrar modal
+  const handleOpenModal = () => setOpenModal(true);
+  const handleCloseModal = () => setOpenModal(false);
 
   const renderActiveTable = () => {
     if (!activeTable) {
@@ -118,11 +114,13 @@ const AdminSettings = () => {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={handleOpenModal} // 👈 Botón para abrir el modal
+              onClick={handleOpenModal}
             >
               Crear Usuario
             </Button>
           </Box>
+          {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
@@ -211,7 +209,7 @@ const AdminSettings = () => {
       >
         <Fade in={openModal}>
           <Box sx={modalStyle}>
-            <CreateCrownUserForm
+            <CreateSystemUserForm // 👈 Usa el nuevo componente aquí
               onClose={handleCloseModal}
               onUserCreated={fetchUsers}
               setMessage={setMessage}

@@ -1,3 +1,4 @@
+// src/pages/Inventory.jsx
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -55,6 +56,33 @@ const Inventory = () => {
       setError("Error al cargar el inventario.");
     }
   };
+  
+  // 📌 Nueva función para cambiar el estado a "Baja"
+  const handleSetDisposed = async (id) => {
+    // Primero, obtener el ID del estado "Baja"
+    const statusResponse = await api.get("/device-status/get");
+    const disposedStatus = statusResponse.data.find(s => s.nombre === "Baja");
+
+    if (!disposedStatus) {
+        setError("El estado 'Baja' no se encontró en la base de datos.");
+        return;
+    }
+
+    if (window.confirm("¿Estás seguro de que quieres dar de baja este equipo?")) {
+        try {
+            // 📌 Se envía la fecha actual en la solicitud de actualización
+            await api.put(`/devices/put/${id}`, { 
+                estadoId: disposedStatus.id,
+                fecha_baja: new Date()
+            });
+            setMessage("Equipo dado de baja correctamente.");
+            fetchDevices(); // Refrescar la lista de equipos activos
+        } catch (err) {
+            setError(err.response?.data?.error || "Error al dar de baja el equipo.");
+        }
+    }
+  };
+
 
   const handleDelete = async (id) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este equipo?")) {
@@ -97,26 +125,26 @@ const Inventory = () => {
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell>No.</TableCell>
               <TableCell>Etiqueta</TableCell>
+              <TableCell>Nombre Equipo</TableCell>
+              <TableCell>Usuario</TableCell>
               <TableCell>N° Serie</TableCell>
               <TableCell>Tipo</TableCell>
-              <TableCell>Marca</TableCell>
-              <TableCell>Modelo</TableCell>
               <TableCell>Estado</TableCell>
-              <TableCell>Usuario</TableCell>
               <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {devices.map((device) => (
+            {devices.map((device, index) => (
               <TableRow key={device.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell>{device.etiqueta}</TableCell>
+                <TableCell>{device.nombre_equipo}</TableCell>
+                <TableCell>{device.usuario?.nombre || 'N/A'}</TableCell>
                 <TableCell>{device.numero_serie}</TableCell>
                 <TableCell>{device.tipo?.nombre || 'N/A'}</TableCell>
-                <TableCell>{device.marca}</TableCell>
-                <TableCell>{device.modelo}</TableCell>
                 <TableCell>{device.estado?.nombre || 'N/A'}</TableCell>
-                <TableCell>{device.usuario?.nombre || 'N/A'}</TableCell>
                 <TableCell>
                   <IconButton
                     color="primary"
@@ -124,9 +152,10 @@ const Inventory = () => {
                   >
                     <EditIcon />
                   </IconButton>
+                  {/* 📌 Cambiado el botón de eliminar por el de dar de baja */}
                   <IconButton
                     color="error"
-                    onClick={() => handleDelete(device.id)}
+                    onClick={() => handleSetDisposed(device.id)}
                   >
                     <DeleteIcon />
                   </IconButton>

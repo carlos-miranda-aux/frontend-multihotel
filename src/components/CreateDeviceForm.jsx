@@ -75,8 +75,19 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     setError("");
     setMessage("");
 
+    // 🔹 Lógica corregida para limpiar los datos antes de enviar
+    const payload = {};
+    for (const key in formData) {
+      // Reemplazar "" por null solo si el campo es opcional y está vacío
+      if (typeof formData[key] === "string" && formData[key].trim() === "") {
+        payload[key] = null;
+      } else {
+        payload[key] = formData[key];
+      }
+    }
+
     try {
-      await api.post("/devices/post", formData);
+      await api.post("/devices/post", payload);
       setMessage("Equipo creado exitosamente.");
       onDeviceCreated();
       onClose();

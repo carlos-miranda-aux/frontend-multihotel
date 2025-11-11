@@ -75,8 +75,30 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
     const payload = {};
     for (const key in formData) {
-      payload[key] = formData[key]?.trim() === "" ? null : formData[key];
+      const value = formData[key];
+
+      // Esto es de tu corrección anterior, está bien
+      if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+        payload[key] = trimmedValue === "" ? null : trimmedValue;
+      } else {
+        payload[key] = value;
+      }
     }
+
+    // 👇 --- INICIA LA CORRECCIÓN --- 👇
+    // 
+    // Convertir las fechas al formato ISO-8601 que Prisma espera
+    // Hacemos esto DESPUÉS del bucle
+    
+    if (payload.garantia_inicio) {
+      payload.garantia_inicio = new Date(payload.garantia_inicio).toISOString();
+    }
+    
+    if (payload.garantia_fin) {
+      payload.garantia_fin = new Date(payload.garantia_fin).toISOString();
+    }
+    // 👆 --- TERMINA LA CORRECCIÓN --- 👆
 
     try {
       await api.post("/devices/post", payload);

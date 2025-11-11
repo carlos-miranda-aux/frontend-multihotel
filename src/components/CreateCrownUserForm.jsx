@@ -18,7 +18,6 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
     correo: "",
     departamentoId: "",
     usuario_login: "",
-    password_login: "",
   });
   const [departments, setDepartments] = useState([]);
 
@@ -96,14 +95,6 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
           label="Usuario de Login"
           name="usuario_login"
           value={formData.usuario_login}
-          onChange={handleChange}
-          fullWidth
-        />
-        <TextField
-          label="Contraseña de Login"
-          name="password_login"
-          type="password"
-          value={formData.password_login}
           onChange={handleChange}
           fullWidth
         />

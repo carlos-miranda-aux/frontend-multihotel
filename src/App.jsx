@@ -15,6 +15,7 @@ import EditMaintenance from "./pages/EditMaintenance.jsx";
 import EditUsers from "./pages/EditUser.jsx";
 import EditCrownUser from "./pages/EditCrownUser.jsx";
 import AdminSettings from "./pages/AdminSettings.jsx";
+import Reportes from "./pages/Reportes.jsx";
 
 function App() {
   return (
@@ -28,7 +29,7 @@ function App() {
           element={
             <ProtectedRoute>
               <MainLayout />
-            </ProtectedRoute>
+            </ProtectedRoute> 
           }
         >
           <Route path="/home" element={<Home />} />
@@ -39,7 +40,9 @@ function App() {
           <Route path="/disposals" element={<Disposals />} />
           <Route path="/inventory/edit/:id" element={<EditDevice />} />
           <Route path="/user-manager/edit/:id" element={<EditUsers />} />
+          <Route path="/maintenances/edit/:id" element={<EditMaintenance />} />
           <Route path="/users/edit/:id" element={<EditCrownUser />} />
+          <Route path="/reportes" element={<Reportes />} />
           <Route path="/admin-settings" element={<AdminSettings />} />
         </Route>
       </Routes>

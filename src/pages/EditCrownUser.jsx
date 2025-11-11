@@ -25,7 +25,6 @@ const EditCrownUser = () => {
     correo: "",
     departamentoId: "",
     usuario_login: "",
-    password_login: "",
   });
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +49,6 @@ const EditCrownUser = () => {
         correo: userData.correo || "",
         departamentoId: userData.departamentoId || "",
         usuario_login: userData.usuario_login || "",
-        password_login: userData.password_login || "",
       });
       setDepartments(deptResponse.data);
       setLoading(false);
@@ -135,14 +133,6 @@ const EditCrownUser = () => {
             label="Usuario de Login"
             name="usuario_login"
             value={formData.usuario_login}
-            onChange={handleChange}
-            fullWidth
-          />
-          <TextField
-            label="Contraseña de Login"
-            name="password_login"
-            type="password"
-            value={formData.password_login}
             onChange={handleChange}
             fullWidth
           />

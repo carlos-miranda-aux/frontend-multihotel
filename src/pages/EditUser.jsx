@@ -33,7 +33,7 @@ const EditUser = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await api.get(`/users/get/${id}`);
+        const response = await api.get(`/auth/get/${id}`);
         setFormData({
           nombre: response.data.nombre || "",
           username: response.data.username || "",
@@ -73,7 +73,7 @@ const EditUser = () => {
     try {
       await api.put(`/auth/put/${id}`, payload);
       setMessage("Usuario actualizado correctamente.");
-      setTimeout(() => navigate("/user-manager"), 2000);
+      setTimeout(() => navigate("/admin-settings"), 2000);
     } catch (err) {
       setError(err.response?.data?.error || "Error al actualizar el usuario.");
     }
@@ -96,7 +96,6 @@ const EditUser = () => {
             value={formData.nombre}
             onChange={handleChange}
             fullWidth
-            required
           />
           <TextField
             label="Correo electrónico"
@@ -105,7 +104,6 @@ const EditUser = () => {
             value={formData.email}
             onChange={handleChange}
             fullWidth
-            required
           />
           <FormControl fullWidth disabled={formData.username === "superadmin"}>
             <InputLabel>Rol</InputLabel>

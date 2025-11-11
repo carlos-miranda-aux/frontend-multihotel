@@ -1,9 +1,244 @@
+// src/pages/Maintenances.jsx
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Button,
+  Typography,
+  Alert,
+  Modal,
+  Fade,
+  Backdrop,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  Chip,
+  Tabs, // 👈 Añadido
+  Tab     // 👈 Añadido
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from '@mui/icons-material/Add';
+import api from "../api/axios";
+import { useNavigate } from "react-router-dom";
+import CreateMaintenanceForm from "../components/CreateMaintenanceForm";
+
+// ... (modalStyle sigue igual)
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 600,
+  bgcolor: 'background.paper',
+  boxShadow: 24,
+  p: 4,
+  borderRadius: 2
+};
+
 const Maintenances = () => {
+  const [devices, setDevices] = useState([]);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('programados'); // 👈 Estado para las pestañas
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchDevicesWithMaintenances();
+  }, []);
+
+  const fetchDevicesWithMaintenances = async () => {
+    try {
+      const res = await api.get("/devices/get");
+      setDevices(res.data);
+    } catch (err) {
+      console.error("Error al obtener equipos:", err);
+      setError("Error al cargar los equipos y sus mantenimientos.");
+    }
+  };
+
+  const handleDeleteMaintenance = async (m_id) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar este registro de mantenimiento?")) {
+      try {
+        await api.delete(`/maintenances/delete/${m_id}`);
+        setMessage("Registro de mantenimiento eliminado.");
+        fetchDevicesWithMaintenances();
+      } catch (err) {
+        setError(err.response?.data?.error || "Error al eliminar el registro.");
+      }
+    }
+  };
+
+  const handleEditMaintenance = (m_id) => {
+    navigate(`/maintenances/edit/${m_id}`);
+  };
+
+  const handleOpenModal = () => setOpenModal(true);
+  const handleCloseModal = () => setOpenModal(false);
+  
+  const handleTabChange = (event, newValue) => { // 👈 Función para cambiar de pestaña
+    setActiveTab(newValue);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  // --- Lógica de filtrado ---
+  // 1. Filtra mantenimientos "Pendientes"
+  const programados = devices
+    .map(d => ({
+      ...d,
+      maintenances: d.maintenances.filter(m => m.estado === 'pendiente')
+    }))
+    .filter(d => d.maintenances.length > 0); // Solo muestra equipos con mantenimientos pendientes
+
+  // 2. Filtra mantenimientos "Realizados" o "Cancelados"
+  const historial = devices
+    .map(d => ({
+      ...d,
+      maintenances: d.maintenances.filter(m => m.estado !== 'pendiente')
+    }))
+    .filter(d => d.maintenances.length > 0); // Solo muestra equipos con historial
+
+
+  // --- Componente de Tabla Reutilizable ---
+  const renderMaintenanceTable = (data) => (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Nombre del equipo</TableCell>
+            <TableCell>N° Serie</TableCell>
+            <TableCell>Marca</TableCell>
+            <TableCell>Modelo</TableCell>
+            <TableCell>S.O.</TableCell>
+            <TableCell sx={{ minWidth: 350 }}>Acciones de Mantenimiento</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {data.map((device) => (
+            <TableRow key={device.id}>
+              <TableCell>{device.nombre_equipo}</TableCell>
+              <TableCell>{device.numero_serie}</TableCell>
+              <TableCell>{device.marca || 'N/A'}</TableCell>
+              <TableCell>{device.modelo || 'N/A'}</TableCell>
+              <TableCell>{device.sistema_operativo?.nombre || 'N/A'}</TableCell>
+              <TableCell>
+                <List dense disablePadding>
+                  {device.maintenances.map((m) => (
+                    <React.Fragment key={m.id}>
+                      <ListItem
+                        secondaryAction={
+                          <>
+                            <IconButton edge="end" color="primary" onClick={() => handleEditMaintenance(m.id)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton edge="end" color="error" onClick={() => handleDeleteMaintenance(m.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </>
+                        }
+                        disableGutters
+                      >
+                        <ListItemText
+                          primary={m.descripcion}
+                          secondary={
+                            activeTab === 'programados'
+                              ? `Programado para: ${formatDate(m.fecha_programada)} - ${m.proveedor || 'Interno'}`
+                              : `Realizado: ${formatDate(m.fecha_realizacion)} - ${m.proveedor || 'Interno'}`
+                          }
+                        />
+                        <Chip label={m.estado} size="small" sx={{ ml: 1, mr: 10 }} 
+                          color={m.estado === 'pendiente' ? 'warning' : m.estado === 'realizado' ? 'success' : 'default'}
+                        />
+                      </ListItem>
+                      <Divider component="li" />
+                    </React.Fragment>
+                  ))}
+                </List>
+              </TableCell>
+            </TableRow>
+          ))}
+          {data.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={6} align="center">
+                No hay mantenimientos en esta categoría.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
   return (
-    <div style={{ padding: "2rem" }}>
-      Hola, Mantenimientos
-    </div>
+    <Box sx={{ p: 3, width: '100%' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">
+          Gestión de Mantenimientos
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleOpenModal}
+        >
+          Nuevo Mantenimiento
+        </Button>
+      </Box>
+
+      {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {/* --- Pestañas --- */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs value={activeTab} onChange={handleTabChange}>
+          <Tab label="Programados" value="programados" />
+          <Tab label="Historial" value="historial" />
+        </Tabs>
+      </Box>
+
+      {/* --- Contenido de las Pestañas --- */}
+      <Box>
+        {activeTab === 'programados' && renderMaintenanceTable(programados)}
+        {activeTab === 'historial' && renderMaintenanceTable(historial)}
+      </Box>
+
+      {/* Modal para crear mantenimiento */}
+      <Modal
+        open={openModal}
+        onClose={handleCloseModal}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{ timeout: 500 }}
+      >
+        <Fade in={openModal}>
+          <Box sx={modalStyle}>
+            <CreateMaintenanceForm
+              onClose={handleCloseModal}
+              onMaintenanceCreated={() => {
+                fetchDevicesWithMaintenances();
+                setMessage("Mantenimiento programado exitosamente.");
+                setActiveTab('programados'); // Cambia a la pestaña de programados
+              }}
+              setMessage={setMessage}
+              setError={setError}
+            />
+          </Box>
+        </Fade>
+      </Modal>
+    </Box>
   );
 };
 
-export default Maintenances;
+export default Maintenances;  

@@ -8,6 +8,7 @@ import DevicesIcon from "@mui/icons-material/Devices";
 import PeopleIcon from "@mui/icons-material/People";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AssessmentIcon from '@mui/icons-material/Assessment'; //
 import LogoImg from "../assets/logo.png";
 import { AuthContext } from "../context/AuthContext";
 
@@ -25,6 +26,7 @@ const Sidebar = ({ open, onClose }) => {
   ];
 
   const adminItems = [
+    { text: "Reportes", icon: <AssessmentIcon />, path: "/reportes" },
     { text: "Configuración Admin", icon: <AdminPanelSettingsIcon />, path: "/admin-settings" },
   ];
 

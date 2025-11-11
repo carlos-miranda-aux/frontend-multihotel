@@ -76,13 +76,30 @@ const EditDevice = () => {
 
         const deviceData = deviceResponse.data;
         setFormData({
-          ...deviceData,
+          nombre_equipo: deviceData.nombre_equipo || "",
+          modelo: deviceData.modelo || "",
+          numero_serie: deviceData.numero_serie || "",
+          ip_equipo: deviceData.ip_equipo || "",
+          etiqueta: deviceData.etiqueta || "",
+          descripcion: deviceData.descripcion || "",
+          usuarioId: deviceData.usuarioId || "",
+          tipoId: deviceData.tipoId || "",
+          estadoId: deviceData.estadoId || "",
+          sistemaOperativoId: deviceData.sistemaOperativoId || "",
+          marca: deviceData.marca || "",
+          licencia_so: deviceData.licencia_so || "",
+          office_version: deviceData.office_version || "",
+          office_tipo_licencia: deviceData.office_tipo_licencia || "",
+          office_serial: deviceData.office_serial || "",
+          office_key: deviceData.office_key || "",
+          garantia_numero_producto: deviceData.garantia_numero_producto || "",
           garantia_inicio: deviceData.garantia_inicio
             ? deviceData.garantia_inicio.substring(0, 10)
             : "",
           garantia_fin: deviceData.garantia_fin
             ? deviceData.garantia_fin.substring(0, 10)
             : "",
+          departamentoId: deviceData.departamentoId || "",
         });
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
@@ -108,15 +125,10 @@ const EditDevice = () => {
     setError("");
     setMessage("");
 
-    const payload = {
-      ...formData,
-      garantia_inicio: formData.garantia_inicio
-        ? new Date(formData.garantia_inicio).toISOString()
-        : null,
-      garantia_fin: formData.garantia_fin
-        ? new Date(formData.garantia_fin).toISOString()
-        : null,
-    };
+    const payload = { ...formData };
+    
+    payload.garantia_inicio = payload.garantia_inicio ? new Date(payload.garantia_inicio).toISOString() : null;
+    payload.garantia_fin = payload.garantia_fin ? new Date(payload.garantia_fin).toISOString() : null;
 
     try {
       await api.put(`/devices/put/${id}`, payload);
@@ -124,29 +136,6 @@ const EditDevice = () => {
       setTimeout(() => navigate("/inventory"), 1200);
     } catch (err) {
       setError(err.response?.data?.error || "Error al actualizar el equipo.");
-    }
-  };
-
-  const handleSetDisposed = async () => {
-    const statusResponse = await api.get("/device-status/get");
-    const disposedStatus = statusResponse.data.find((s) => s.nombre === "Baja");
-
-    if (!disposedStatus) {
-      setError("El estado 'Baja' no se encontró en la base de datos.");
-      return;
-    }
-
-    if (window.confirm("¿Dar de baja este equipo? Esta acción es irreversible.")) {
-      try {
-        await api.put(`/devices/put/${id}`, {
-          estadoId: disposedStatus.id,
-          fecha_baja: new Date(),
-        });
-        setMessage("Equipo dado de baja correctamente.");
-        setTimeout(() => navigate("/inventory"), 1200);
-      } catch (err) {
-        setError(err.response?.data?.error || "Error al dar de baja el equipo.");
-      }
     }
   };
 
@@ -219,12 +208,12 @@ const EditDevice = () => {
           <Divider sx={{ mb: 2 }} />
 
           <Grid container spacing={2}>
-            <Grid item xs={10} sm={5}>
-              <FormControl fullWidth sx={{ mb: 2, minWidth: 200 }}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
                 <InputLabel>Sistema Operativo</InputLabel>
                 <Select
                   name="sistemaOperativoId"
-                  value={formData.sistemaOperativoId}
+                  value={formData.sistemaOperativoId || ''}
                   onChange={handleChange}
                   label="Sistema Operativo"
                 >
@@ -232,11 +221,12 @@ const EditDevice = () => {
                     <em>Ninguno</em>
                   </MenuItem>
                   {operatingSystems.map((os) => (
-                    <MenuItem key={os.id} value={os.id}>{os.nombre}</MenuItem>
+                    <MenuItem key={os.id} value={os.id}>
+                      {os.nombre}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
-
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField label="Licencia SO" name="licencia_so" fullWidth value={formData.licencia_so} onChange={handleChange} />
@@ -247,6 +237,12 @@ const EditDevice = () => {
             <Grid item xs={12} sm={6}>
               <TextField label="Tipo de licencia Office" name="office_tipo_licencia" fullWidth value={formData.office_tipo_licencia} onChange={handleChange} />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="Serial de Office" name="office_serial" fullWidth value={formData.office_serial} onChange={handleChange} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField label="Clave de Office" name="office_key" fullWidth value={formData.office_key} onChange={handleChange} />
+            </Grid>
           </Grid>
 
           {/* GARANTÍA */}
@@ -256,10 +252,10 @@ const EditDevice = () => {
           <Divider sx={{ mb: 2 }} />
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField label="Número de producto" name="garantia_numero_producto" fullWidth value={formData.garantia_numero_producto} onChange={handleChange} />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 label="Inicio de garantía"
                 type="date"
@@ -270,7 +266,7 @@ const EditDevice = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 label="Fin de garantía"
                 type="date"
@@ -295,7 +291,7 @@ const EditDevice = () => {
                 <InputLabel>Usuario asignado</InputLabel>
                 <Select
                   name="usuarioId"
-                  value={formData.usuarioId}
+                  value={formData.usuarioId || ''}
                   onChange={handleChange}
                   label="Usuario asignado"
                 >
@@ -316,7 +312,7 @@ const EditDevice = () => {
                 <InputLabel>Departamento</InputLabel>
                 <Select
                   name="departamentoId"
-                  value={formData.departamentoId}
+                  value={formData.departamentoId || ''}
                   onChange={handleChange}
                   label="Departamento"
                 >
@@ -333,13 +329,39 @@ const EditDevice = () => {
             </Grid>
           </Grid>
 
+          {/* ESTADO */}
+          <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>
+            Estado
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Estado del equipo</InputLabel>
+                <Select
+                  name="estadoId"
+                  value={formData.estadoId || ''}
+                  onChange={handleChange}
+                  label="Estado del equipo"
+                >
+                  <MenuItem value="">
+                    <em>Ninguno</em>
+                  </MenuItem>
+                  {deviceStatuses.map((status) => (
+                    <MenuItem key={status.id} value={status.id}>
+                      {status.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
           {/* ACCIONES */}
           <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
             <Button type="submit" variant="contained">
               Guardar cambios
-            </Button>
-            <Button variant="contained" color="error" onClick={handleSetDisposed}>
-              Dar de baja
             </Button>
           </Stack>
         </form>

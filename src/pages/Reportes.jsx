@@ -37,7 +37,8 @@ const Reportes = () => {
       const link = document.createElement('a');
       link.href = href;
       // Extrae el nombre del archivo de la URL
-      link.setAttribute('download', url.split('/').pop() + '.xlsx');
+      const fileName = url.substring(url.lastIndexOf('/') + 1);
+      link.setAttribute('download', `${fileName}.xlsx`); // Asignar un nombre de archivo
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -66,6 +67,11 @@ const Reportes = () => {
       name: "Lista de Usuarios (Crown)", 
       description: "Exporta todos los usuarios de la organización (empleados).", 
       url: `${apiBaseUrl}/users/export/all` // (Tendrás que crear esta ruta)
+    },
+    { 
+      name: "Usuarios del Sistema", 
+      description: "Exporta los usuarios administradores y editores de SIMET.", 
+      url: `${apiBaseUrl}/auth/export/all` 
     },
     // Puedes añadir más aquí
   ];

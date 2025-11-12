@@ -14,6 +14,7 @@ import {
   MenuItem,
   CircularProgress,
   Grid
+  // 👈 'Stack' e 'DownloadIcon' eliminados
 } from "@mui/material";
 import api from "../api/axios";
 
@@ -35,6 +36,7 @@ const EditMaintenance = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // ... (useEffect sigue igual)
     const fetchMaintenanceData = async () => {
       try {
         setLoading(true);
@@ -65,10 +67,12 @@ const EditMaintenance = () => {
   }, [id]);
 
   const handleChange = (e) => {
+    // ... (handleChange sigue igual)
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleUpdate = async (e) => {
+    // ... (handleUpdate sigue igual)
     e.preventDefault();
     setError("");
     setMessage("");
@@ -89,6 +93,8 @@ const EditMaintenance = () => {
     }
   };
 
+  // 👈 FUNCIÓN 'handleExport' ELIMINADA
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -99,6 +105,7 @@ const EditMaintenance = () => {
 
   return (
     <Box sx={{ p: 3 }}>
+      {/* ... (Títulos y Alertas) ... */}
       <Typography variant="h4" sx={{ mb: 3 }}>
         Editar Mantenimiento
       </Typography>
@@ -109,6 +116,7 @@ const EditMaintenance = () => {
       <Paper sx={{ p: 3 }}>
         <Box component="form" onSubmit={handleUpdate} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <Grid container spacing={2}>
+            {/* ... (Todos los Grid items del formulario) ... */}
             <Grid item xs={12}>
               <FormControl fullWidth required>
                 <InputLabel>Equipo (Device)</InputLabel>
@@ -179,6 +187,8 @@ const EditMaintenance = () => {
               </FormControl>
             </Grid>
           </Grid>
+          
+          {/* 👇 STACK ELIMINADO Y RESTAURADO A UN SOLO BOTÓN 👇 */}
           <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
             Guardar Cambios
           </Button>

@@ -35,6 +35,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     garantia_inicio: "",
     garantia_fin: "",
     departamentoId: "",
+    fecha_proxima_revision: "",
   });
 
   const [users, setUsers] = useState([]);
@@ -99,6 +100,10 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       payload.garantia_fin = new Date(payload.garantia_fin).toISOString();
     }
     // 👆 --- TERMINA LA CORRECCIÓN --- 👆
+
+    if (payload.fecha_proxima_revision) {
+      payload.fecha_proxima_revision = new Date(payload.fecha_proxima_revision).toISOString();
+    }
 
     try {
       await api.post("/devices/post", payload);
@@ -364,6 +369,17 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
               name="garantia_fin"
               type="date"
               value={formData.garantia_fin}
+              onChange={handleChange}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Próxima Revisión Sugerida"
+              name="fecha_proxima_revision"
+              type="date"
+              value={formData.fecha_proxima_revision}
               onChange={handleChange}
               fullWidth
               InputLabelProps={{ shrink: true }}

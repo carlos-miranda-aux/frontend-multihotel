@@ -43,6 +43,7 @@ const EditDevice = () => {
     garantia_inicio: "",
     garantia_fin: "",
     departamentoId: "",
+    fecha_proxima_revision: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -100,7 +101,10 @@ const EditDevice = () => {
             ? deviceData.garantia_fin.substring(0, 10)
             : "",
           departamentoId: deviceData.departamentoId || "",
-        });
+          fecha_proxima_revision: deviceData.fecha_proxima_revision
+            ? deviceData.fecha_proxima_revision.substring(0, 10)
+            : "",
+        }); 
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
         setDeviceStatuses(deviceStatusesRes.data);
@@ -129,6 +133,7 @@ const EditDevice = () => {
     
     payload.garantia_inicio = payload.garantia_inicio ? new Date(payload.garantia_inicio).toISOString() : null;
     payload.garantia_fin = payload.garantia_fin ? new Date(payload.garantia_fin).toISOString() : null;
+    payload.fecha_proxima_revision = payload.fecha_proxima_revision ? new Date(payload.fecha_proxima_revision).toISOString() : null;
 
     try {
       await api.put(`/devices/put/${id}`, payload);
@@ -274,6 +279,17 @@ const EditDevice = () => {
                 fullWidth
                 value={formData.garantia_fin}
                 onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Próxima Revisión Sugerida"
+                name="fecha_proxima_revision"
+                type="date"
+                value={formData.fecha_proxima_revision}
+                onChange={handleChange}
+                fullWidth
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>

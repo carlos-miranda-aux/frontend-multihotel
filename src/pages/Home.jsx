@@ -17,12 +17,13 @@ import DevicesIcon from "@mui/icons-material/Devices";
 import BuildIcon from "@mui/icons-material/Build";
 import WarningIcon from "@mui/icons-material/Warning";
 import EventBusyIcon from '@mui/icons-material/EventBusy';
-import PeopleIcon from '@mui/icons-material/People'; // 👈 1. IMPORTAR NUEVO ICONO
+import PeopleIcon from '@mui/icons-material/People';
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useTheme } from '@mui/material/styles';
+import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 
-// --- Componente de Widget (sin cambios) ---
+// --- Componente de Widget (Sin cambios) ---
 const WidgetCard = ({ title, value, icon, color, onClick }) => (
   <Paper
     onClick={onClick}
@@ -62,51 +63,87 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalDevices: 0,
-    totalUsers: 0, // 👈 2. AÑADIR NUEVO ESTADO
+    totalUsers: 0,
     pendingMaintenancesCount: 0,
     warrantyAlertsCount: 0,
   });
+  const [warrantyData, setWarrantyData] = useState([]);
   const [warrantyAlertsList, setWarrantyAlertsList] = useState([]);
   const [pendingMaintenancesList, setPendingMaintenancesList] = useState([]);
   
   const navigate = useNavigate();
   const theme = useTheme();
 
+  // 👇 1. SIMPLIFICAMOS LOS COLORES
+  const COLORS = {
+    Vigentes: theme.palette.success.main,
+    Riesgo: theme.palette.warning.main,
+    // Ya no necesitamos el color 'Vencidas'
+  };
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // 👇 3. AÑADIR /users/get A LA LLAMADA
         const [devicesRes, maintenancesRes, usersRes] = await Promise.all([
           api.get("/devices/get"),
           api.get("/maintenances/get"),
-          api.get("/users/get"), // (Usuarios Crown)
+          api.get("/users/get"),
         ]);
 
-        const devices = devicesRes.data;
+        const devices = devicesRes.data; // Esto ya son solo equipos ACTIVOS
         const maintenances = maintenancesRes.data;
-        const users = usersRes.data; // 👈 4. OBTENER USUARIOS
+        const users = usersRes.data;
 
-        // ... (lógica de mantenimientos y garantías sin cambios)
+        // --- Lógica de Mantenimientos (Sin cambios) ---
         const pending = maintenances.filter((m) => m.estado === "pendiente");
+        setPendingMaintenancesList(pending);
+
+        // --- 👇 2. LÓGICA DE GARANTÍAS MODIFICADA ---
         const today = new Date();
         const ninetyDaysFromNow = new Date();
         ninetyDaysFromNow.setDate(today.getDate() + 90);
-        const expiringWarranties = devices.filter((d) => {
-          if (!d.garantia_fin) return false;
-          const expirationDate = new Date(d.garantia_fin);
-          return expirationDate > today && expirationDate <= ninetyDaysFromNow;
-        });
 
-        // 👇 5. ACTUALIZAR EL ESTADO CON EL CONTEO DE USUARIOS
+        let safeCount = 0; // Vigentes
+        let expiringSoonCount = 0; // En Riesgo
+        // Ya no contamos 'expiredCount' para el gráfico
+        const expiringList = [];
+
+        // Iteramos solo sobre los equipos ACTIVOS
+        devices.forEach((d) => {
+          if (!d.garantia_fin) {
+            safeCount++; // Si no tiene fecha, se considera "Vigente"
+          } else {
+            const expirationDate = new Date(d.garantia_fin);
+            if (expirationDate < today) {
+              // Es un equipo activo con garantía vencida.
+              // Lo ignoramos del gráfico, como pediste.
+            } else if (expirationDate <= ninetyDaysFromNow) {
+              // EN RIESGO
+              expiringSoonCount++;
+              expiringList.push(d); 
+            } else {
+              // VIGENTE
+              safeCount++;
+            }
+          }
+        });
+        
+        // 👇 3. ENVIAR SOLO 2 CATEGORÍAS AL GRÁFICO
+        setWarrantyData([
+          { name: 'Vigentes', value: safeCount },
+          { name: 'Riesgo (90d)', value: expiringSoonCount },
+        ]);
+        
+        setWarrantyAlertsList(expiringList);
+
+        // El stat del KPI sigue siendo el de "Riesgo"
         setStats({
           totalDevices: devices.length,
-          totalUsers: users.length, // <-- AÑADIDO
+          totalUsers: users.length,
           pendingMaintenancesCount: pending.length,
-          warrantyAlertsCount: expiringWarranties.length,
+          warrantyAlertsCount: expiringSoonCount,
         });
 
-        setWarrantyAlertsList(expiringWarranties);
-        setPendingMaintenancesList(pending);
         setLoading(false);
       } catch (error) {
         console.error("Error cargando dashboard:", error);
@@ -115,22 +152,25 @@ const Home = () => {
     };
 
     fetchDashboardData();
-  }, []);
+    // 👇 4. ACTUALIZAR DEPENDENCIAS DE useEffect
+  }, [theme.palette.success.main, theme.palette.warning.main]); 
 
-  // ... (función formatDate sin cambios)
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
   };
 
-
   if (loading) {
-    // ... (spinner de carga sin cambios)
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* ... (Títulos sin cambios) ... */}
+      {/* --- Título (Sin cambios) --- */}
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Panel de Control
       </Typography>
@@ -138,12 +178,9 @@ const Home = () => {
         Resumen del estado de tu infraestructura TI.
       </Typography>
 
-
-      {/* --- Widgets de Resumen (KPIs) --- */}
-      {/* 👇 6. AJUSTAR EL GRID DE 4 A 3 COLUMNAS (md={4} -> md={3}) 👇 */}
+      {/* --- Widgets de Resumen (KPIs) (Sin cambios) --- */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        
-        <Grid item xs={12} md={3}> 
+        <Grid item xs={12} sm={6} md={3}> 
           <WidgetCard
             title="Equipos Activos"
             value={stats.totalDevices}
@@ -152,20 +189,16 @@ const Home = () => {
             onClick={() => navigate("/inventory")}
           />
         </Grid>
-
-        {/* --- WIDGET NUEVO --- */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <WidgetCard
             title="Usuarios Gestionados"
             value={stats.totalUsers}
             icon={<PeopleIcon />}
-            color={theme.palette.secondary.main} // O el color que prefieras
+            color={theme.palette.secondary.main}
             onClick={() => navigate("/users")}
           />
         </Grid>
-        {/* --- FIN WIDGET NUEVO --- */}
-
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <WidgetCard
             title="Mantenimientos Pendientes"
             value={stats.pendingMaintenancesCount}
@@ -174,8 +207,7 @@ const Home = () => {
             onClick={() => navigate("/maintenances")}
           />
         </Grid>
-        
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <WidgetCard
             title="Garantías en Riesgo"
             value={stats.warrantyAlertsCount}
@@ -185,10 +217,10 @@ const Home = () => {
         </Grid>
       </Grid>
 
-      {/* --- Columnas de Contenido (sin cambios) --- */}
+      {/* --- Columnas de Contenido --- */}
       <Grid container spacing={3}>
         
-        {/* --- Columna 1: Mantenimientos Programados --- */}
+        {/* --- Columna 1: Mantenimientos (Sin cambios) --- */}
         <Grid item xs={12} lg={7}>
           <Paper sx={{ p: 3, height: '100%' }} elevation={3}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -198,9 +230,7 @@ const Home = () => {
             {pendingMaintenancesList.length > 0 ? (
               <List disablePadding>
                 {pendingMaintenancesList.map((m) => (
-                  <ListItem 
-                    key={m.id} 
-                    divider
+                  <ListItem key={m.id} divider
                     secondaryAction={
                       <Button size="small" variant="outlined" onClick={() => navigate(`/maintenances/edit/${m.id}`)}>
                         Gestionar
@@ -225,22 +255,46 @@ const Home = () => {
           </Paper>
         </Grid>
         
-        {/* --- Columna 2: Alertas de Garantía --- */}
+        {/* --- Columna 2: Alertas de Garantía (Gráfico actualizado) --- */}
         <Grid item xs={12} lg={5}>
-          <Paper sx={{ p: 3, height: '100%', border: 1, borderColor: stats.warrantyAlertsCount > 0 ? 'error.main' : 'transparent' }} elevation={3}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: stats.warrantyAlertsCount > 0 ? 'error.main' : 'text.primary' }}>
+          <Paper sx={{ p: 3, height: '100%', border: 1, borderColor: warrantyAlertsList.length > 0 ? 'error.main' : 'transparent' }} elevation={3}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: warrantyAlertsList.length > 0 ? 'error.main' : 'text.primary' }}>
               <WarningIcon sx={{ mr: 1 }} />
               <Typography variant="h6" fontWeight="bold">
                 Alertas de Garantía (90 días)
               </Typography>
             </Box>
-            <Divider sx={{ mb: 2 }} />
+
+            {/* --- GRÁFICO (Ahora solo con 2 categorías) --- */}
+            <Box sx={{ height: 120, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={warrantyData} // Solo tiene "Vigentes" y "Riesgo"
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={45}
+                    innerRadius={30}
+                  >
+                    {warrantyData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[entry.name.split(' ')[0]]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Box>
+            
+            <Divider sx={{ my: 2 }} />
+
+            {/* --- Lista de Alertas (Sigue mostrando solo "En Riesgo") --- */}
             {warrantyAlertsList.length > 0 ? (
-              <List disablePadding>
+              <List dense disablePadding>
                 {warrantyAlertsList.map((device) => (
-                  <ListItem 
-                    key={device.id} 
-                    divider
+                  <ListItem key={device.id} divider
                     secondaryAction={
                       <Button size="small" variant="outlined" color="error" onClick={() => navigate(`/inventory/edit/${device.id}`)}>
                         Ver
@@ -255,7 +309,7 @@ const Home = () => {
                 ))}
               </List>
             ) : (
-              <Typography color="textSecondary" sx={{ textAlign: 'center', pt: 4 }}>
+              <Typography color="textSecondary" sx={{ textAlign: 'center', pt: 2 }}>
                 No hay garantías próximas a vencer.
               </Typography>
             )}

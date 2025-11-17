@@ -9,7 +9,7 @@ import PeopleIcon from "@mui/icons-material/People";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AssessmentIcon from '@mui/icons-material/Assessment'; //
-import LogoImg from "../assets/logo.png";
+import LogoImg from "../assets/Logo.png";
 import { AuthContext } from "../context/AuthContext";
 
 const Sidebar = ({ open, onClose }) => {

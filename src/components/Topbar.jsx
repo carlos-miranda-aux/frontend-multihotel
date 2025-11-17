@@ -22,7 +22,7 @@ import BuildIcon from "@mui/icons-material/Build";
 // import EventNoteIcon from '@mui/icons-material/EventNote'; // 👈 ELIMINADO
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
-import Logo from "../assets/logo.png";
+import Logo from "../assets/Logo.png";
 import { useNavigate } from "react-router-dom";
 
 const TopBar = ({ onMenuClick }) => {

@@ -12,7 +12,7 @@ import {
   Alert,
 } from "@mui/material";
 
-import Logo from "../assets/logo.png"; // Ruta de tu logo
+import Logo from "../assets/Logo.png"; // Ruta de tu logo
 
 const SignUp = () => {
   const navigate = useNavigate();

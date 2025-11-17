@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/pages/EditDevice.jsx
+import React, { useState, useEffect, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
 import {
   Box,
   Typography,
@@ -17,10 +18,22 @@ import {
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
+
+// 👈 CORRECCIÓN: Función para parsear la fecha como LOCAL
+const parseLocalDate = (dateString) => {
+  if (!dateString) return null;
+  // "YYYY-MM-DD" -> ["YYYY", "MM", "DD"]
+  const parts = dateString.split('-');
+  // new Date(year, monthIndex, day)
+  // Esto crea la fecha en la medianoche de la zona horaria local
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+};
 
 const EditDevice = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener refreshAlerts
 
   const [formData, setFormData] = useState({
     nombre_equipo: "",
@@ -76,6 +89,19 @@ const EditDevice = () => {
         ]);
 
         const deviceData = deviceResponse.data;
+        
+        // 👈 CORRECCIÓN: Función interna para formatear la fecha para el input type="date"
+        const formatDateForInput = (dateString) => {
+            if (!dateString) return "";
+            // La fecha de la BD (ISO) la convertimos a un objeto Date
+            // y luego extraemos el YYYY-MM-DD
+            try {
+                return new Date(dateString).toISOString().substring(0, 10);
+            } catch (e) {
+                return ""; // Devuelve vacío si la fecha es inválida
+            }
+        };
+
         setFormData({
           nombre_equipo: deviceData.nombre_equipo || "",
           modelo: deviceData.modelo || "",
@@ -94,16 +120,10 @@ const EditDevice = () => {
           office_serial: deviceData.office_serial || "",
           office_key: deviceData.office_key || "",
           garantia_numero_producto: deviceData.garantia_numero_producto || "",
-          garantia_inicio: deviceData.garantia_inicio
-            ? deviceData.garantia_inicio.substring(0, 10)
-            : "",
-          garantia_fin: deviceData.garantia_fin
-            ? deviceData.garantia_fin.substring(0, 10)
-            : "",
+          garantia_inicio: formatDateForInput(deviceData.garantia_inicio), // 👈 CORRECCIÓN
+          garantia_fin: formatDateForInput(deviceData.garantia_fin), // 👈 CORRECCIÓN
           departamentoId: deviceData.departamentoId || "",
-          fecha_proxima_revision: deviceData.fecha_proxima_revision
-            ? deviceData.fecha_proxima_revision.substring(0, 10)
-            : "",
+          fecha_proxima_revision: formatDateForInput(deviceData.fecha_proxima_revision), // 👈 CORRECCIÓN
         }); 
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
@@ -131,12 +151,20 @@ const EditDevice = () => {
 
     const payload = { ...formData };
     
-    payload.garantia_inicio = payload.garantia_inicio ? new Date(payload.garantia_inicio).toISOString() : null;
-    payload.garantia_fin = payload.garantia_fin ? new Date(payload.garantia_fin).toISOString() : null;
-    payload.fecha_proxima_revision = payload.fecha_proxima_revision ? new Date(payload.fecha_proxima_revision).toISOString() : null;
+    // 👇 --- INICIA LA CORRECCIÓN --- 👇
+    // Convertir las fechas al formato ISO-8601 usando la hora LOCAL
+    const localGarantiainicio = parseLocalDate(payload.garantia_inicio);
+    const localGarantiaFin = parseLocalDate(payload.garantia_fin);
+    const localProximaRevision = parseLocalDate(payload.fecha_proxima_revision);
+
+    payload.garantia_inicio = localGarantiainicio ? localGarantiainicio.toISOString() : null;
+    payload.garantia_fin = localGarantiaFin ? localGarantiaFin.toISOString() : null;
+    payload.fecha_proxima_revision = localProximaRevision ? localProximaRevision.toISOString() : null;
+    // 👆 --- TERMINA LA CORRECCIÓN --- 👆
 
     try {
       await api.put(`/devices/put/${id}`, payload);
+      refreshAlerts(); // 👈 CORRECCIÓN: Refrescar alertas globales
       setMessage("Equipo actualizado correctamente.");
       setTimeout(() => navigate("/inventory"), 1200);
     } catch (err) {
@@ -168,6 +196,7 @@ const EditDevice = () => {
 
       <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3, width: "100%" }}>
         <form onSubmit={handleUpdate}>
+          {/* ... (Todo el formulario (Grid, TextField, etc.) sigue exactamente igual) ... */}
           {/* DATOS GENERALES */}
           <Typography variant="h6" sx={{ mb: 1 }}>
             Datos generales

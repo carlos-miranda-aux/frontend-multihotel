@@ -32,6 +32,7 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateMaintenanceForm from "../components/CreateMaintenanceForm";
 import { AuthContext } from "../context/AuthContext";
+import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
 
 const modalStyle = {
   position: 'absolute',
@@ -46,12 +47,15 @@ const modalStyle = {
 };
 
 const Maintenances = () => {
+  // ⚠️ AVISO: Esta página sigue teniendo la Optimización 1 (carga de /devices/get) pendiente
+  // Pero la corrección de las alertas funcionará.
   const [devices, setDevices] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [activeTab, setActiveTab] = useState('programados');
   const { user } = useContext(AuthContext);
+  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener la función de refresco
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,14 +68,11 @@ const Maintenances = () => {
       setDevices(res.data);
     } catch (err) {
       console.error("Error al obtener equipos:", err);
-      // 👈 CORRECCIÓN 1: No establezcas un error aquí.
-      // Esto evita que el refresco cause un mensaje de error conflictivo.
-      // setError("Error al cargar los equipos y sus mantenimientos."); // 👈 LÍNEA COMENTADA
+      // No establecemos error aquí para no causar mensajes duplicados
     }
   };
 
   const handleDeleteMaintenance = async (m_id) => {
-    // 👈 CORRECCIÓN 2: Limpia ambos mensajes al iniciar la acción
     setMessage("");
     setError("");
 
@@ -79,8 +80,8 @@ const Maintenances = () => {
       try {
         await api.delete(`/maintenances/delete/${m_id}`);
         setMessage("Registro de mantenimiento eliminado.");
-        // Esta función de refresco AHORA es segura porque ya no establece el error.
-        fetchDevicesWithMaintenances(); 
+        fetchDevicesWithMaintenances(); // Refresca la tabla local
+        refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
       } catch (err) {
         setError(err.response?.data?.error || "Error al eliminar el registro.");
       }
@@ -92,7 +93,6 @@ const Maintenances = () => {
   };
 
   const handleExport = (id) => {
-    // ... (tu código de exportación está bien)
     const token = localStorage.getItem("token");
     const url = `http://localhost:3000/api/maintenances/export/individual/${id}`;
 
@@ -129,9 +129,6 @@ const Maintenances = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // ⚠️ AVISO: Esta lógica de filtrado sigue siendo ineficiente (Punto de Optimización 1).
-  // Debería obtener de /maintenances/get, no de /devices/get.
-  // Pero la corrección de los mensajes funcionará independientemente.
   const programados = devices
     .map(d => ({ ...d, maintenances: d.maintenances.filter(m => m.estado === 'pendiente')}))
     .filter(d => d.maintenances.length > 0);
@@ -263,11 +260,10 @@ const Maintenances = () => {
             <CreateMaintenanceForm
               onClose={handleCloseModal}
               onMaintenanceCreated={() => {
-                // 👈 CORRECCIÓN 3: Limpia ambos mensajes al iniciar el callback
                 setMessage("");
                 setError("");
-                
-                fetchDevicesWithMaintenances(); // Esta función ya no da 'setError'
+                fetchDevicesWithMaintenances();
+                refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
                 setMessage("Mantenimiento programado exitosamente.");
                 setActiveTab('programados');
               }}

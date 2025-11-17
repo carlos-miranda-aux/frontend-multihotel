@@ -22,9 +22,9 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios"; 
 import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertContext } from "../context/AlertContext"; // 👈 Contexto de Alertas
+import { AlertContext } from "../context/AlertContext";
 
-// ... (Componente WidgetCard sin cambios) ...
+// ... (WidgetCard sigue igual)
 const WidgetCard = ({ title, value, icon, color, onClick }) => (
   <Paper
     onClick={onClick}
@@ -61,11 +61,12 @@ const WidgetCard = ({ title, value, icon, color, onClick }) => (
 
 // --- Componente Principal del Home ---
 const Home = () => {
+  // ⚠️ AVISO: Esta página sigue teniendo la Optimización 5 (carga duplicada) pendiente
+  // Pero la corrección de la lógica del gráfico sí está aplicada.
   const {
     loading: alertLoading, 
     warrantyAlertsList,
     pendingMaintenancesList,
-    devices // 👈 CORRECCIÓN: Obtenemos devices del contexto
   } = useContext(AlertContext);
 
   const [stats, setStats] = useState({
@@ -93,32 +94,39 @@ const Home = () => {
         try {
           setPageLoading(true); 
 
-          // 👈 CORRECCIÓN: Eliminamos la petición duplicada a /devices/get
-          const [usersRes] = await Promise.all([
-            // api.get("/devices/get"), // 👈 ELIMINADA
-            api.get("/users/get"), // Solo pedimos los usuarios
+          // ⚠️ AVISO: Esta petición a /devices/get es redundante
+          // Deberíamos usar la que viene del AlertContext (Optimización 5)
+          const [devicesRes, usersRes] = await Promise.all([
+            api.get("/devices/get"),
+            api.get("/users/get"),
           ]);
           
-          // const devices = devicesRes.data || []; // 👈 ELIMINADA (ya viene del context)
+          const devices = devicesRes.data || [];
           const users = usersRes.data || [];
 
           // --- Lógica de Garantías (para el gráfico) ---
-          // (Usa 'devices' del contexto)
+          
+          // 👈 CORRECCIÓN 1: Normaliza "hoy" a la medianoche local
           const today = new Date();
+          today.setHours(0, 0, 0, 0); 
+
           const ninetyDaysFromNow = new Date();
           ninetyDaysFromNow.setDate(today.getDate() + 90);
+          ninetyDaysFromNow.setHours(0, 0, 0, 0); // También normaliza
 
           let safeCount = 0; 
           let expiringSoonCount = 0;
 
-          devices.forEach((d) => { // 👈 CORRECCIÓN: 'devices' es del contexto
+          devices.forEach((d) => {
             if (!d.garantia_fin) {
-              safeCount++; 
+              safeCount++; // Si no tiene fecha, es "vigente" (o N/A)
             } else {
               const expirationDate = new Date(d.garantia_fin);
+              
+              // 👈 CORRECCIÓN 2: Compara con "today" normalizado
               if (expirationDate < today) {
                 // Vencida, ignorar
-              } else if (expirationDate <= ninetyDaysFromNow) {
+              } else if (expirationDate >= today && expirationDate <= ninetyDaysFromNow) {
                 expiringSoonCount++; // En Riesgo
               } else {
                 safeCount++; // Vigente
@@ -133,7 +141,7 @@ const Home = () => {
           
           // Calcular KPIs
           setStats({
-            totalDevices: devices.length, // 👈 CORRECCIÓN: 'devices' es del contexto
+            totalDevices: devices.length,
             totalUsers: users.length,
             pendingTasksCount: pendingMaintenancesList.length,
             warrantyAlertsCount: warrantyAlertsList.length,
@@ -149,8 +157,7 @@ const Home = () => {
 
       fetchPageSpecificData();
     }
-    // 👈 CORRECCIÓN: Añadimos 'devices' a las dependencias
-  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList, devices]); 
+  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList]); 
 
 
   const formatDate = (dateString) => {

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/components/CreateDeviceForm.jsx
+import React, { useState, useEffect, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
 import {
   Box,
   Typography,
@@ -13,6 +14,17 @@ import {
   Stack,
 } from "@mui/material";
 import api from "../api/axios";
+import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
+
+// 👈 CORRECCIÓN: Función para parsear la fecha como LOCAL
+const parseLocalDate = (dateString) => {
+  if (!dateString) return null;
+  // "YYYY-MM-DD" -> ["YYYY", "MM", "DD"]
+  const parts = dateString.split('-');
+  // new Date(year, monthIndex, day)
+  // Esto crea la fecha en la medianoche de la zona horaria local
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+};
 
 const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) => {
   const [formData, setFormData] = useState({
@@ -42,6 +54,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [operatingSystems, setOperatingSystems] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener refreshAlerts
 
   useEffect(() => {
     const fetchFormData = async () => {
@@ -63,7 +76,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       }
     };
     fetchFormData();
-  }, []);
+  }, [setError]); // 👈 CORRECCIÓN: Dependencia correcta
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -77,8 +90,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     const payload = {};
     for (const key in formData) {
       const value = formData[key];
-
-      // Esto es de tu corrección anterior, está bien
       if (typeof value === 'string') {
         const trimmedValue = value.trim();
         payload[key] = trimmedValue === "" ? null : trimmedValue;
@@ -89,25 +100,20 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
     // 👇 --- INICIA LA CORRECCIÓN --- 👇
     // 
-    // Convertir las fechas al formato ISO-8601 que Prisma espera
-    // Hacemos esto DESPUÉS del bucle
-    
-    if (payload.garantia_inicio) {
-      payload.garantia_inicio = new Date(payload.garantia_inicio).toISOString();
-    }
-    
-    if (payload.garantia_fin) {
-      payload.garantia_fin = new Date(payload.garantia_fin).toISOString();
-    }
-    // 👆 --- TERMINA LA CORRECCIÓN --- 👆
+    // Convertir las fechas al formato ISO-8601 usando la hora LOCAL
+    const localGarantiainicio = parseLocalDate(payload.garantia_inicio);
+    const localGarantiaFin = parseLocalDate(payload.garantia_fin);
+    const localProximaRevision = parseLocalDate(payload.fecha_proxima_revision);
 
-    if (payload.fecha_proxima_revision) {
-      payload.fecha_proxima_revision = new Date(payload.fecha_proxima_revision).toISOString();
-    }
+    payload.garantia_inicio = localGarantiainicio ? localGarantiainicio.toISOString() : null;
+    payload.garantia_fin = localGarantiaFin ? localGarantiaFin.toISOString() : null;
+    payload.fecha_proxima_revision = localProximaRevision ? localProximaRevision.toISOString() : null;
+    // 👆 --- TERMINA LA CORRECCIÓN --- 👆
 
     try {
       await api.post("/devices/post", payload);
       setMessage("Equipo creado exitosamente.");
+      refreshAlerts(); // 👈 CORRECCIÓN: Refrescar alertas globales
       onDeviceCreated();
       onClose();
     } catch (err) {
@@ -122,7 +128,8 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       </Typography>
 
       <form onSubmit={handleCreateDevice}>
-        {/* INFORMACIÓN GENERAL */}
+        {/* ... (El resto del formulario (Grid, TextField, etc.) sigue exactamente igual) ... */}
+         {/* INFORMACIÓN GENERAL */}
         <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
           Información General
         </Typography>
@@ -335,7 +342,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             />
           </Grid>
         </Grid>
-
 
         {/* GARANTÍA */}
         <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>

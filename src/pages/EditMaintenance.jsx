@@ -1,5 +1,5 @@
 // src/pages/EditMaintenance.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -14,13 +14,14 @@ import {
   MenuItem,
   CircularProgress,
   Grid
-  // 👈 'Stack' e 'DownloadIcon' eliminados
 } from "@mui/material";
 import api from "../api/axios";
+import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
 
 const EditMaintenance = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener la función
 
   const [formData, setFormData] = useState({
     descripcion: "",
@@ -36,7 +37,6 @@ const EditMaintenance = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // ... (useEffect sigue igual)
     const fetchMaintenanceData = async () => {
       try {
         setLoading(true);
@@ -67,12 +67,10 @@ const EditMaintenance = () => {
   }, [id]);
 
   const handleChange = (e) => {
-    // ... (handleChange sigue igual)
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleUpdate = async (e) => {
-    // ... (handleUpdate sigue igual)
     e.preventDefault();
     setError("");
     setMessage("");
@@ -86,14 +84,13 @@ const EditMaintenance = () => {
 
     try {
       await api.put(`/maintenances/put/${id}`, payload);
+      refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
       setMessage("Mantenimiento actualizado correctamente.");
       setTimeout(() => navigate("/maintenances"), 1500);
     } catch (err) {
       setError(err.response?.data?.error || "Error al actualizar el mantenimiento.");
     }
   };
-
-  // 👈 FUNCIÓN 'handleExport' ELIMINADA
 
   if (loading) {
     return (
@@ -105,7 +102,6 @@ const EditMaintenance = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* ... (Títulos y Alertas) ... */}
       <Typography variant="h4" sx={{ mb: 3 }}>
         Editar Mantenimiento
       </Typography>
@@ -116,7 +112,6 @@ const EditMaintenance = () => {
       <Paper sx={{ p: 3 }}>
         <Box component="form" onSubmit={handleUpdate} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <Grid container spacing={2}>
-            {/* ... (Todos los Grid items del formulario) ... */}
             <Grid item xs={12}>
               <FormControl fullWidth required>
                 <InputLabel>Equipo (Device)</InputLabel>
@@ -188,7 +183,6 @@ const EditMaintenance = () => {
             </Grid>
           </Grid>
           
-          {/* 👇 STACK ELIMINADO Y RESTAURADO A UN SOLO BOTÓN 👇 */}
           <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
             Guardar Cambios
           </Button>

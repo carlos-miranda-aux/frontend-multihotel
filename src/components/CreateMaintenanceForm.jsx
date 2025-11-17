@@ -1,5 +1,5 @@
 // src/components/CreateMaintenanceForm.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
   Grid
 } from "@mui/material";
 import api from "../api/axios";
+import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
 
 const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setError }) => {
   const [formData, setFormData] = useState({
@@ -22,6 +23,7 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
   });
   
   const [devices, setDevices] = useState([]);
+  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener la función
 
   useEffect(() => {
     // Cargar la lista de equipos para el selector
@@ -54,7 +56,8 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
 
     try {
       await api.post("/maintenances/post", payload);
-      setMessage("Mantenimiento creado exitosamente.");
+      // setMessage("Mantenimiento creado exitosamente."); // 👈 Lo quitamos de aquí
+      refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
       onMaintenanceCreated(); 
       onClose(); 
     } catch (err) {

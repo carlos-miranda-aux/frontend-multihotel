@@ -1,5 +1,5 @@
 // src/pages/Inventory.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
 import {
   Box,
   Table,
@@ -18,10 +18,12 @@ import {
   Backdrop
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+// import DeleteIcon from "@mui/icons-material/Delete"; // 👈 Sigue eliminado (Soft Delete)
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateDeviceForm from "../components/CreateDeviceForm";
+import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
 
 const modalStyle = {
   position: 'absolute',
@@ -41,6 +43,7 @@ const Inventory = () => {
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const navigate = useNavigate();
+  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener refreshAlerts
 
   useEffect(() => {
     fetchDevices();
@@ -55,6 +58,8 @@ const Inventory = () => {
       setError("Error al cargar el inventario.");
     }
   };
+
+  // 👈 (Función handleDelete sigue eliminada)
 
   const handleEdit = (id) => {
     navigate(`/inventory/edit/${id}`);
@@ -131,7 +136,10 @@ const Inventory = () => {
           <Box sx={modalStyle}>
             <CreateDeviceForm
               onClose={handleCloseModal}
-              onDeviceCreated={fetchDevices}
+              onDeviceCreated={() => {
+                fetchDevices(); // Refresca la tabla local
+                refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
+              }}
               setMessage={setMessage}
               setError={setError}
             />

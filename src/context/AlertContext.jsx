@@ -6,12 +6,11 @@ export const AlertContext = createContext();
 
 export const AlertProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
-  const [devices, setDevices] = useState([]); // 👈 CORRECCIÓN: Añadido
+  const [devices, setDevices] = useState([]);
   const [warrantyAlertsList, setWarrantyAlertsList] = useState([]);
   const [pendingMaintenancesList, setPendingMaintenancesList] = useState([]);
   const [totalAlertCount, setTotalAlertCount] = useState(0);
 
-  // Esta función calcula todo
   const fetchAlertData = async () => {
     try {
       setLoading(true);
@@ -20,27 +19,33 @@ export const AlertProvider = ({ children }) => {
         api.get("/maintenances/get"),
       ]);
 
-      const devicesData = devicesRes.data || []; // 👈 CORRECCIÓN: Renombrada variable
+      const devicesData = devicesRes.data || [];
       const maintenances = maintenancesRes.data || [];
 
-      setDevices(devicesData); // 👈 CORRECCIÓN: Guardamos los dispositivos
+      setDevices(devicesData); 
 
-      // 1. Lógica de Mantenimientos
+      // 1. Lógica de Mantenimientos (sin cambios)
       const pendingMaint = maintenances.filter((m) => m.estado === "pendiente");
       setPendingMaintenancesList(pendingMaint);
 
-      // 2. Lógica de Garantías
+      // 2. Lógica de Garantías (CORREGIDA)
+      
+      // 👈 CORRECCIÓN 1: Normaliza "hoy" a la medianoche local
       const today = new Date();
+      today.setHours(0, 0, 0, 0); 
+
       const ninetyDaysFromNow = new Date();
       ninetyDaysFromNow.setDate(today.getDate() + 90);
+      ninetyDaysFromNow.setHours(0, 0, 0, 0); // También normaliza
 
       const expiringList = [];
 
-      devicesData.forEach((d) => { // 👈 CORRECCIÓN: Usamos devicesData
-        // Garantía
+      devicesData.forEach((d) => {
         if (d.garantia_fin) {
           const expirationDate = new Date(d.garantia_fin);
-          if (expirationDate > today && expirationDate <= ninetyDaysFromNow) {
+          // 👈 CORRECCIÓN 2: Compara la fecha de expiración (que es local)
+          // Usamos >= para incluir las que vencen HOY
+          if (expirationDate >= today && expirationDate <= ninetyDaysFromNow) {
             expiringList.push(d);
           }
         }
@@ -48,7 +53,7 @@ export const AlertProvider = ({ children }) => {
 
       setWarrantyAlertsList(expiringList);
       
-      // 3. Sumar todas las alertas para el ícono de la campana
+      // 3. Sumar todas las alertas
       setTotalAlertCount(pendingMaint.length + expiringList.length);
 
       setLoading(false);
@@ -58,7 +63,6 @@ export const AlertProvider = ({ children }) => {
     }
   };
 
-  // Cargar datos al iniciar la app
   useEffect(() => {
     fetchAlertData();
   }, []);
@@ -67,11 +71,11 @@ export const AlertProvider = ({ children }) => {
     <AlertContext.Provider
       value={{
         loading,
-        devices, // 👈 CORRECCIÓN: Exportamos la lista de dispositivos
+        devices, 
         warrantyAlertsList,
         pendingMaintenancesList,
         totalAlertCount,
-        refreshAlerts: fetchAlertData,
+        refreshAlerts: fetchAlertData, // 👈 CORRECCIÓN: Exponemos la función
       }}
     >
       {children}

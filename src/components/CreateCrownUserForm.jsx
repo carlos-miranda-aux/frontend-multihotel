@@ -9,6 +9,8 @@ import {
   Select,
   MenuItem,
   Button,
+  FormControlLabel, // 👈 AÑADIR
+  Switch            // 👈 AÑADIR
 } from "@mui/material";
 import api from "../api/axios";
 
@@ -19,20 +21,22 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
     departamentoId: "",
     usuario_login: "",
   });
+  const [isManager, setIsManager] = useState(false); // 👈 AÑADIR ESTADO
   const [departments, setDepartments] = useState([]);
-
+  
   useEffect(() => {
+    // Cargar Departamentos
+    const fetchDepartments = async () => {
+      try {
+        const res = await api.get("/departments/get");
+        setDepartments(res.data || []);
+      } catch (err) {
+        console.error("Error fetching departments:", err);
+        setError("Error al cargar departamentos.");
+      }
+    };
     fetchDepartments();
-  }, []);
-
-  const fetchDepartments = async () => {
-    try {
-      const response = await api.get("/departments/get");
-      setDepartments(response.data);
-    } catch (err) {
-      console.error("Error fetching departments:", err);
-    }
-  };
+  }, [setError]); // Dependencia corregida
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -42,8 +46,15 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
     e.preventDefault();
     setError("");
     setMessage("");
+    
+    const payload = {
+      ...formData,
+      departamentoId: formData.departamentoId || null,
+      es_jefe_de_area: isManager // 👈 AÑADIR CAMPO AL PAYLOAD
+    };
+
     try {
-      await api.post("/users/post", formData);
+      await api.post("/users/post", payload);
       setMessage("Usuario de Crown creado exitosamente.");
       onUserCreated();
       onClose();
@@ -91,6 +102,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
             ))}
           </Select>
         </FormControl>
+        
         <TextField
           label="Usuario de Login"
           name="usuario_login"
@@ -98,6 +110,19 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
           onChange={handleChange}
           fullWidth
         />
+
+        {/* 👇 AÑADIR ESTE BLOQUE 👇 */}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isManager}
+              onChange={(e) => setIsManager(e.target.checked)}
+            />
+          }
+          label="Es Jefe de Área (Recibe notificaciones)"
+        />
+        {/* 👆 FIN DEL BLOQUE NUEVO 👆 */}
+
         <Button type="submit" variant="contained" color="primary">
           Crear usuario
         </Button>

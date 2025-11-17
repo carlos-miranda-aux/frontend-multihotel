@@ -18,9 +18,9 @@ import BuildIcon from "@mui/icons-material/Build";
 import WarningIcon from "@mui/icons-material/Warning";
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import PeopleIcon from '@mui/icons-material/People';
-import EventNoteIcon from '@mui/icons-material/EventNote';
+// import EventNoteIcon from '@mui/icons-material/EventNote'; // 👈 ELIMINADO
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios"; // 👈 Importamos api
+import api from "../api/axios"; 
 import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertContext } from "../context/AlertContext"; 
@@ -63,13 +63,12 @@ const WidgetCard = ({ title, value, icon, color, onClick }) => (
 // --- Componente Principal del Home ---
 const Home = () => {
   const {
-    loading: alertLoading, // Renombrar para evitar conflicto
+    loading: alertLoading, 
     warrantyAlertsList,
     pendingMaintenancesList,
-    pendingRevisionsList,
+    // pendingRevisionsList, // 👈 ELIMINADO
   } = useContext(AlertContext);
 
-  // Estados propios de la página (KPIs y datos del gráfico)
   const [stats, setStats] = useState({
     totalDevices: 0,
     totalUsers: 0,
@@ -77,7 +76,7 @@ const Home = () => {
     warrantyAlertsCount: 0,
   });
   const [warrantyData, setWarrantyData] = useState([]);
-  const [pageLoading, setPageLoading] = useState(true); // Estado de carga propio
+  const [pageLoading, setPageLoading] = useState(true); 
   
   const navigate = useNavigate();
   const theme = useTheme();
@@ -88,21 +87,18 @@ const Home = () => {
   };
 
   useEffect(() => {
-    // Solo actuamos cuando las alertas del contexto hayan cargado
     if (!alertLoading) {
       
       const fetchPageSpecificData = async () => {
         try {
-          setPageLoading(true); // Inicia la carga de esta página
+          setPageLoading(true); 
           const [devicesRes, usersRes] = await Promise.all([
             api.get("/devices/get"),
             api.get("/users/get"),
           ]);
           
-          // 👇 --- INICIA LA CORRECCIÓN --- 👇
           const devices = devicesRes.data || [];
           const users = usersRes.data || [];
-          // 👆 --- TERMINA LA CORRECCIÓN --- 👆
 
           // --- Lógica de Garantías (para el gráfico) ---
           const today = new Date();
@@ -117,7 +113,6 @@ const Home = () => {
               safeCount++; 
             } else {
               const expirationDate = new Date(d.garantia_fin);
-              // Lógica corregida para 'Vigentes'
               if (expirationDate < today) {
                 // Vencida, ignorar
               } else if (expirationDate <= ninetyDaysFromNow) {
@@ -133,15 +128,15 @@ const Home = () => {
             { name: 'Riesgo (90d)', value: expiringSoonCount },
           ]);
           
-          // Calcular KPIs usando datos del contexto y de esta página
+          // Calcular KPIs (pendingTasksCount ahora solo usa maintenances)
           setStats({
             totalDevices: devices.length,
             totalUsers: users.length,
-            pendingTasksCount: pendingMaintenancesList.length + pendingRevisionsList.length,
+            pendingTasksCount: pendingMaintenancesList.length, // 👈 MODIFICADO
             warrantyAlertsCount: warrantyAlertsList.length,
           });
 
-          setPageLoading(false); // Termina la carga de esta página
+          setPageLoading(false); 
 
         } catch (error) {
            console.error("Error cargando datos de Home:", error);
@@ -151,9 +146,7 @@ const Home = () => {
 
       fetchPageSpecificData();
     }
-    // 👇 CORRECCIÓN CLAVE: El useEffect SÓLO debe depender de 'alertLoading'
-    // Las listas se leen del contexto *después* de que 'alertLoading' es false.
-  }, [alertLoading]); 
+  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList]); // 👈 MODIFICADO (dependemos de las listas del context)
 
 
   const formatDate = (dateString) => {
@@ -161,7 +154,6 @@ const Home = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Usamos el estado de carga combinado
   if (alertLoading || pageLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
@@ -172,7 +164,6 @@ const Home = () => {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* ... (Título sin cambios) ... */}
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Panel de Control
       </Typography>
@@ -205,7 +196,7 @@ const Home = () => {
 
         <Grid item xs={12} sm={6} md={3}>
           <WidgetCard
-            title="Tareas Pendientes" 
+            title="Tareas Pendientes" // (Ahora incluye revisiones)
             value={stats.pendingTasksCount}
             icon={<BuildIcon />}
             color={stats.pendingTasksCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
@@ -233,8 +224,8 @@ const Home = () => {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             
-            {/* Mantenimientos Programados */}
-            {pendingMaintenancesList.length > 0 && (
+            {/* Mantenimientos Programados (ahora incluye revisiones) */}
+            {pendingMaintenancesList.length > 0 ? (
               <List dense disablePadding>
                 {pendingMaintenancesList.map((m) => (
                   <ListItem key={`m-${m.id}`} divider
@@ -249,42 +240,19 @@ const Home = () => {
                     </ListItemIcon>
                     <ListItemText
                       primary={<strong>{m.device?.etiqueta || 'Equipo no encontrado'}</strong>}
-                      secondary={`MANTENIMIENTO: ${m.descripcion} (Prog: ${formatDate(m.fecha_programada)})`}
+                      secondary={`TAREA: ${m.descripcion} (Prog: ${formatDate(m.fecha_programada)})`}
                     />
                   </ListItem>
                 ))}
               </List>
-            )}
-
-            {/* Revisiones Vencidas */}
-            {pendingRevisionsList.length > 0 && (
-              <List dense disablePadding sx={{ mt: pendingMaintenancesList.length > 0 ? 2 : 0 }}>
-                {pendingRevisionsList.map((d) => (
-                  <ListItem key={`d-${d.id}`} divider
-                    secondaryAction={
-                      <Button size="small" variant="outlined" color="error" onClick={() => navigate(`/inventory/edit/${d.id}`)}>
-                        Ver Equipo
-                      </Button>
-                    }
-                  >
-                    <ListItemIcon sx={{ minWidth: 40, color: theme.palette.error.main }}>
-                      <EventNoteIcon />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={<strong>{d.etiqueta || 'N/A'}</strong>}
-                      secondary={`REVISIÓN VENCIDA: (Venció: ${formatDate(d.fecha_proxima_revision)})`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            )}
-
-            {/* Mensaje si no hay nada */}
-            {pendingMaintenancesList.length === 0 && pendingRevisionsList.length === 0 && (
+            ) : (
               <Typography color="textSecondary" sx={{ textAlign: 'center', pt: 4 }}>
                 No hay tareas pendientes. ¡Buen trabajo!
               </Typography>
             )}
+
+            {/* 👇 BLOQUE DE REVISIONES ELIMINADO 👇 */}
+
           </Paper>
         </Grid>
         

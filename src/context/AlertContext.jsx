@@ -7,7 +7,7 @@ export const AlertProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [warrantyAlertsList, setWarrantyAlertsList] = useState([]);
   const [pendingMaintenancesList, setPendingMaintenancesList] = useState([]);
-  const [pendingRevisionsList, setPendingRevisionsList] = useState([]);
+  // const [pendingRevisionsList, setPendingRevisionsList] = useState([]); // 👈 ELIMINADO
   const [totalAlertCount, setTotalAlertCount] = useState(0);
 
   // Esta función calcula todo
@@ -19,23 +19,20 @@ export const AlertProvider = ({ children }) => {
         api.get("/maintenances/get"),
       ]);
 
-      // 👇 --- INICIA LA CORRECCIÓN --- 👇
-      // Si la API no devuelve datos, usamos un array vacío como fallback
       const devices = devicesRes.data || [];
       const maintenances = maintenancesRes.data || [];
-      // 👆 --- TERMINA LA CORRECCIÓN --- 👆
 
       // 1. Lógica de Mantenimientos
       const pendingMaint = maintenances.filter((m) => m.estado === "pendiente");
       setPendingMaintenancesList(pendingMaint);
 
-      // 2. Lógica de Garantías y Revisiones
+      // 2. Lógica de Garantías
       const today = new Date();
       const ninetyDaysFromNow = new Date();
       ninetyDaysFromNow.setDate(today.getDate() + 90);
 
       const expiringList = [];
-      const revisionList = [];
+      // const revisionList = []; // 👈 ELIMINADO
 
       devices.forEach((d) => {
         // Garantía
@@ -45,20 +42,15 @@ export const AlertProvider = ({ children }) => {
             expiringList.push(d);
           }
         }
-        // Revisión
-        if (d.fecha_proxima_revision) {
-          const revisionDate = new Date(d.fecha_proxima_revision);
-          if (revisionDate < today) {
-            revisionList.push(d);
-          }
-        }
+        // Lógica de Revisión ELIMINADA de aquí
       });
 
       setWarrantyAlertsList(expiringList);
-      setPendingRevisionsList(revisionList);
+      // setPendingRevisionsList(revisionList); // 👈 ELIMINADO
       
       // 3. Sumar todas las alertas para el ícono de la campana
-      setTotalAlertCount(pendingMaint.length + expiringList.length + revisionList.length);
+      //    (Quitamos revisionList.length)
+      setTotalAlertCount(pendingMaint.length + expiringList.length); // 👈 MODIFICADO
 
       setLoading(false);
     } catch (error) {
@@ -78,7 +70,7 @@ export const AlertProvider = ({ children }) => {
         loading,
         warrantyAlertsList,
         pendingMaintenancesList,
-        pendingRevisionsList,
+        // pendingRevisionsList, // 👈 ELIMINADO
         totalAlertCount,
         refreshAlerts: fetchAlertData,
       }}

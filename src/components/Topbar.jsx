@@ -13,13 +13,13 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider // Asegúrate de que Divider esté importado
+  Divider
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import WarningIcon from "@mui/icons-material/Warning";
 import BuildIcon from "@mui/icons-material/Build";
-import EventNoteIcon from '@mui/icons-material/EventNote';
+// import EventNoteIcon from '@mui/icons-material/EventNote'; // 👈 ELIMINADO
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
 import Logo from "../assets/logo.png";
@@ -27,8 +27,8 @@ import { useNavigate } from "react-router-dom";
 
 const TopBar = ({ onMenuClick }) => {
   const { user, logout } = useContext(AuthContext);
-  // Usar el contexto de alertas
-  const { totalAlertCount, warrantyAlertsList, pendingMaintenancesList, pendingRevisionsList } = useContext(AlertContext);
+  // Usar el contexto de alertas (sin pendingRevisionsList)
+  const { totalAlertCount, warrantyAlertsList, pendingMaintenancesList } = useContext(AlertContext); // 👈 MODIFICADO
 
   const [profileAnchorEl, setProfileAnchorEl] = React.useState(null);
   const [alertsAnchorEl, setAlertsAnchorEl] = React.useState(null);
@@ -129,31 +129,25 @@ const TopBar = ({ onMenuClick }) => {
                 ) : (
                   <>
                     {/* Alertas de Garantía */}
-                    {(warrantyAlertsList || []).map(device => ( // Protección || []
+                    {(warrantyAlertsList || []).map(device => ( 
                       <MenuItem key={`w-${device.id}`} onClick={() => { navigate(`/inventory/edit/${device.id}`); handleAlertsClose(); }}>
                         <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
                         <ListItemText primary="Garantía por Vencer" secondary={`${device.etiqueta} - Vence: ${formatDate(device.garantia_fin)}`} />
                       </MenuItem>
                     ))}
                     {/* Alertas de Mantenimiento */}
-                    {(pendingMaintenancesList || []).map(maint => ( // Protección || []
+                    {(pendingMaintenancesList || []).map(maint => ( 
                       <MenuItem key={`m-${maint.id}`} onClick={() => { navigate(`/maintenances/edit/${maint.id}`); handleAlertsClose(); }}>
                         <ListItemIcon><BuildIcon color="warning" /></ListItemIcon>
-                        {/* 👇 --- INICIA LA CORRECCIÓN --- 👇 */}
                         <ListItemText 
                           primary="Mantenimiento Pendiente" 
                           secondary={`${maint.device?.etiqueta || 'N/A'} - ${maint.descripcion?.substring(0, 25) || ''}...`} 
                         />
-                        {/* 👆 --- TERMINA LA CORRECCIÓN --- 👆 */}
                       </MenuItem>
                     ))}
-                    {/* Alertas de Revisión */}
-                    {(pendingRevisionsList || []).map(device => ( // Protección || []
-                      <MenuItem key={`r-${device.id}`} onClick={() => { navigate(`/inventory/edit/${device.id}`); handleAlertsClose(); }}>
-                        <ListItemIcon><EventNoteIcon color="warning" /></ListItemIcon>
-                        <ListItemText primary="Revisión Vencida" secondary={`${device.etiqueta} - Venció: ${formatDate(device.fecha_proxima_revision)}`} />
-                      </MenuItem>
-                    ))}
+                    
+                    {/* 👇 BLOQUE DE REVISIONES ELIMINADO 👇 */}
+                    
                   </>
                 )}
               </List>

@@ -1,3 +1,4 @@
+// src/context/AlertContext.jsx
 import React, { createContext, useState, useEffect, useContext } from "react";
 import api from "../api/axios";
 
@@ -5,9 +6,9 @@ export const AlertContext = createContext();
 
 export const AlertProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
+  const [devices, setDevices] = useState([]); // 👈 CORRECCIÓN: Añadido
   const [warrantyAlertsList, setWarrantyAlertsList] = useState([]);
   const [pendingMaintenancesList, setPendingMaintenancesList] = useState([]);
-  // const [pendingRevisionsList, setPendingRevisionsList] = useState([]); // 👈 ELIMINADO
   const [totalAlertCount, setTotalAlertCount] = useState(0);
 
   // Esta función calcula todo
@@ -19,8 +20,10 @@ export const AlertProvider = ({ children }) => {
         api.get("/maintenances/get"),
       ]);
 
-      const devices = devicesRes.data || [];
+      const devicesData = devicesRes.data || []; // 👈 CORRECCIÓN: Renombrada variable
       const maintenances = maintenancesRes.data || [];
+
+      setDevices(devicesData); // 👈 CORRECCIÓN: Guardamos los dispositivos
 
       // 1. Lógica de Mantenimientos
       const pendingMaint = maintenances.filter((m) => m.estado === "pendiente");
@@ -32,9 +35,8 @@ export const AlertProvider = ({ children }) => {
       ninetyDaysFromNow.setDate(today.getDate() + 90);
 
       const expiringList = [];
-      // const revisionList = []; // 👈 ELIMINADO
 
-      devices.forEach((d) => {
+      devicesData.forEach((d) => { // 👈 CORRECCIÓN: Usamos devicesData
         // Garantía
         if (d.garantia_fin) {
           const expirationDate = new Date(d.garantia_fin);
@@ -42,15 +44,12 @@ export const AlertProvider = ({ children }) => {
             expiringList.push(d);
           }
         }
-        // Lógica de Revisión ELIMINADA de aquí
       });
 
       setWarrantyAlertsList(expiringList);
-      // setPendingRevisionsList(revisionList); // 👈 ELIMINADO
       
       // 3. Sumar todas las alertas para el ícono de la campana
-      //    (Quitamos revisionList.length)
-      setTotalAlertCount(pendingMaint.length + expiringList.length); // 👈 MODIFICADO
+      setTotalAlertCount(pendingMaint.length + expiringList.length);
 
       setLoading(false);
     } catch (error) {
@@ -68,9 +67,9 @@ export const AlertProvider = ({ children }) => {
     <AlertContext.Provider
       value={{
         loading,
+        devices, // 👈 CORRECCIÓN: Exportamos la lista de dispositivos
         warrantyAlertsList,
         pendingMaintenancesList,
-        // pendingRevisionsList, // 👈 ELIMINADO
         totalAlertCount,
         refreshAlerts: fetchAlertData,
       }}

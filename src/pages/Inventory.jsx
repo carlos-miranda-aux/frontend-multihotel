@@ -18,7 +18,6 @@ import {
   Backdrop
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
@@ -54,18 +53,6 @@ const Inventory = () => {
     } catch (err) {
       console.error("Error al obtener dispositivos:", err);
       setError("Error al cargar el inventario.");
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este equipo?")) {
-      try {
-        await api.delete(`/devices/delete/${id}`);
-        setMessage("Equipo eliminado correctamente.");
-        fetchDevices();
-      } catch (err) {
-        setError(err.response?.data?.error || "Error al eliminar el equipo.");
-      }
     }
   };
 
@@ -122,12 +109,6 @@ const Inventory = () => {
                     onClick={() => handleEdit(device.id)}
                   >
                     <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => handleDelete(device.id)}
-                  >
-                    <DeleteIcon />
                   </IconButton>
                 </TableCell>
               </TableRow>

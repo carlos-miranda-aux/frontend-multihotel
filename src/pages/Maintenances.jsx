@@ -46,7 +46,8 @@ const modalStyle = {
 };
 
 const Maintenances = () => {
-  const [devices, setDevices] = useState([]);
+  //const [devices, setDevices] = useState([]);
+  const [groupedDevices, setGroupedDevices] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
@@ -54,16 +55,40 @@ const Maintenances = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchDevicesWithMaintenances();
+    //fetchDevicesWithMaintenances();
+    fetchMaintenances();
   }, []);
 
-  const fetchDevicesWithMaintenances = async () => {
+  const fetchMaintenances = async () => {
     try {
-      const res = await api.get("/devices/get");
-      setDevices(res.data);
+      const res = await api.get("/maintenances/get"); // Llama a la ruta de mantenimientos
+      const maintenances = res.data || [];
+
+      // Agrupar mantenimientos por dispositivo
+      const devicesMap = new Map();
+      maintenances.forEach((maint) => {
+        if (!maint.device) return; // Omitir mantenimientos sin dispositivo
+
+        const deviceId = maint.device.id;
+
+        if (!devicesMap.has(deviceId)) {
+          // Si es la primera vez que vemos este dispositivo, lo añadimos al Map
+          devicesMap.set(deviceId, {
+            ...maint.device, // Copia toda la info del dispositivo
+            maintenances: [], // Prepara un array para sus mantenimientos
+          });
+        }
+
+        // Añade el mantenimiento actual al dispositivo correspondiente
+        devicesMap.get(deviceId).maintenances.push(maint);
+      });
+
+      // Convierte el Map a un array y lo guarda en el estado
+      setGroupedDevices(Array.from(devicesMap.values()));
+
     } catch (err) {
-      console.error("Error al obtener equipos:", err);
-      setError("Error al cargar los equipos y sus mantenimientos.");
+      console.error("Error al obtener mantenimientos:", err);
+      setError("Error al cargar los mantenimientos.");
     }
   };
 
@@ -122,11 +147,11 @@ const Maintenances = () => {
   };
 
   // ... (Lógica de filtrado para 'programados' e 'historial' sigue igual)
-  const programados = devices
+const programados = groupedDevices
     .map(d => ({ ...d, maintenances: d.maintenances.filter(m => m.estado === 'pendiente')}))
     .filter(d => d.maintenances.length > 0);
 
-  const historial = devices
+  const historial = groupedDevices
     .map(d => ({ ...d, maintenances: d.maintenances.filter(m => m.estado !== 'pendiente')}))
     .filter(d => d.maintenances.length > 0);
 

@@ -18,12 +18,11 @@ import BuildIcon from "@mui/icons-material/Build";
 import WarningIcon from "@mui/icons-material/Warning";
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import PeopleIcon from '@mui/icons-material/People';
-// import EventNoteIcon from '@mui/icons-material/EventNote'; // 👈 ELIMINADO
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios"; 
 import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertContext } from "../context/AlertContext"; 
+import { AlertContext } from "../context/AlertContext"; // 👈 Contexto de Alertas
 
 // ... (Componente WidgetCard sin cambios) ...
 const WidgetCard = ({ title, value, icon, color, onClick }) => (
@@ -66,7 +65,7 @@ const Home = () => {
     loading: alertLoading, 
     warrantyAlertsList,
     pendingMaintenancesList,
-    // pendingRevisionsList, // 👈 ELIMINADO
+    devices // 👈 CORRECCIÓN: Obtenemos devices del contexto
   } = useContext(AlertContext);
 
   const [stats, setStats] = useState({
@@ -87,20 +86,24 @@ const Home = () => {
   };
 
   useEffect(() => {
+    // Solo ejecutamos esto cuando el contexto (alertLoading) haya terminado
     if (!alertLoading) {
       
       const fetchPageSpecificData = async () => {
         try {
           setPageLoading(true); 
-          const [devicesRes, usersRes] = await Promise.all([
-            api.get("/devices/get"),
-            api.get("/users/get"),
+
+          // 👈 CORRECCIÓN: Eliminamos la petición duplicada a /devices/get
+          const [usersRes] = await Promise.all([
+            // api.get("/devices/get"), // 👈 ELIMINADA
+            api.get("/users/get"), // Solo pedimos los usuarios
           ]);
           
-          const devices = devicesRes.data || [];
+          // const devices = devicesRes.data || []; // 👈 ELIMINADA (ya viene del context)
           const users = usersRes.data || [];
 
           // --- Lógica de Garantías (para el gráfico) ---
+          // (Usa 'devices' del contexto)
           const today = new Date();
           const ninetyDaysFromNow = new Date();
           ninetyDaysFromNow.setDate(today.getDate() + 90);
@@ -108,7 +111,7 @@ const Home = () => {
           let safeCount = 0; 
           let expiringSoonCount = 0;
 
-          devices.forEach((d) => {
+          devices.forEach((d) => { // 👈 CORRECCIÓN: 'devices' es del contexto
             if (!d.garantia_fin) {
               safeCount++; 
             } else {
@@ -128,11 +131,11 @@ const Home = () => {
             { name: 'Riesgo (90d)', value: expiringSoonCount },
           ]);
           
-          // Calcular KPIs (pendingTasksCount ahora solo usa maintenances)
+          // Calcular KPIs
           setStats({
-            totalDevices: devices.length,
+            totalDevices: devices.length, // 👈 CORRECCIÓN: 'devices' es del contexto
             totalUsers: users.length,
-            pendingTasksCount: pendingMaintenancesList.length, // 👈 MODIFICADO
+            pendingTasksCount: pendingMaintenancesList.length,
             warrantyAlertsCount: warrantyAlertsList.length,
           });
 
@@ -146,7 +149,8 @@ const Home = () => {
 
       fetchPageSpecificData();
     }
-  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList]); // 👈 MODIFICADO (dependemos de las listas del context)
+    // 👈 CORRECCIÓN: Añadimos 'devices' a las dependencias
+  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList, devices]); 
 
 
   const formatDate = (dateString) => {
@@ -196,7 +200,7 @@ const Home = () => {
 
         <Grid item xs={12} sm={6} md={3}>
           <WidgetCard
-            title="Tareas Pendientes" // (Ahora incluye revisiones)
+            title="Tareas Pendientes" 
             value={stats.pendingTasksCount}
             icon={<BuildIcon />}
             color={stats.pendingTasksCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
@@ -224,7 +228,6 @@ const Home = () => {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             
-            {/* Mantenimientos Programados (ahora incluye revisiones) */}
             {pendingMaintenancesList.length > 0 ? (
               <List dense disablePadding>
                 {pendingMaintenancesList.map((m) => (
@@ -250,9 +253,6 @@ const Home = () => {
                 No hay tareas pendientes. ¡Buen trabajo!
               </Typography>
             )}
-
-            {/* 👇 BLOQUE DE REVISIONES ELIMINADO 👇 */}
-
           </Paper>
         </Grid>
         

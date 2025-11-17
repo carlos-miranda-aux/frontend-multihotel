@@ -1,5 +1,5 @@
 // src/pages/Disposals.jsx
-import React, { useEffect, useState, useContext } from "react"; // 👈 Agrega useContext
+import React, { useEffect, useState, useContext } from "react";
 import {
   Box,
   Typography,
@@ -12,18 +12,18 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  IconButton // 👈 Agrega IconButton
+  IconButton
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit"; // 👈 Agrega EditIcon
+import EditIcon from "@mui/icons-material/Edit";
 import api from "../api/axios";
-import { AuthContext } from "../context/AuthContext"; // 👈 Agrega AuthContext
-import { useNavigate } from "react-router-dom"; // 👈 Agrega useNavigate
+import { AuthContext } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Disposals = () => {
   const [disposals, setDisposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const { user } = useContext(AuthContext); // 👈 Obtener información del usuario
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,7 +33,8 @@ const Disposals = () => {
   const fetchDisposals = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/disposals/get");
+      // Esta ruta obtiene los 'Devices' con estado "Baja"
+      const response = await api.get("/disposals/get"); 
       setDisposals(response.data);
       setLoading(false);
     } catch (err) {
@@ -44,6 +45,7 @@ const Disposals = () => {
   };
 
   const handleEdit = (id) => {
+    // Navega al 'EditDevice' para añadir/editar la nota
     navigate(`/inventory/edit/${id}`);
   };
 
@@ -71,11 +73,10 @@ const Disposals = () => {
               <TableCell>N° Serie</TableCell>
               <TableCell>Tipo</TableCell>
               <TableCell>Estado</TableCell>
-              <TableCell>Motivo</TableCell>
-              <TableCell>Observaciones</TableCell>
+              <TableCell>Motivo</TableCell> {/* 👈 CORRECCIÓN */}
+              <TableCell>Observaciones</TableCell> {/* 👈 CORRECCIÓN */}
               <TableCell>Fecha de Baja</TableCell>
-              {/* 📌 Muestra la columna de acciones solo si el usuario tiene permisos */}
-              {(user?.role === "ADMIN" || user?.role === "EDITOR") && <TableCell>Acciones</TableCell>}
+              {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && <TableCell>Acciones</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -86,14 +87,13 @@ const Disposals = () => {
                   <TableCell>{disposal.numero_serie || 'N/A'}</TableCell>
                   <TableCell>{disposal.tipo?.nombre || 'N/A'}</TableCell>
                   <TableCell>{disposal.estado?.nombre || 'N/A'}</TableCell>
-                  <TableCell>{disposal.motivo || 'N/A'}</TableCell>
-                  <TableCell>{disposal.observaciones || 'N/A'}</TableCell>
-                  {/* 📌 Muestra la fecha de baja si existe */}
+                  {/* 👈 CORRECCIÓN: Lee los nuevos campos de la BD */}
+                  <TableCell>{disposal.motivo_baja || 'N/A'}</TableCell>
+                  <TableCell>{disposal.observaciones_baja || 'N/A'}</TableCell>
                   <TableCell>
                     {disposal.fecha_baja ? new Date(disposal.fecha_baja).toLocaleDateString() : 'N/A'}
                   </TableCell>
-                  {/* 📌 Muestra el botón de editar solo si el usuario tiene permisos */}
-                  {(user?.role === "ADMIN" || user?.role === "EDITOR") && (
+                  {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && (
                     <TableCell>
                       <IconButton
                         color="primary"
@@ -107,7 +107,7 @@ const Disposals = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center"> {/* 👈 ColSpan actualizado a 8 */}
                   No hay equipos dados de baja.
                 </TableCell>
               </TableRow>

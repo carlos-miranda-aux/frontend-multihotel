@@ -1,5 +1,5 @@
 // src/pages/EditDevice.jsx
-import React, { useState, useEffect, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Typography,
@@ -15,25 +15,23 @@ import {
   Grid,
   Divider,
   Stack,
+  Fade,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
+import { AlertContext } from "../context/AlertContext";
 
-// 👈 CORRECCIÓN: Función para parsear la fecha como LOCAL
+// Función para parsear la fecha como LOCAL
 const parseLocalDate = (dateString) => {
   if (!dateString) return null;
-  // "YYYY-MM-DD" -> ["YYYY", "MM", "DD"]
   const parts = dateString.split('-');
-  // new Date(year, monthIndex, day)
-  // Esto crea la fecha en la medianoche de la zona horaria local
   return new Date(parts[0], parts[1] - 1, parts[2]);
 };
 
 const EditDevice = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener refreshAlerts
+  const { refreshAlerts } = useContext(AlertContext);
 
   const [formData, setFormData] = useState({
     nombre_equipo: "",
@@ -57,6 +55,8 @@ const EditDevice = () => {
     garantia_fin: "",
     departamentoId: "",
     fecha_proxima_revision: "",
+    motivo_baja: "",
+    observaciones_baja: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -67,6 +67,8 @@ const EditDevice = () => {
   const [departments, setDepartments] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [bajaStatusId, setBajaStatusId] = useState(null);
+  const [isPermanentlyBaja, setIsPermanentlyBaja] = useState(false); // 👈 CORRECCIÓN: Nuevo estado
 
   useEffect(() => {
     const fetchDeviceData = async () => {
@@ -90,17 +92,24 @@ const EditDevice = () => {
 
         const deviceData = deviceResponse.data;
         
-        // 👈 CORRECCIÓN: Función interna para formatear la fecha para el input type="date"
         const formatDateForInput = (dateString) => {
             if (!dateString) return "";
-            // La fecha de la BD (ISO) la convertimos a un objeto Date
-            // y luego extraemos el YYYY-MM-DD
             try {
                 return new Date(dateString).toISOString().substring(0, 10);
             } catch (e) {
-                return ""; // Devuelve vacío si la fecha es inválida
+                return "";
             }
         };
+        
+        const bajaStatus = deviceStatusesRes.data.find(s => s.nombre.toLowerCase() === 'baja');
+        if (bajaStatus) {
+          setBajaStatusId(bajaStatus.id);
+        }
+
+        // 👈 CORRECCIÓN: Comprobar si el dispositivo ya está de baja al cargar
+        if (bajaStatus && deviceData.estadoId === bajaStatus.id) {
+          setIsPermanentlyBaja(true);
+        }
 
         setFormData({
           nombre_equipo: deviceData.nombre_equipo || "",
@@ -120,10 +129,12 @@ const EditDevice = () => {
           office_serial: deviceData.office_serial || "",
           office_key: deviceData.office_key || "",
           garantia_numero_producto: deviceData.garantia_numero_producto || "",
-          garantia_inicio: formatDateForInput(deviceData.garantia_inicio), // 👈 CORRECCIÓN
-          garantia_fin: formatDateForInput(deviceData.garantia_fin), // 👈 CORRECCIÓN
+          garantia_inicio: formatDateForInput(deviceData.garantia_inicio),
+          garantia_fin: formatDateForInput(deviceData.garantia_fin),
           departamentoId: deviceData.departamentoId || "",
-          fecha_proxima_revision: formatDateForInput(deviceData.fecha_proxima_revision), // 👈 CORRECCIÓN
+          fecha_proxima_revision: formatDateForInput(deviceData.fecha_proxima_revision),
+          motivo_baja: deviceData.motivo_baja || "",
+          observaciones_baja: deviceData.observaciones_baja || "",
         }); 
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
@@ -151,8 +162,6 @@ const EditDevice = () => {
 
     const payload = { ...formData };
     
-    // 👇 --- INICIA LA CORRECCIÓN --- 👇
-    // Convertir las fechas al formato ISO-8601 usando la hora LOCAL
     const localGarantiainicio = parseLocalDate(payload.garantia_inicio);
     const localGarantiaFin = parseLocalDate(payload.garantia_fin);
     const localProximaRevision = parseLocalDate(payload.fecha_proxima_revision);
@@ -160,14 +169,24 @@ const EditDevice = () => {
     payload.garantia_inicio = localGarantiainicio ? localGarantiainicio.toISOString() : null;
     payload.garantia_fin = localGarantiaFin ? localGarantiaFin.toISOString() : null;
     payload.fecha_proxima_revision = localProximaRevision ? localProximaRevision.toISOString() : null;
-    // 👆 --- TERMINA LA CORRECCIÓN --- 👆
+
+    if (payload.estadoId !== bajaStatusId) {
+      payload.motivo_baja = null;
+      payload.observaciones_baja = null;
+    }
 
     try {
       await api.put(`/devices/put/${id}`, payload);
-      refreshAlerts(); // 👈 CORRECCIÓN: Refrescar alertas globales
+      refreshAlerts();
       setMessage("Equipo actualizado correctamente.");
-      setTimeout(() => navigate("/inventory"), 1200);
+      // 👈 CORRECCIÓN: Redirige a 'Bajas' si es una baja, si no a 'Inventario'
+      if (isPermanentlyBaja || payload.estadoId === bajaStatusId) {
+        setTimeout(() => navigate("/disposals"), 1200);
+      } else {
+        setTimeout(() => navigate("/inventory"), 1200);
+      }
     } catch (err) {
+      // 👈 CORRECCIÓN: Muestra el error específico del backend
       setError(err.response?.data?.error || "Error al actualizar el equipo.");
     }
   };
@@ -186,7 +205,7 @@ const EditDevice = () => {
         <Typography variant="h4" fontWeight="bold">
           Editar equipo
         </Typography>
-        <Button variant="outlined" onClick={() => navigate("/inventory")}>
+        <Button variant="outlined" onClick={() => navigate(-1)}> {/* 👈 CORRECCIÓN: Regresa a la página anterior */}
           Volver
         </Button>
       </Stack>
@@ -196,13 +215,12 @@ const EditDevice = () => {
 
       <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3, width: "100%" }}>
         <form onSubmit={handleUpdate}>
-          {/* ... (Todo el formulario (Grid, TextField, etc.) sigue exactamente igual) ... */}
-          {/* DATOS GENERALES */}
+          {/* ... (Datos Generales, Software, Garantía, Asignación - Sin cambios) ... */}
+           {/* DATOS GENERALES */}
           <Typography variant="h6" sx={{ mb: 1 }}>
             Datos generales
           </Typography>
           <Divider sx={{ mb: 2 }} />
-
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField label="Etiqueta" name="etiqueta" fullWidth value={formData.etiqueta} onChange={handleChange} />
@@ -240,7 +258,6 @@ const EditDevice = () => {
             Software y licencias
           </Typography>
           <Divider sx={{ mb: 2 }} />
-
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
@@ -284,7 +301,6 @@ const EditDevice = () => {
             Garantía
           </Typography>
           <Divider sx={{ mb: 2 }} />
-
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField label="Número de producto" name="garantia_numero_producto" fullWidth value={formData.garantia_numero_producto} onChange={handleChange} />
@@ -329,9 +345,8 @@ const EditDevice = () => {
             Asignación
           </Typography>
           <Divider sx={{ mb: 2 }} />
-
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Usuario asignado</InputLabel>
                 <Select
@@ -382,7 +397,8 @@ const EditDevice = () => {
 
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth>
+              {/* 👈 CORRECCIÓN: Añadido 'disabled' */}
+              <FormControl fullWidth disabled={isPermanentlyBaja}>
                 <InputLabel>Estado del equipo</InputLabel>
                 <Select
                   name="estadoId"
@@ -401,6 +417,33 @@ const EditDevice = () => {
                 </Select>
               </FormControl>
             </Grid>
+            
+            {/* 👈 CORRECCIÓN: Ahora se muestra si el estado ES "Baja" (nuevo o permanente) */}
+            <Fade in={formData.estadoId === bajaStatusId} mountOnEnter unmountOnExit>
+              <Grid item container xs={12} spacing={2} sx={{ mt: 0 }}>
+                <Grid item xs={12}>
+                    <TextField
+                      label="Motivo de la Baja"
+                      name="motivo_baja"
+                      fullWidth
+                      value={formData.motivo_baja}
+                      onChange={handleChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Observaciones de la Baja"
+                      name="observaciones_baja"
+                      fullWidth
+                      multiline
+                      rows={3}
+                      value={formData.observaciones_baja}
+                      onChange={handleChange}
+                    />
+                  </Grid>
+              </Grid>
+            </Fade>
+
           </Grid>
 
           {/* ACCIONES */}

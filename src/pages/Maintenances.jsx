@@ -80,13 +80,11 @@ const Maintenances = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, activeTab, search]); // 👈 Dependencia search
+  }, [page, rowsPerPage, activeTab, search]); 
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchMaintenances();
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
+    // ❌ ELIMINADO: Removimos el delay de 500ms
+    fetchMaintenances();
   }, [fetchMaintenances]);
 
   const handleSearchChange = (e) => {
@@ -114,7 +112,7 @@ const Maintenances = () => {
   };
 
   const handleExport = async (id) => {
-    // ... (mismo código de exportación)
+    // ... (código de exportación sin cambios)
     setMessage("");
     setError("");
     try {

@@ -34,10 +34,8 @@ const UsersCrownP = () => {
   const { sortedItems: sortedUsers, requestSort, sortConfig } = useSortableData(users, { key: 'nombre', direction: 'ascending' });
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchUsers();
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
+    // ❌ ELIMINADO: Removimos el delay de 500ms
+    fetchUsers(); 
   }, [page, rowsPerPage, search]);
 
   const fetchUsers = async () => {

@@ -51,7 +51,7 @@ const Inventory = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalDevices, setTotalDevices] = useState(0);
-  const [search, setSearch] = useState(""); // 👈 CORRECCIÓN: Estado para búsqueda
+  const [search, setSearch] = useState(""); // 👈 Estado para búsqueda
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
@@ -59,12 +59,8 @@ const Inventory = () => {
   const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'etiqueta', direction: 'ascending' });
 
   useEffect(() => {
-    // Debounce para evitar muchas peticiones al escribir
-    const delayDebounceFn = setTimeout(() => {
-      fetchDevices();
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
+    // ❌ ELIMINADO: Removimos el delay de 500ms
+    fetchDevices(); 
   }, [page, rowsPerPage, search]); // 👈 Dependencia 'search'
 
   const fetchDevices = async () => {

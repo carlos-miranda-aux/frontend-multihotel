@@ -38,10 +38,8 @@ const Disposals = () => {
   const { sortedItems: sortedDisposals, requestSort, sortConfig } = useSortableData(disposals, { key: 'etiqueta', direction: 'ascending' });
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchDisposals();
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
+    // ✅ CORRECCIÓN: Eliminado el debounce de 500ms para carga instantánea.
+    fetchDisposals();
   }, [page, rowsPerPage, search]);
 
   const fetchDisposals = async () => {

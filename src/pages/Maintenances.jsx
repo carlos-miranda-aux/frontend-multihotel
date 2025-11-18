@@ -21,20 +21,19 @@ import {
   Tab,
   TablePagination,
   CircularProgress,
-  TableSortLabel // 👈 CORRECCIÓN: Importar
+  TableSortLabel
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import DownloadIcon from '@mui/icons-material/Download';
-import api from "../api/axios";
+import api from "../api/axios"; // 👈 Tu instancia de axios
 import { useNavigate } from "react-router-dom";
 import CreateMaintenanceForm from "../components/CreateMaintenanceForm";
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
-import { useSortableData } from "../hooks/useSortableData"; // 👈 CORRECCIÓN: Importar Hook
+import { useSortableData } from "../hooks/useSortableData";
 
-// ... (modalStyle sigue igual)
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -63,7 +62,6 @@ const Maintenances = () => {
   const { refreshAlerts } = useContext(AlertContext);
   const navigate = useNavigate();
 
-  // 👈 CORRECCIÓN: Usar el hook de ordenamiento
   const { sortedItems: sortedMaintenances, requestSort, sortConfig } = useSortableData(maintenances, { key: 'fecha_programada', direction: 'descending' });
 
   const fetchMaintenances = useCallback(async () => {
@@ -104,9 +102,42 @@ const Maintenances = () => {
     navigate(`/maintenances/edit/${m_id}`);
   };
 
-  const handleExport = (id) => {
-    // ... (sin cambios)
+  // -----------------------------------------------------------
+  // 👈 CORRECCIÓN: Función 'handleExport' reescrita con 'api' (axios)
+  // -----------------------------------------------------------
+  const handleExport = async (id) => {
+    setMessage("");
+    setError("");
+    try {
+      // Usa 'api.get' que ya envía las cookies de autenticación
+      const response = await api.get(
+        `/maintenances/export/individual/${id}`,
+        {
+          responseType: 'blob', // 👈 IMPORTANTE: Pide a axios que la respuesta es un archivo
+        }
+      );
+
+      // Crear un enlace temporal para descargar el archivo
+      const href = window.URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = href;
+      link.setAttribute('download', `Servicio_Manto_${id}.xlsx`); // Nombre del archivo
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar el enlace
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(href);
+
+    } catch (err) {
+      console.error("Error al descargar el archivo:", err);
+      setError("Error al descargar el reporte.");
+    }
   };
+  // -----------------------------------------------------------
+  // 👆 FIN DE LA CORRECCIÓN
+  // -----------------------------------------------------------
+
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
@@ -160,7 +191,6 @@ const Maintenances = () => {
           <Table>
             <TableHead>
               <TableRow>
-                {/* 👈 CORRECCIÓN: Encabezados con TableSortLabel */}
                 <TableCell sortDirection={sortConfig?.key === 'device.etiqueta' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'device.etiqueta'}
@@ -192,7 +222,6 @@ const Maintenances = () => {
                   </TableCell>
                 </TableRow>
               ) : sortedMaintenances.length > 0 ? (
-                // 👈 CORRECCIÓN: Mapear sobre 'sortedMaintenances'
                 sortedMaintenances.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell>
@@ -252,7 +281,7 @@ const Maintenances = () => {
         />
       </Paper>
 
-      {/* ... (Modal sigue igual) ... */}
+      {/* Modal para crear mantenimiento */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}
@@ -270,7 +299,7 @@ const Maintenances = () => {
                 setMessage("Mantenimiento programado exitosamente.");
                 setActiveTab('pendiente'); 
                 setPage(0); 
-                fetchMaintenances(); // 👈 Llama al fetch aquí para asegurarse
+                fetchMaintenances();
                 refreshAlerts();
               }}
               setMessage={setMessage}

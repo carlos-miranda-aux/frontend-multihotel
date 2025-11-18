@@ -1,3 +1,4 @@
+// src/pages/AdminSettings.jsx
 import React, { useState, useEffect, useContext, useCallback } from "react";
 import {
   Box, Typography, Button, Stack, Divider, Table, TableBody, TableCell,
@@ -6,7 +7,7 @@ import {
 } from "@mui/material";
 import ListIcon from '@mui/icons-material/List';
 import PeopleIcon from '@mui/icons-material/People';
-import DomainIcon from '@mui/icons-material/Domain'; // Icono para Áreas
+import DomainIcon from '@mui/icons-material/Domain'; 
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
@@ -15,7 +16,7 @@ import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import CrudTable from "../components/CrudTable";
 import CreateSystemUserForm from "../components/CreateSystemUserForm";
-import CreateAreaForm from "../components/CreateAreaForm"; // 👈 IMPORTAR EL NUEVO FORMULARIO
+import CreateAreaForm from "../components/CreateAreaForm"; 
 import { useSortableData } from "../hooks/useSortableData";
 
 const modalStyle = {
@@ -27,7 +28,7 @@ const AdminSettings = () => {
   const [activeTable, setActiveTable] = useState(null);
   
   // Estados generales
-  const [dataList, setDataList] = useState([]); // Reutilizable para usuarios o áreas
+  const [dataList, setDataList] = useState([]); 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -35,27 +36,27 @@ const AdminSettings = () => {
   // Estados de Paginación
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0); 
 
   // Estados del Modal
   const [openModal, setOpenModal] = useState(false);
-  const [modalType, setModalType] = useState(""); // 'USER', 'AREA'
-  const [editingItem, setEditingItem] = useState(null); // Para editar áreas
+  const [modalType, setModalType] = useState(""); 
+  const [editingItem, setEditingItem] = useState(null); 
 
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
-  // Hook de ordenamiento (clave dinámica según la tabla activa)
   const getSortKey = () => {
     if (activeTable === "Gestión de Usuarios") return 'nombre';
-    if (activeTable === "Áreas") return 'nombre';
+    if (activeTable === "Áreas") return 'nombre'; 
     return 'id';
   };
+  
   const { sortedItems, requestSort, sortConfig } = useSortableData(dataList, { key: getSortKey(), direction: 'ascending' });
-
+  
   const tables = [
     { name: "Departamentos", url: "/departments" },
-    { name: "Áreas", url: "/areas", icon: <DomainIcon /> }, // 👈 Nueva configuración
+    { name: "Áreas", url: "/areas", icon: <DomainIcon /> }, 
     { name: "Sistemas Operativos", url: "/operating-systems" },
     { name: "Tipos de Dispositivo", url: "/device-types" },
     { name: "Estados de Dispositivo", url: "/device-status" },
@@ -68,40 +69,57 @@ const AdminSettings = () => {
     setError("");
     try {
       let url = "";
+      let isPaginatedTable = false;
+
+      // Determinar el endpoint y si es paginado
       if (activeTable === "Gestión de Usuarios") {
         url = `/auth/get?page=${page + 1}&limit=${rowsPerPage}`;
+        isPaginatedTable = true;
       } else if (activeTable === "Áreas") {
-        // Asumiendo que tu endpoint de áreas NO paginado es '/areas/get'
-        // Si lo paginaste en el backend, usa params. Si no, filtra en frontend.
-        // Para mantener consistencia con CrudTable que no pagina, pediremos todo por ahora
-        // O si creaste el controller nuevo sin paginación:
-        url = `/areas/get`; 
-      }
-
-      if (url) {
-        const response = await api.get(url);
-        // Ajustar según si el backend devuelve paginación o array directo
-        if (response.data.data) {
-            setDataList(response.data.data);
-            setTotalCount(response.data.totalCount);
+        // 👈 ENVIAR PAGINACIÓN
+        url = `/areas/get?page=${page + 1}&limit=${rowsPerPage}`; 
+        isPaginatedTable = true;
+      } else {
+        // Tablas CRUD genéricas
+        const tableData = tables.find(t => t.name === activeTable);
+        if (tableData) {
+            // CrudTable tiene su propia lógica de paginación que ya funciona,
+            // pero si la manejáramos aquí sería así:
+            // url = `${tableData.url}/get?page=${page + 1}&limit=${rowsPerPage}`;
+            // isPaginatedTable = true; 
+            setLoading(false);
+            return;
         } else {
-            // Caso Áreas (si el controller devuelve array directo)
-            setDataList(response.data);
-            setTotalCount(response.data.length);
+            setLoading(false);
+            return;
         }
       }
+
+      const response = await api.get(url);
+
+      if (isPaginatedTable && response.data.data) {
+          // Usar la estructura paginada
+          setDataList(response.data.data);
+          setTotalCount(response.data.totalCount);
+      } else {
+          // Fallback (e.g. si se devuelve una lista completa no paginada)
+          setDataList(response.data);
+          setTotalCount(response.data.length);
+      }
+      
     } catch (err) {
       console.error(`Error fetching ${activeTable}:`, err);
       setError(`Error al cargar los datos de ${activeTable}.`);
     } finally {
       setLoading(false);
     }
-  }, [activeTable, page, rowsPerPage]);
+  }, [activeTable, page, rowsPerPage]); 
 
   useEffect(() => {
     if (activeTable === "Gestión de Usuarios" || activeTable === "Áreas") {
       fetchData();
     }
+    // NOTA: Para las tablas CRUD genéricas, el fetch se maneja dentro de CrudTable.jsx
   }, [activeTable, fetchData]);
 
   // --- HANDLERS ---
@@ -112,11 +130,18 @@ const AdminSettings = () => {
     let url = "";
     if (activeTable === "Gestión de Usuarios") url = `/auth/delete/${id}`;
     if (activeTable === "Áreas") url = `/areas/delete/${id}`;
-
+    
     try {
-      await api.delete(url);
-      setMessage("Registro eliminado correctamente.");
-      fetchData();
+        await api.delete(url);
+        setMessage("Registro eliminado correctamente.");
+        
+        // Ajustar página si se elimina el último elemento
+        if (dataList.length === 1 && page > 0) {
+             setPage(page - 1);
+        } else {
+             fetchData();
+        }
+        
     } catch (err) {
       setError(err.response?.data?.error || "Error al eliminar.");
     }
@@ -141,6 +166,28 @@ const AdminSettings = () => {
     setOpenModal(false);
     setEditingItem(null);
   };
+
+  // --- PAGINATION HANDLERS ---
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+  
+  const handleTableChange = (tableName) => {
+    setActiveTable(tableName);
+    // Resetear el estado de paginación al cambiar de tabla
+    setPage(0); 
+    setRowsPerPage(10);
+    setTotalCount(0);
+    setDataList([]); 
+    setMessage(""); 
+    setError(""); 
+  }
+
 
   // --- RENDERS ---
 
@@ -185,20 +232,28 @@ const AdminSettings = () => {
                       </TableRow>
                     ))
                   }
+                   {!loading && dataList.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={5} align="center">
+                                No hay usuarios en el sistema.
+                            </TableCell>
+                        </TableRow>
+                    )}
                 </TableBody>
               </Table>
             </TableContainer>
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount}
               rowsPerPage={rowsPerPage} page={page}
-              onPageChange={(e, p) => setPage(p)} onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))}
+              onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage="Filas por página:"
             />
           </Paper>
         </Box>
       );
     }
 
-    // 2. TABLA DE ÁREAS (NUEVA)
+    // 2. TABLA DE ÁREAS
     if (activeTable === "Áreas") {
       return (
         <Box>
@@ -232,14 +287,22 @@ const AdminSettings = () => {
                       </TableRow>
                     ))
                   }
+                   {!loading && dataList.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={3} align="center">
+                                No hay áreas registradas.
+                            </TableCell>
+                        </TableRow>
+                    )}
                 </TableBody>
               </Table>
             </TableContainer>
-            {/* Paginación local si el endpoint no pagina, o remota si sí */}
+            
             <TablePagination
-               rowsPerPageOptions={[5, 10, 25]} component="div" count={dataList.length}
+               rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount} 
                rowsPerPage={rowsPerPage} page={page}
-               onPageChange={(e, p) => setPage(p)} onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))}
+               onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
+               labelRowsPerPage="Filas por página:"
             />
           </Paper>
         </Box>
@@ -248,6 +311,7 @@ const AdminSettings = () => {
 
     // 3. TABLAS CRUD GENÉRICAS
     const tableData = tables.find(t => t.name === activeTable);
+    // CrudTable.jsx maneja su propia paginación y funciona con el backend paginado
     return <CrudTable title={tableData.name} apiUrl={tableData.url} />;
   };
 
@@ -261,7 +325,7 @@ const AdminSettings = () => {
           <Button
             key={table.name}
             variant={activeTable === table.name ? "contained" : "outlined"}
-            onClick={() => { setActiveTable(table.name); setPage(0); setMessage(""); setError(""); }}
+            onClick={() => handleTableChange(table.name)} 
             startIcon={table.icon || <ListIcon />}
           >
             {table.name}
@@ -285,7 +349,7 @@ const AdminSettings = () => {
               <CreateAreaForm 
                 onClose={handleCloseModal} 
                 onSuccess={fetchData} 
-                initialData={editingItem} // Para editar
+                initialData={editingItem} 
               />
             )}
           </Box>

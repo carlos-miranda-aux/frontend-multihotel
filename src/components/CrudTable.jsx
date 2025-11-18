@@ -16,12 +16,15 @@ import {
   Alert,
   Modal,
   Fade,
-  Backdrop
+  Backdrop,
+  TablePagination, // ✅ Habilitado
+  CircularProgress // ✅ Habilitado
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
+
 
 const CrudTable = ({ title, apiUrl }) => {
   const [data, setData] = useState([]);
@@ -31,18 +34,32 @@ const CrudTable = ({ title, apiUrl }) => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // 👈 ESTADOS DE PAGINACIÓN
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     fetchData();
-  }, [apiUrl]);
+  }, [apiUrl, page, rowsPerPage]); // 👈 Dependencias de paginación y cambio de tabla
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const response = await api.get(`${apiUrl}/get`);
-      setData(response.data);
+      // 👈 ENVIAR PARÁMETROS DE PAGINACIÓN
+      const response = await api.get(`${apiUrl}/get?page=${page + 1}&limit=${rowsPerPage}`);
+      
+      // 👈 LEER LA NUEVA ESTRUCTURA PAGINADA DEL BACKEND
+      setData(response.data.data || response.data);
+      setTotalCount(response.data.totalCount || response.data.length);
+
     } catch (err) {
       console.error("Error fetching data:", err);
       setError("Error al cargar los datos.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,6 +74,7 @@ const CrudTable = ({ title, apiUrl }) => {
     try {
       await api.post(`${apiUrl}/post`, { nombre: itemName });
       setMessage("Elemento creado correctamente.");
+      setPage(0); // Volver a la primera página al crear
       fetchData();
       setItemName("");
       setOpenModal(false);
@@ -91,7 +109,12 @@ const CrudTable = ({ title, apiUrl }) => {
       try {
         await api.delete(`${apiUrl}/delete/${id}`);
         setMessage("Elemento eliminado correctamente.");
-        fetchData();
+        // Retrocede la página si se elimina el último elemento
+        if (data.length === 1 && page > 0) {
+            setPage(page - 1);
+        } else {
+            fetchData();
+        }
       } catch (err) {
         setError(err.response?.data?.error || "Error al eliminar el elemento.");
       }
@@ -116,6 +139,16 @@ const CrudTable = ({ title, apiUrl }) => {
     setItemName("");
     setIsEdit(false);
   };
+  
+  // 👈 HANDLERS DE PAGINACIÓN
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0); // Resetear a la primera página
+  };
 
   return (
     <Box>
@@ -129,35 +162,65 @@ const CrudTable = ({ title, apiUrl }) => {
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Nombre</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.id}</TableCell>
-                <TableCell>{item.nombre}</TableCell>
-                <TableCell>
-                  <IconButton color="primary" onClick={() => openEditModal(item)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton color="error" onClick={() => handleDelete(item.id)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
+      <Paper>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Nombre</TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                 <TableRow>
+                    <TableCell colSpan={3} align="center">
+                       <CircularProgress />
+                    </TableCell>
+                  </TableRow>
+              ) : (
+                data.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.id}</TableCell>
+                    <TableCell>{item.nombre}</TableCell>
+                    <TableCell>
+                      <IconButton color="primary" onClick={() => openEditModal(item)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDelete(item.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+               {!loading && data.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    No hay datos.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Modal para añadir/editar */}
+        {/* 👈 COMPONENTE DE PAGINACIÓN */}
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={totalCount}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Filas por página:"
+        />
+
+      </Paper>
+
+      {/* Modal para añadir/editar (sin cambios en la lógica) */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}

@@ -21,13 +21,14 @@ import {
   Tab,
   TablePagination,
   CircularProgress,
-  TableSortLabel
+  TableSortLabel,
+  TextField // 👈 Importar TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import DownloadIcon from '@mui/icons-material/Download';
-import api from "../api/axios"; // 👈 Tu instancia de axios
+import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateMaintenanceForm from "../components/CreateMaintenanceForm";
 import { AuthContext } from "../context/AuthContext";
@@ -57,6 +58,7 @@ const Maintenances = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalMaintenances, setTotalMaintenances] = useState(0);
+  const [search, setSearch] = useState(""); // 👈 Estado search
 
   const { user } = useContext(AuthContext);
   const { refreshAlerts } = useContext(AlertContext);
@@ -68,7 +70,8 @@ const Maintenances = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get(`/maintenances/get?page=${page + 1}&limit=${rowsPerPage}&status=${activeTab}`);
+      // 👈 Enviar search
+      const res = await api.get(`/maintenances/get?page=${page + 1}&limit=${rowsPerPage}&status=${activeTab}&search=${search}`);
       setMaintenances(res.data.data);
       setTotalMaintenances(res.data.totalCount);
     } catch (err) {
@@ -77,11 +80,19 @@ const Maintenances = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, activeTab]);
+  }, [page, rowsPerPage, activeTab, search]); // 👈 Dependencia search
 
   useEffect(() => {
-    fetchMaintenances();
+    const delayDebounceFn = setTimeout(() => {
+      fetchMaintenances();
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
   }, [fetchMaintenances]);
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(0);
+  };
 
   const handleDeleteMaintenance = async (m_id) => {
     setMessage("");
@@ -102,42 +113,28 @@ const Maintenances = () => {
     navigate(`/maintenances/edit/${m_id}`);
   };
 
-  // -----------------------------------------------------------
-  // 👈 CORRECCIÓN: Función 'handleExport' reescrita con 'api' (axios)
-  // -----------------------------------------------------------
   const handleExport = async (id) => {
+    // ... (mismo código de exportación)
     setMessage("");
     setError("");
     try {
-      // Usa 'api.get' que ya envía las cookies de autenticación
       const response = await api.get(
         `/maintenances/export/individual/${id}`,
-        {
-          responseType: 'blob', // 👈 IMPORTANTE: Pide a axios que la respuesta es un archivo
-        }
+        { responseType: 'blob' }
       );
-
-      // Crear un enlace temporal para descargar el archivo
       const href = window.URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = href;
-      link.setAttribute('download', `Servicio_Manto_${id}.xlsx`); // Nombre del archivo
+      link.setAttribute('download', `Servicio_Manto_${id}.xlsx`);
       document.body.appendChild(link);
       link.click();
-      
-      // Limpiar el enlace
       document.body.removeChild(link);
       window.URL.revokeObjectURL(href);
-
     } catch (err) {
       console.error("Error al descargar el archivo:", err);
       setError("Error al descargar el reporte.");
     }
   };
-  // -----------------------------------------------------------
-  // 👆 FIN DE LA CORRECCIÓN
-  // -----------------------------------------------------------
-
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
@@ -167,13 +164,23 @@ const Maintenances = () => {
         <Typography variant="h4">
           Gestión de Mantenimientos
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenModal}
-        >
-          Nuevo Mantenimiento
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {/* 👈 Barra de búsqueda */}
+          <TextField
+            label="Buscar..."
+            variant="outlined"
+            size="small"
+            value={search}
+            onChange={handleSearchChange}
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenModal}
+          >
+            Nuevo Mantenimiento
+          </Button>
+        </Box>
       </Box>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
@@ -281,7 +288,6 @@ const Maintenances = () => {
         />
       </Paper>
 
-      {/* Modal para crear mantenimiento */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}

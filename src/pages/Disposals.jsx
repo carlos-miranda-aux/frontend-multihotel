@@ -14,13 +14,14 @@ import {
   Alert,
   IconButton,
   TablePagination,
-  TableSortLabel // 👈 CORRECCIÓN: Importar
+  TableSortLabel,
+  TextField // 👈 Importar TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useSortableData } from "../hooks/useSortableData"; // 👈 CORRECCIÓN: Importar Hook
+import { useSortableData } from "../hooks/useSortableData";
 
 const Disposals = () => {
   const [disposals, setDisposals] = useState([]);
@@ -32,19 +33,23 @@ const Disposals = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalDisposals, setTotalDisposals] = useState(0);
+  const [search, setSearch] = useState(""); // 👈 Estado search
 
-  // 👈 CORRECCIÓN: Usar el hook de ordenamiento
   const { sortedItems: sortedDisposals, requestSort, sortConfig } = useSortableData(disposals, { key: 'etiqueta', direction: 'ascending' });
 
   useEffect(() => {
-    fetchDisposals();
-  }, [page, rowsPerPage]);
+    const delayDebounceFn = setTimeout(() => {
+      fetchDisposals();
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [page, rowsPerPage, search]);
 
   const fetchDisposals = async () => {
     try {
       setLoading(true);
       setError("");
-      const response = await api.get(`/disposals/get?page=${page + 1}&limit=${rowsPerPage}`);
+      // 👈 Enviar search
+      const response = await api.get(`/disposals/get?page=${page + 1}&limit=${rowsPerPage}&search=${search}`);
       setDisposals(response.data.data);
       setTotalDisposals(response.data.totalCount);
       setLoading(false);
@@ -53,6 +58,11 @@ const Disposals = () => {
       setError("Error al cargar la lista de bajas.");
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(0);
   };
 
   const handleEdit = (id) => {
@@ -70,9 +80,19 @@ const Disposals = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Equipos dados de Baja
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">
+          Equipos dados de Baja
+        </Typography>
+        {/* 👈 Barra de búsqueda */}
+        <TextField
+            label="Buscar..."
+            variant="outlined"
+            size="small"
+            value={search}
+            onChange={handleSearchChange}
+        />
+      </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -81,7 +101,6 @@ const Disposals = () => {
           <Table>
             <TableHead>
               <TableRow>
-                {/* 👈 CORRECCIÓN: Encabezados con TableSortLabel */}
                 <TableCell sortDirection={sortConfig?.key === 'etiqueta' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'etiqueta'}
@@ -132,7 +151,6 @@ const Disposals = () => {
                   </TableCell>
                 </TableRow>
               ) : sortedDisposals.length > 0 ? (
-                // 👈 CORRECCIÓN: Mapear sobre 'sortedDisposals'
                 sortedDisposals.map((disposal) => (
                   <TableRow key={disposal.id}>
                     <TableCell>{disposal.etiqueta || 'N/A'}</TableCell>

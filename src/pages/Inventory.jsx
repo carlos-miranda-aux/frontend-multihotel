@@ -18,7 +18,8 @@ import {
   Backdrop,
   TablePagination,
   CircularProgress,
-  TableSortLabel // 👈 CORRECCIÓN: Importar
+  TableSortLabel,
+  TextField // 👈 CORRECCIÓN: Importar TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from '@mui/icons-material/Add';
@@ -26,9 +27,8 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateDeviceForm from "../components/CreateDeviceForm";
 import { AlertContext } from "../context/AlertContext";
-import { useSortableData } from "../hooks/useSortableData"; // 👈 CORRECCIÓN: Importar Hook
+import { useSortableData } from "../hooks/useSortableData";
 
-// ... (modalStyle sigue igual)
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -51,23 +51,28 @@ const Inventory = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalDevices, setTotalDevices] = useState(0);
+  const [search, setSearch] = useState(""); // 👈 CORRECCIÓN: Estado para búsqueda
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
 
-  // 👈 CORRECCIÓN: Usar el hook de ordenamiento
-  // Ordena por 'etiqueta' por defecto
   const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'etiqueta', direction: 'ascending' });
 
   useEffect(() => {
-    fetchDevices();
-  }, [page, rowsPerPage]);
+    // Debounce para evitar muchas peticiones al escribir
+    const delayDebounceFn = setTimeout(() => {
+      fetchDevices();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [page, rowsPerPage, search]); // 👈 Dependencia 'search'
 
   const fetchDevices = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await api.get(`/devices/get?page=${page + 1}&limit=${rowsPerPage}`);
+      // 👈 Enviar parámetro search
+      const res = await api.get(`/devices/get?page=${page + 1}&limit=${rowsPerPage}&search=${search}`);
       setDevices(res.data.data);
       setTotalDevices(res.data.totalCount);
     } catch (err) {
@@ -76,6 +81,11 @@ const Inventory = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(0); // Resetear a página 1 al buscar
   };
 
   const handleEdit = (id) => {
@@ -100,13 +110,23 @@ const Inventory = () => {
         <Typography variant="h4">
           Inventario de Equipos
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenModal}
-        >
-          Crear Equipo
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+           {/* 👈 CORRECCIÓN: Barra de Búsqueda */}
+          <TextField
+            label="Buscar equipo..."
+            variant="outlined"
+            size="small"
+            value={search}
+            onChange={handleSearchChange}
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenModal}
+          >
+            Crear Equipo
+          </Button>
+        </Box>
       </Box>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
@@ -117,7 +137,6 @@ const Inventory = () => {
           <Table>
             <TableHead>
               <TableRow>
-                {/* 👈 CORRECCIÓN: Encabezados con TableSortLabel */}
                 <TableCell sortDirection={sortConfig?.key === 'etiqueta' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'etiqueta'}
@@ -166,7 +185,6 @@ const Inventory = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                // 👈 CORRECCIÓN: Mapear sobre 'sortedDevices'
                 sortedDevices.map((device) => (
                   <TableRow key={device.id}>
                     <TableCell>{device.etiqueta}</TableCell>
@@ -201,7 +219,6 @@ const Inventory = () => {
         />
       </Paper>
 
-      {/* ... (Modal sigue igual) ... */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}

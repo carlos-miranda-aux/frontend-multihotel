@@ -18,7 +18,8 @@ import {
   Backdrop,
   TablePagination,
   CircularProgress,
-  TableSortLabel // 👈 CORRECCIÓN: Importar
+  TableSortLabel,
+  TextField // 👈 Importar TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -26,9 +27,8 @@ import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateCrownUserForm from "../components/CreateCrownUserForm";
-import { useSortableData } from "../hooks/useSortableData"; // 👈 CORRECCIÓN: Importar Hook
+import { useSortableData } from "../hooks/useSortableData";
 
-// ... (modalStyle sigue igual)
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -52,19 +52,23 @@ const UsersCrownP = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [search, setSearch] = useState(""); // 👈 Estado search
 
-  // 👈 CORRECCIÓN: Usar el hook de ordenamiento
   const { sortedItems: sortedUsers, requestSort, sortConfig } = useSortableData(users, { key: 'nombre', direction: 'ascending' });
 
   useEffect(() => {
-    fetchUsers();
-  }, [page, rowsPerPage]);
+    const delayDebounceFn = setTimeout(() => {
+      fetchUsers();
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [page, rowsPerPage, search]);
 
   const fetchUsers = async () => {
     setLoading(true);
     setError("");
     try {
-      const response = await api.get(`/users/get?page=${page + 1}&limit=${rowsPerPage}`);
+      // 👈 Enviar search
+      const response = await api.get(`/users/get?page=${page + 1}&limit=${rowsPerPage}&search=${search}`);
       setUsers(response.data.data);
       setTotalUsers(response.data.totalCount);
     } catch (err) {
@@ -73,6 +77,11 @@ const UsersCrownP = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(0);
   };
 
   const handleDelete = async (id) => {
@@ -111,13 +120,23 @@ const UsersCrownP = () => {
         <Typography variant="h4">
           Usuarios de Crown
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenModal}
-        >
-          Crear Usuario
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {/* 👈 Barra de búsqueda */}
+          <TextField
+            label="Buscar usuario..."
+            variant="outlined"
+            size="small"
+            value={search}
+            onChange={handleSearchChange}
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenModal}
+          >
+            Crear Usuario
+          </Button>
+        </Box>
       </Box>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
@@ -128,7 +147,6 @@ const UsersCrownP = () => {
           <Table>
             <TableHead>
               <TableRow>
-                {/* 👈 CORRECCIÓN: Encabezados con TableSortLabel */}
                 <TableCell sortDirection={sortConfig?.key === 'nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'nombre'}
@@ -160,7 +178,6 @@ const UsersCrownP = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                // 👈 CORRECCIÓN: Mapear sobre 'sortedUsers'
                 sortedUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell>{u.nombre}</TableCell>
@@ -200,7 +217,6 @@ const UsersCrownP = () => {
         />
       </Paper>
 
-      {/* ... (Modal sigue igual) ... */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}
@@ -214,7 +230,7 @@ const UsersCrownP = () => {
           <Box sx={modalStyle}>
             <CreateCrownUserForm
               onClose={handleCloseModal}
-              onUserCreated={fetchUsers}
+              onUserCreated={fetchUsers} 
               setMessage={setMessage}
               setError={setError}
             />

@@ -1,5 +1,5 @@
 // src/pages/EditMaintenance.jsx
-import React, { useState, useEffect, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
+import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -16,12 +16,12 @@ import {
   Grid
 } from "@mui/material";
 import api from "../api/axios";
-import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
+import { AlertContext } from "../context/AlertContext";
 
 const EditMaintenance = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener la función
+  const { refreshAlerts } = useContext(AlertContext);
 
   const [formData, setFormData] = useState({
     descripcion: "",
@@ -42,19 +42,21 @@ const EditMaintenance = () => {
         setLoading(true);
         const [maintenanceRes, devicesRes] = await Promise.all([
           api.get(`/maintenances/get/${id}`),
-          api.get("/devices/get"),
+          // 👈 CORRECCIÓN: Llamar a la nueva ruta "get/all-names"
+          api.get("/devices/get/all-names"),
         ]);
 
         const maintenanceData = maintenanceRes.data;
         
         setFormData({
           descripcion: maintenanceData.descripcion || "",
-          fecha_programada: maintenanceData.fecha_programada ? maintenanceData.fecha_programada.substring(0, 10) : "",
-          fecha_realizacion: maintenanceData.fecha_realizacion ? maintenanceData.fecha_realizacion.substring(0, 10) : "",
+          fecha_programada: maintenanceData.fecha_programada ? new Date(maintenanceData.fecha_programada).toISOString().substring(0, 10) : "",
+          fecha_realizacion: maintenanceData.fecha_realizacion ? new Date(maintenanceData.fecha_realizacion).toISOString().substring(0, 10) : "",
           estado: maintenanceData.estado || "pendiente",
           deviceId: maintenanceData.deviceId || "",
         });
         
+        // 👈 CORRECCIÓN: 'devicesRes.data' ahora es un array simple
         setDevices(devicesRes.data);
         setLoading(false);
       } catch (err) {
@@ -84,7 +86,7 @@ const EditMaintenance = () => {
 
     try {
       await api.put(`/maintenances/put/${id}`, payload);
-      refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
+      refreshAlerts(); 
       setMessage("Mantenimiento actualizado correctamente.");
       setTimeout(() => navigate("/maintenances"), 1500);
     } catch (err) {
@@ -125,6 +127,7 @@ const EditMaintenance = () => {
                     <em>Selecciona un equipo</em>
                   </MenuItem>
                   {devices.map((device) => (
+                    // 👈 CORRECCIÓN: Acceder a los datos del 'select'
                     <MenuItem key={device.id} value={device.id}>
                       {device.etiqueta} - {device.nombre_equipo || device.tipo?.nombre}
                     </MenuItem>

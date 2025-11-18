@@ -1,5 +1,5 @@
 // src/pages/AdminSettings.jsx
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -17,7 +17,10 @@ import {
   Alert,
   Modal,
   Fade,
-  Backdrop
+  Backdrop,
+  TablePagination,
+  CircularProgress,
+  TableSortLabel // 👈 CORRECCIÓN: Importar
 } from "@mui/material";
 import ListIcon from '@mui/icons-material/List';
 import PeopleIcon from '@mui/icons-material/People';
@@ -28,9 +31,10 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import CrudTable from "../components/CrudTable";
-// import CreateCrownUserForm from "../components/CreateCrownUserForm"; 👈 Quita esta línea
-import CreateSystemUserForm from "../components/CreateSystemUserForm"; // 👈 Agrega esta importación
+import CreateSystemUserForm from "../components/CreateSystemUserForm";
+import { useSortableData } from "../hooks/useSortableData"; // 👈 CORRECCIÓN: Importar Hook
 
+// ... (modalStyle sigue igual)
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -49,8 +53,16 @@ const AdminSettings = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalUsers, setTotalUsers] = useState(0);
+
+  // 👈 CORRECCIÓN: Usar el hook de ordenamiento
+  const { sortedItems: sortedUsers, requestSort, sortConfig } = useSortableData(users, { key: 'nombre', direction: 'ascending' });
 
   const tables = [
     { name: "Departamentos", url: "/departments" },
@@ -60,23 +72,30 @@ const AdminSettings = () => {
     { name: "Gestión de Usuarios", url: "/auth" },
   ];
 
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await api.get(`/auth/get?page=${page + 1}&limit=${rowsPerPage}`);
+      setUsers(response.data.data);
+      setTotalUsers(response.data.totalCount);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setError("Error al cargar la lista de usuarios.");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, rowsPerPage]);
+
   useEffect(() => {
     if (activeTable === "Gestión de Usuarios") {
       fetchUsers();
     }
-  }, [activeTable]);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await api.get("/auth/get");
-      setUsers(response.data);
-    } catch (err) {
-      console.error("Error fetching users:", err);
-      setError("Error al cargar la lista de usuarios.");
-    }
-  };
+  }, [activeTable, fetchUsers]);
 
   const handleDelete = async (id) => {
+    setMessage("");
+    setError("");
     if (window.confirm("¿Estás seguro de que quieres eliminar este usuario?")) {
       try {
         await api.delete(`/auth/delete/${id}`);
@@ -94,6 +113,15 @@ const AdminSettings = () => {
   
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   const renderActiveTable = () => {
     if (!activeTable) {
@@ -121,49 +149,100 @@ const AdminSettings = () => {
           </Box>
           {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Usuario</TableCell>
-                  <TableCell>Correo</TableCell>
-                  <TableCell>Rol</TableCell>
-                  <TableCell>Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {users.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>{u.nombre}</TableCell>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                    <TableCell>{u.rol}</TableCell>
-                    <TableCell>
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleEditUser(u.id)}
-                        disabled={user.id === u.id}
+          
+          <Paper>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    {/* 👈 CORRECCIÓN: Encabezados con TableSortLabel */}
+                    <TableCell sortDirection={sortConfig?.key === 'nombre' ? sortConfig.direction : false}>
+                      <TableSortLabel
+                        active={sortConfig?.key === 'nombre'}
+                        direction={sortConfig?.key === 'nombre' ? sortConfig.direction : 'asc'}
+                        onClick={() => requestSort('nombre')}
                       >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDelete(u.id)}
-                        disabled={user.id === u.id}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                        Nombre
+                      </TableSortLabel>
                     </TableCell>
+                    <TableCell sortDirection={sortConfig?.key === 'username' ? sortConfig.direction : false}>
+                      <TableSortLabel
+                        active={sortConfig?.key === 'username'}
+                        direction={sortConfig?.key === 'username' ? sortConfig.direction : 'asc'}
+                        onClick={() => requestSort('username')}
+                      >
+                        Usuario
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>Correo</TableCell>
+                    <TableCell sortDirection={sortConfig?.key === 'rol' ? sortConfig.direction : false}>
+                      <TableSortLabel
+                        active={sortConfig?.key === 'rol'}
+                        direction={sortConfig?.key === 'rol' ? sortConfig.direction : 'asc'}
+                        onClick={() => requestSort('rol')}
+                      >
+                        Rol
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell>Acciones</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <CircularProgress />
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    // 👈 CORRECCIÓN: Mapear sobre 'sortedUsers'
+                    sortedUsers.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell>{u.nombre}</TableCell>
+                        <TableCell>{u.username}</TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell>{u.rol}</TableCell>
+                        <TableCell>
+                          <IconButton
+                            color="primary"
+                            onClick={() => handleEditUser(u.id)}
+                            disabled={user.id === u.id}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDelete(u.id)}
+                            disabled={user.id === u.id}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={totalUsers}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage="Filas por página:"
+            />
+          </Paper>
         </Box>
       );
     }
 
+    // ⚠️ AVISO: Las tablas CRUD (Departamentos, SO, etc.)
+    // no están paginadas porque usan un componente genérico 'CrudTable'.
+    // Si tienen muchos datos, también habría que refactorizar 'CrudTable.jsx'.
     const tableData = tables.find(t => t.name === activeTable);
     return <CrudTable title={tableData.name} apiUrl={tableData.url} />;
   };
@@ -183,7 +262,10 @@ const AdminSettings = () => {
           <Button
             key={table.name}
             variant={activeTable === table.name ? "contained" : "outlined"}
-            onClick={() => setActiveTable(table.name)}
+            onClick={() => {
+              setActiveTable(table.name);
+              setPage(0);
+            }}
             startIcon={table.name === "Gestión de Usuarios" ? <PeopleIcon /> : <ListIcon />}
           >
             {table.name}
@@ -197,7 +279,7 @@ const AdminSettings = () => {
         {renderActiveTable()}
       </Box>
       
-      {/* Modal para crear usuario */}
+      {/* ... (Modal sigue igual) ... */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}
@@ -209,7 +291,7 @@ const AdminSettings = () => {
       >
         <Fade in={openModal}>
           <Box sx={modalStyle}>
-            <CreateSystemUserForm // 👈 Usa el nuevo componente aquí
+            <CreateSystemUserForm
               onClose={handleCloseModal}
               onUserCreated={fetchUsers}
               setMessage={setMessage}

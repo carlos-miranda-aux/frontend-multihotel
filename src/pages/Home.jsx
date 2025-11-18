@@ -61,12 +61,11 @@ const WidgetCard = ({ title, value, icon, color, onClick }) => (
 
 // --- Componente Principal del Home ---
 const Home = () => {
-  // ⚠️ AVISO: Esta página sigue teniendo la Optimización 5 (carga duplicada) pendiente
-  // Pero la corrección de la lógica del gráfico sí está aplicada.
   const {
     loading: alertLoading, 
     warrantyAlertsList,
     pendingMaintenancesList,
+    devices // 👈 CORRECCIÓN: Obtenemos devices del contexto
   } = useContext(AlertContext);
 
   const [stats, setStats] = useState({
@@ -94,36 +93,31 @@ const Home = () => {
         try {
           setPageLoading(true); 
 
-          // ⚠️ AVISO: Esta petición a /devices/get es redundante
-          // Deberíamos usar la que viene del AlertContext (Optimización 5)
-          const [devicesRes, usersRes] = await Promise.all([
-            api.get("/devices/get"),
-            api.get("/users/get"),
+          // 👈 CORRECCIÓN: Quitamos la llamada a /devices/get (viene del context)
+          // y leemos la respuesta paginada de /users/get
+          const [usersRes] = await Promise.all([
+            // api.get("/devices/get"), // 👈 ELIMINADA
+            api.get("/users/get?page=1&limit=1"), // Solo necesitamos el totalCount
           ]);
           
-          const devices = devicesRes.data || [];
-          const users = usersRes.data || [];
+          const usersTotal = usersRes.data.totalCount || 0; // 👈 CORRECCIÓN
 
           // --- Lógica de Garantías (para el gráfico) ---
-          
-          // 👈 CORRECCIÓN 1: Normaliza "hoy" a la medianoche local
           const today = new Date();
           today.setHours(0, 0, 0, 0); 
 
           const ninetyDaysFromNow = new Date();
           ninetyDaysFromNow.setDate(today.getDate() + 90);
-          ninetyDaysFromNow.setHours(0, 0, 0, 0); // También normaliza
+          ninetyDaysFromNow.setHours(0, 0, 0, 0);
 
           let safeCount = 0; 
           let expiringSoonCount = 0;
 
-          devices.forEach((d) => {
+          devices.forEach((d) => { // 👈 CORRECCIÓN: 'devices' es del contexto
             if (!d.garantia_fin) {
-              safeCount++; // Si no tiene fecha, es "vigente" (o N/A)
+              safeCount++; 
             } else {
               const expirationDate = new Date(d.garantia_fin);
-              
-              // 👈 CORRECCIÓN 2: Compara con "today" normalizado
               if (expirationDate < today) {
                 // Vencida, ignorar
               } else if (expirationDate >= today && expirationDate <= ninetyDaysFromNow) {
@@ -141,8 +135,8 @@ const Home = () => {
           
           // Calcular KPIs
           setStats({
-            totalDevices: devices.length,
-            totalUsers: users.length,
+            totalDevices: devices.length, // 👈 CORRECCIÓN: 'devices' es del contexto
+            totalUsers: usersTotal, // 👈 CORRECCIÓN
             pendingTasksCount: pendingMaintenancesList.length,
             warrantyAlertsCount: warrantyAlertsList.length,
           });
@@ -157,7 +151,7 @@ const Home = () => {
 
       fetchPageSpecificData();
     }
-  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList]); 
+  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList, devices]); // 👈 'devices' añadido
 
 
   const formatDate = (dateString) => {

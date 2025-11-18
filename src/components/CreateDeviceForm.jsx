@@ -1,5 +1,5 @@
 // src/components/CreateDeviceForm.jsx
-import React, { useState, useEffect, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Typography,
@@ -14,15 +14,12 @@ import {
   Stack,
 } from "@mui/material";
 import api from "../api/axios";
-import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
+import { AlertContext } from "../context/AlertContext";
 
-// 👈 CORRECCIÓN: Función para parsear la fecha como LOCAL
+// Función para parsear la fecha como LOCAL
 const parseLocalDate = (dateString) => {
   if (!dateString) return null;
-  // "YYYY-MM-DD" -> ["YYYY", "MM", "DD"]
   const parts = dateString.split('-');
-  // new Date(year, monthIndex, day)
-  // Esto crea la fecha en la medianoche de la zona horaria local
   return new Date(parts[0], parts[1] - 1, parts[2]);
 };
 
@@ -54,18 +51,21 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [operatingSystems, setOperatingSystems] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener refreshAlerts
+  const { refreshAlerts } = useContext(AlertContext);
 
   useEffect(() => {
     const fetchFormData = async () => {
       try {
         const [usersRes, deviceTypesRes, operatingSystemsRes, departmentsRes] =
           await Promise.all([
-            api.get("/users/get"),
+            // 👈 CORRECCIÓN: Llamar a la nueva ruta
+            api.get("/users/get/all"), 
             api.get("/device-types/get"),
             api.get("/operating-systems/get"),
             api.get("/departments/get"),
           ]);
+        
+        // 👈 CORRECCIÓN: La respuesta es un array simple, no un objeto paginado
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
         setOperatingSystems(operatingSystemsRes.data);
@@ -98,9 +98,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       }
     }
 
-    // 👇 --- INICIA LA CORRECCIÓN --- 👇
-    // 
-    // Convertir las fechas al formato ISO-8601 usando la hora LOCAL
     const localGarantiainicio = parseLocalDate(payload.garantia_inicio);
     const localGarantiaFin = parseLocalDate(payload.garantia_fin);
     const localProximaRevision = parseLocalDate(payload.fecha_proxima_revision);
@@ -108,12 +105,11 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     payload.garantia_inicio = localGarantiainicio ? localGarantiainicio.toISOString() : null;
     payload.garantia_fin = localGarantiaFin ? localGarantiaFin.toISOString() : null;
     payload.fecha_proxima_revision = localProximaRevision ? localProximaRevision.toISOString() : null;
-    // 👆 --- TERMINA LA CORRECCIÓN --- 👆
 
     try {
       await api.post("/devices/post", payload);
       setMessage("Equipo creado exitosamente.");
-      refreshAlerts(); // 👈 CORRECCIÓN: Refrescar alertas globales
+      refreshAlerts(); 
       onDeviceCreated();
       onClose();
     } catch (err) {

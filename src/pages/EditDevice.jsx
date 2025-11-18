@@ -68,7 +68,7 @@ const EditDevice = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [bajaStatusId, setBajaStatusId] = useState(null);
-  const [isPermanentlyBaja, setIsPermanentlyBaja] = useState(false); // 👈 CORRECCIÓN: Nuevo estado
+  const [isPermanentlyBaja, setIsPermanentlyBaja] = useState(false);
 
   useEffect(() => {
     const fetchDeviceData = async () => {
@@ -83,7 +83,8 @@ const EditDevice = () => {
           departmentsRes,
         ] = await Promise.all([
           api.get(`/devices/get/${id}`),
-          api.get("/users/get"),
+          // 👈 CORRECCIÓN: Llamar a la nueva ruta "get/all"
+          api.get("/users/get/all"), 
           api.get("/device-types/get"),
           api.get("/device-status/get"),
           api.get("/operating-systems/get"),
@@ -106,7 +107,6 @@ const EditDevice = () => {
           setBajaStatusId(bajaStatus.id);
         }
 
-        // 👈 CORRECCIÓN: Comprobar si el dispositivo ya está de baja al cargar
         if (bajaStatus && deviceData.estadoId === bajaStatus.id) {
           setIsPermanentlyBaja(true);
         }
@@ -136,6 +136,8 @@ const EditDevice = () => {
           motivo_baja: deviceData.motivo_baja || "",
           observaciones_baja: deviceData.observaciones_baja || "",
         }); 
+        
+        // 👈 CORRECCIÓN: 'usersRes.data' ahora es un array simple
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
         setDeviceStatuses(deviceStatusesRes.data);
@@ -179,14 +181,12 @@ const EditDevice = () => {
       await api.put(`/devices/put/${id}`, payload);
       refreshAlerts();
       setMessage("Equipo actualizado correctamente.");
-      // 👈 CORRECCIÓN: Redirige a 'Bajas' si es una baja, si no a 'Inventario'
       if (isPermanentlyBaja || payload.estadoId === bajaStatusId) {
         setTimeout(() => navigate("/disposals"), 1200);
       } else {
         setTimeout(() => navigate("/inventory"), 1200);
       }
     } catch (err) {
-      // 👈 CORRECCIÓN: Muestra el error específico del backend
       setError(err.response?.data?.error || "Error al actualizar el equipo.");
     }
   };
@@ -205,7 +205,7 @@ const EditDevice = () => {
         <Typography variant="h4" fontWeight="bold">
           Editar equipo
         </Typography>
-        <Button variant="outlined" onClick={() => navigate(-1)}> {/* 👈 CORRECCIÓN: Regresa a la página anterior */}
+        <Button variant="outlined" onClick={() => navigate(-1)}>
           Volver
         </Button>
       </Stack>
@@ -215,8 +215,9 @@ const EditDevice = () => {
 
       <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3, width: "100%" }}>
         <form onSubmit={handleUpdate}>
-          {/* ... (Datos Generales, Software, Garantía, Asignación - Sin cambios) ... */}
-           {/* DATOS GENERALES */}
+          {/* --- El resto del formulario (Grids, TextFields, etc.) sigue igual --- */}
+          
+          {/* DATOS GENERALES */}
           <Typography variant="h6" sx={{ mb: 1 }}>
             Datos generales
           </Typography>
@@ -397,7 +398,6 @@ const EditDevice = () => {
 
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              {/* 👈 CORRECCIÓN: Añadido 'disabled' */}
               <FormControl fullWidth disabled={isPermanentlyBaja}>
                 <InputLabel>Estado del equipo</InputLabel>
                 <Select
@@ -418,7 +418,6 @@ const EditDevice = () => {
               </FormControl>
             </Grid>
             
-            {/* 👈 CORRECCIÓN: Ahora se muestra si el estado ES "Baja" (nuevo o permanente) */}
             <Fade in={formData.estadoId === bajaStatusId} mountOnEnter unmountOnExit>
               <Grid item container xs={12} spacing={2} sx={{ mt: 0 }}>
                 <Grid item xs={12}>

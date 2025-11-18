@@ -1,5 +1,5 @@
 // src/components/CreateMaintenanceForm.jsx
-import React, { useState, useEffect, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Typography,
@@ -12,7 +12,7 @@ import {
   Grid
 } from "@mui/material";
 import api from "../api/axios";
-import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
+import { AlertContext } from "../context/AlertContext";
 
 const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setError }) => {
   const [formData, setFormData] = useState({
@@ -23,14 +23,16 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
   });
   
   const [devices, setDevices] = useState([]);
-  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener la función
+  const { refreshAlerts } = useContext(AlertContext);
 
   useEffect(() => {
-    // Cargar la lista de equipos para el selector
     const fetchDevices = async () => {
       try {
-        const res = await api.get("/devices/get"); // Usamos la ruta de dispositivos
-        setDevices(res.data);
+        // 👈 CORRECCIÓN: Llamar a la nueva ruta
+        const res = await api.get("/devices/get/all-names");
+        
+        // 👈 CORRECCIÓN: La respuesta es un array simple
+        setDevices(res.data); 
       } catch (err) {
         console.error("Error fetching devices:", err);
         setError("Error al cargar la lista de equipos.");
@@ -56,8 +58,7 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
 
     try {
       await api.post("/maintenances/post", payload);
-      // setMessage("Mantenimiento creado exitosamente."); // 👈 Lo quitamos de aquí
-      refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
+      refreshAlerts();
       onMaintenanceCreated(); 
       onClose(); 
     } catch (err) {
@@ -86,6 +87,7 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
                 </MenuItem>
                 {devices.map((device) => (
                   <MenuItem key={device.id} value={device.id}>
+                    {/* 👈 CORRECCIÓN: Acceder a los datos del 'select' */}
                     {device.etiqueta} - {device.nombre_equipo || device.tipo?.nombre}
                   </MenuItem>
                 ))}

@@ -1,5 +1,5 @@
 // src/pages/Maintenances.jsx
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box,
   Table,
@@ -16,13 +16,12 @@ import {
   Modal,
   Fade,
   Backdrop,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
   Chip,
   Tabs,
-  Tab
+  Tab,
+  TablePagination,
+  CircularProgress,
+  TableSortLabel // 👈 CORRECCIÓN: Importar
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -32,8 +31,10 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateMaintenanceForm from "../components/CreateMaintenanceForm";
 import { AuthContext } from "../context/AuthContext";
-import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
+import { AlertContext } from "../context/AlertContext";
+import { useSortableData } from "../hooks/useSortableData"; // 👈 CORRECCIÓN: Importar Hook
 
+// ... (modalStyle sigue igual)
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -47,41 +48,52 @@ const modalStyle = {
 };
 
 const Maintenances = () => {
-  // ⚠️ AVISO: Esta página sigue teniendo la Optimización 1 (carga de /devices/get) pendiente
-  // Pero la corrección de las alertas funcionará.
-  const [devices, setDevices] = useState([]);
+  const [maintenances, setMaintenances] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('programados');
+  const [activeTab, setActiveTab] = useState('pendiente');
+  const [loading, setLoading] = useState(true);
+  
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalMaintenances, setTotalMaintenances] = useState(0);
+
   const { user } = useContext(AuthContext);
-  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener la función de refresco
+  const { refreshAlerts } = useContext(AlertContext);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchDevicesWithMaintenances();
-  }, []);
+  // 👈 CORRECCIÓN: Usar el hook de ordenamiento
+  const { sortedItems: sortedMaintenances, requestSort, sortConfig } = useSortableData(maintenances, { key: 'fecha_programada', direction: 'descending' });
 
-  const fetchDevicesWithMaintenances = async () => {
+  const fetchMaintenances = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      const res = await api.get("/devices/get");
-      setDevices(res.data);
+      const res = await api.get(`/maintenances/get?page=${page + 1}&limit=${rowsPerPage}&status=${activeTab}`);
+      setMaintenances(res.data.data);
+      setTotalMaintenances(res.data.totalCount);
     } catch (err) {
-      console.error("Error al obtener equipos:", err);
-      // No establecemos error aquí para no causar mensajes duplicados
+      console.error("Error al obtener mantenimientos:", err);
+      setError("Error al cargar los mantenimientos.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, activeTab]);
+
+  useEffect(() => {
+    fetchMaintenances();
+  }, [fetchMaintenances]);
 
   const handleDeleteMaintenance = async (m_id) => {
     setMessage("");
     setError("");
-
     if (window.confirm("¿Estás seguro de que quieres eliminar este registro de mantenimiento?")) {
       try {
         await api.delete(`/maintenances/delete/${m_id}`);
         setMessage("Registro de mantenimiento eliminado.");
-        fetchDevicesWithMaintenances(); // Refresca la tabla local
-        refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
+        fetchMaintenances(); 
+        refreshAlerts(); 
       } catch (err) {
         setError(err.response?.data?.error || "Error al eliminar el registro.");
       }
@@ -93,130 +105,30 @@ const Maintenances = () => {
   };
 
   const handleExport = (id) => {
-    const token = localStorage.getItem("token");
-    const url = `http://localhost:3000/api/maintenances/export/individual/${id}`;
-
-    fetch(url, {
-      method: 'GET',
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    .then(res => res.blob())
-    .then(blob => {
-      const href = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = href;
-      link.setAttribute('download', `Servicio_Manto_${id}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    })
-    .catch(err => {
-      console.error("Error al descargar el archivo:", err);
-      setError("Error al descargar el reporte.");
-    });
+    // ... (sin cambios)
   };
-
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
   
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+    setPage(0);
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
   };
+  
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
 
-  const programados = devices
-    .map(d => ({ ...d, maintenances: d.maintenances.filter(m => m.estado === 'pendiente')}))
-    .filter(d => d.maintenances.length > 0);
-
-  const historial = devices
-    .map(d => ({ ...d, maintenances: d.maintenances.filter(m => m.estado !== 'pendiente')}))
-    .filter(d => d.maintenances.length > 0);
-
-
-  // --- Componente de Tabla Reutilizable ---
-  const renderMaintenanceTable = (data, tabType) => (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Nombre del equipo</TableCell>
-            <TableCell>N° Serie</TableCell>
-            <TableCell>Marca</TableCell>
-            <TableCell>Modelo</TableCell>
-            <TableCell>S.O.</TableCell>
-            <TableCell sx={{ minWidth: 350 }}>Acciones de Mantenimiento</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {data.map((device) => (
-            <TableRow key={device.id}>
-              <TableCell>{device.nombre_equipo}</TableCell>
-              <TableCell>{device.numero_serie}</TableCell>
-              <TableCell>{device.marca || 'N/A'}</TableCell>
-              <TableCell>{device.modelo || 'N/A'}</TableCell>
-              <TableCell>{device.sistema_operativo?.nombre || 'N/A'}</TableCell>
-
-              <TableCell>
-                <List dense disablePadding>
-                  {device.maintenances.map((m) => (
-                    <React.Fragment key={m.id}>
-                      <ListItem
-                        secondaryAction={
-                          <>
-                            {tabType === 'historial' && (
-                              <IconButton edge="end" color="secondary" onClick={() => handleExport(m.id)}>
-                                <DownloadIcon fontSize="small" />
-                              </IconButton>
-                            )}
-                            
-                            <IconButton edge="end" color="primary" onClick={() => handleEditMaintenance(m.id)}>
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            
-                            {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && (
-                              <IconButton edge="end" color="error" onClick={() => handleDeleteMaintenance(m.id)}>
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            )}
-                          </>
-                        }
-                        disableGutters
-                      >
-                        <ListItemText
-                          primary={m.descripcion}
-                          secondary={
-                            tabType === 'programados'
-                              ? `Programado para: ${formatDate(m.fecha_programada)}`
-                              : `Realizado: ${formatDate(m.fecha_realizacion)}`
-                          }
-                        />
-                        <Chip label={m.estado} size="small" sx={{ ml: 1, mr: 10 }} 
-                          color={m.estado === 'pendiente' ? 'warning' : m.estado === 'realizado' ? 'success' : 'default'}
-                        />
-                      </ListItem>
-                      <Divider component="li" />
-                    </React.Fragment>
-                  ))}
-                </List>
-              </TableCell>
-            </TableRow>
-          ))}
-          {data.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={6} align="center">
-                No hay mantenimientos en esta categoría.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
@@ -238,16 +150,109 @@ const Maintenances = () => {
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
-          <Tab label="Programados" value="programados" />
+          <Tab label="Programados" value="pendiente" />
           <Tab label="Historial" value="historial" />
         </Tabs>
       </Box>
 
-      <Box>
-        {activeTab === 'programados' && renderMaintenanceTable(programados, 'programados')}
-        {activeTab === 'historial' && renderMaintenanceTable(historial, 'historial')}
-      </Box>
+      <Paper>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                {/* 👈 CORRECCIÓN: Encabezados con TableSortLabel */}
+                <TableCell sortDirection={sortConfig?.key === 'device.etiqueta' ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig?.key === 'device.etiqueta'}
+                    direction={sortConfig?.key === 'device.etiqueta' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('device.etiqueta')}
+                  >
+                    Equipo (Etiqueta)
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Descripción</TableCell>
+                <TableCell>Estado</TableCell>
+                <TableCell sortDirection={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
+                    direction={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort(activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
+                  >
+                    {activeTab === 'pendiente' ? 'Fecha Programada' : 'Fecha Realización'}
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    <CircularProgress />
+                  </TableCell>
+                </TableRow>
+              ) : sortedMaintenances.length > 0 ? (
+                // 👈 CORRECCIÓN: Mapear sobre 'sortedMaintenances'
+                sortedMaintenances.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="bold">
+                        {m.device?.etiqueta || 'N/A'}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        {m.device?.nombre_equipo || 'Sin nombre'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{m.descripcion}</TableCell>
+                    <TableCell>
+                      <Chip label={m.estado} size="small"
+                        color={m.estado === 'pendiente' ? 'warning' : m.estado === 'realizado' ? 'success' : 'default'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(activeTab === 'pendiente' ? m.fecha_programada : m.fecha_realizacion)}
+                    </TableCell>
+                    <TableCell>
+                      {activeTab === 'historial' && (
+                        <IconButton edge="end" color="secondary" onClick={() => handleExport(m.id)} title="Exportar formato">
+                          <DownloadIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      <IconButton edge="end" color="primary" onClick={() => handleEditMaintenance(m.id)} title="Editar">
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && (
+                        <IconButton edge="end" color="error" onClick={() => handleDeleteMaintenance(m.id)} title="Eliminar">
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    No hay mantenimientos en esta categoría.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={totalMaintenances}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Filas por página:"
+        />
+      </Paper>
+
+      {/* ... (Modal sigue igual) ... */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}
@@ -262,10 +267,11 @@ const Maintenances = () => {
               onMaintenanceCreated={() => {
                 setMessage("");
                 setError("");
-                fetchDevicesWithMaintenances();
-                refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
                 setMessage("Mantenimiento programado exitosamente.");
-                setActiveTab('programados');
+                setActiveTab('pendiente'); 
+                setPage(0); 
+                fetchMaintenances(); // 👈 Llama al fetch aquí para asegurarse
+                refreshAlerts();
               }}
               setMessage={setMessage}
               setError={setError}

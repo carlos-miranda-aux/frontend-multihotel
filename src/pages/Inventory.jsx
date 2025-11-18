@@ -1,5 +1,5 @@
 // src/pages/Inventory.jsx
-import React, { useEffect, useState, useContext } from "react"; // 👈 CORRECCIÓN: Añadir useContext
+import React, { useEffect, useState, useContext } from "react";
 import {
   Box,
   Table,
@@ -15,16 +15,20 @@ import {
   Alert,
   Modal,
   Fade,
-  Backdrop
+  Backdrop,
+  TablePagination,
+  CircularProgress,
+  TableSortLabel // 👈 CORRECCIÓN: Importar
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
-// import DeleteIcon from "@mui/icons-material/Delete"; // 👈 Sigue eliminado (Soft Delete)
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateDeviceForm from "../components/CreateDeviceForm";
-import { AlertContext } from "../context/AlertContext"; // 👈 CORRECCIÓN: Importar AlertContext
+import { AlertContext } from "../context/AlertContext";
+import { useSortableData } from "../hooks/useSortableData"; // 👈 CORRECCIÓN: Importar Hook
 
+// ... (modalStyle sigue igual)
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -42,24 +46,37 @@ const Inventory = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalDevices, setTotalDevices] = useState(0);
+
   const navigate = useNavigate();
-  const { refreshAlerts } = useContext(AlertContext); // 👈 CORRECCIÓN: Obtener refreshAlerts
+  const { refreshAlerts } = useContext(AlertContext);
+
+  // 👈 CORRECCIÓN: Usar el hook de ordenamiento
+  // Ordena por 'etiqueta' por defecto
+  const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'etiqueta', direction: 'ascending' });
 
   useEffect(() => {
     fetchDevices();
-  }, []);
+  }, [page, rowsPerPage]);
 
   const fetchDevices = async () => {
+    setLoading(true);
+    setError("");
     try {
-      const res = await api.get("/devices/get");
-      setDevices(res.data);
+      const res = await api.get(`/devices/get?page=${page + 1}&limit=${rowsPerPage}`);
+      setDevices(res.data.data);
+      setTotalDevices(res.data.totalCount);
     } catch (err) {
       console.error("Error al obtener dispositivos:", err);
       setError("Error al cargar el inventario.");
+    } finally {
+      setLoading(false);
     }
   };
-
-  // 👈 (Función handleDelete sigue eliminada)
 
   const handleEdit = (id) => {
     navigate(`/inventory/edit/${id}`);
@@ -67,6 +84,15 @@ const Inventory = () => {
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -86,43 +112,96 @@ const Inventory = () => {
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>No.</TableCell>
-              <TableCell>Etiqueta</TableCell>
-              <TableCell>Nombre Equipo</TableCell>
-              <TableCell>Usuario</TableCell>
-              <TableCell>N° Serie</TableCell>
-              <TableCell>Tipo</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {devices.map((device, index) => (
-              <TableRow key={device.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{device.etiqueta}</TableCell>
-                <TableCell>{device.nombre_equipo}</TableCell>
-                <TableCell>{device.usuario?.nombre || 'N/A'}</TableCell>
-                <TableCell>{device.numero_serie}</TableCell>
-                <TableCell>{device.tipo?.nombre || 'N/A'}</TableCell>
-                <TableCell>
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleEdit(device.id)}
+      <Paper>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                {/* 👈 CORRECCIÓN: Encabezados con TableSortLabel */}
+                <TableCell sortDirection={sortConfig?.key === 'etiqueta' ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig?.key === 'etiqueta'}
+                    direction={sortConfig?.key === 'etiqueta' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('etiqueta')}
                   >
-                    <EditIcon />
-                  </IconButton>
+                    Etiqueta
+                  </TableSortLabel>
                 </TableCell>
+                <TableCell sortDirection={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig?.key === 'nombre_equipo'}
+                    direction={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('nombre_equipo')}
+                  >
+                    Nombre Equipo
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortConfig?.key === 'usuario.nombre' ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig?.key === 'usuario.nombre'}
+                    direction={sortConfig?.key === 'usuario.nombre' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('usuario.nombre')}
+                  >
+                    Usuario
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>N° Serie</TableCell>
+                <TableCell sortDirection={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig?.key === 'tipo.nombre'}
+                    direction={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('tipo.nombre')}
+                  >
+                    Tipo
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <CircularProgress />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                // 👈 CORRECCIÓN: Mapear sobre 'sortedDevices'
+                sortedDevices.map((device) => (
+                  <TableRow key={device.id}>
+                    <TableCell>{device.etiqueta}</TableCell>
+                    <TableCell>{device.nombre_equipo}</TableCell>
+                    <TableCell>{device.usuario?.nombre || 'N/A'}</TableCell>
+                    <TableCell>{device.numero_serie}</TableCell>
+                    <TableCell>{device.tipo?.nombre || 'N/A'}</TableCell>
+                    <TableCell>
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleEdit(device.id)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Modal para crear equipo */}
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={totalDevices}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Filas por página:"
+        />
+      </Paper>
+
+      {/* ... (Modal sigue igual) ... */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}
@@ -137,8 +216,8 @@ const Inventory = () => {
             <CreateDeviceForm
               onClose={handleCloseModal}
               onDeviceCreated={() => {
-                fetchDevices(); // Refresca la tabla local
-                refreshAlerts(); // 👈 CORRECCIÓN: Refresca las alertas globales
+                fetchDevices(); 
+                refreshAlerts(); 
               }}
               setMessage={setMessage}
               setError={setError}

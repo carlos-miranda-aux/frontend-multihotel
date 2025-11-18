@@ -1,25 +1,9 @@
 // src/pages/Users_Crown.jsx
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Button,
-  Alert,
-  Modal,
-  Fade,
-  Backdrop,
-  TablePagination,
-  CircularProgress,
-  TableSortLabel,
-  TextField // 👈 Importar TextField
+  Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+  IconButton, Button, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress,
+  TableSortLabel, TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -30,15 +14,8 @@ import CreateCrownUserForm from "../components/CreateCrownUserForm";
 import { useSortableData } from "../hooks/useSortableData";
 
 const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 500,
-  bgcolor: 'background.paper',
-  boxShadow: 24,
-  p: 4,
-  borderRadius: 2
+  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+  width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
 const UsersCrownP = () => {
@@ -52,7 +29,7 @@ const UsersCrownP = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [search, setSearch] = useState(""); // 👈 Estado search
+  const [search, setSearch] = useState(""); 
 
   const { sortedItems: sortedUsers, requestSort, sortConfig } = useSortableData(users, { key: 'nombre', direction: 'ascending' });
 
@@ -67,7 +44,6 @@ const UsersCrownP = () => {
     setLoading(true);
     setError("");
     try {
-      // 👈 Enviar search
       const response = await api.get(`/users/get?page=${page + 1}&limit=${rowsPerPage}&search=${search}`);
       setUsers(response.data.data);
       setTotalUsers(response.data.totalCount);
@@ -98,17 +74,10 @@ const UsersCrownP = () => {
     }
   };
 
-  const handleEdit = (id) => {
-    navigate(`/users/edit/${id}`);
-  };
-
+  const handleEdit = (id) => navigate(`/users/edit/${id}`);
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
+  const handleChangePage = (event, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
@@ -117,11 +86,8 @@ const UsersCrownP = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
-          Usuarios de Crown
-        </Typography>
+        <Typography variant="h4">Usuarios de Crown</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          {/* 👈 Barra de búsqueda */}
           <TextField
             label="Buscar usuario..."
             variant="outlined"
@@ -129,11 +95,7 @@ const UsersCrownP = () => {
             value={search}
             onChange={handleSearchChange}
           />
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleOpenModal}
-          >
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}>
             Crear Usuario
           </Button>
         </Box>
@@ -148,55 +110,44 @@ const UsersCrownP = () => {
             <TableHead>
               <TableRow>
                 <TableCell sortDirection={sortConfig?.key === 'nombre' ? sortConfig.direction : false}>
-                  <TableSortLabel
-                    active={sortConfig?.key === 'nombre'}
-                    direction={sortConfig?.key === 'nombre' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('nombre')}
-                  >
+                  <TableSortLabel active={sortConfig?.key === 'nombre'} direction={sortConfig?.key === 'nombre' ? sortConfig.direction : 'asc'} onClick={() => requestSort('nombre')}>
                     Nombre
                   </TableSortLabel>
                 </TableCell>
                 <TableCell>Correo</TableCell>
-                <TableCell sortDirection={sortConfig?.key === 'departamento.nombre' ? sortConfig.direction : false}>
-                  <TableSortLabel
-                    active={sortConfig?.key === 'departamento.nombre'}
-                    direction={sortConfig?.key === 'departamento.nombre' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('departamento.nombre')}
-                  >
-                    Departamento
+                
+                {/* Columna AREA */}
+                <TableCell sortDirection={sortConfig?.key === 'area.nombre' ? sortConfig.direction : false}>
+                  <TableSortLabel active={sortConfig?.key === 'area.nombre'} direction={sortConfig?.key === 'area.nombre' ? sortConfig.direction : 'asc'} onClick={() => requestSort('area.nombre')}>
+                    Área
                   </TableSortLabel>
                 </TableCell>
+                
+                {/* Columna DEPARTAMENTO (Automática) */}
+                <TableCell sortDirection={sortConfig?.key === 'area.departamento.nombre' ? sortConfig.direction : false}>
+                  <TableSortLabel active={sortConfig?.key === 'area.departamento.nombre'} direction={sortConfig?.key === 'area.departamento.nombre' ? sortConfig.direction : 'asc'} onClick={() => requestSort('area.departamento.nombre')}>
+                    Departamento (Auto)
+                  </TableSortLabel>
+                </TableCell>
+
                 <TableCell>Usuario Login</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center">
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={6} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 sortedUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell>{u.nombre}</TableCell>
                     <TableCell>{u.correo}</TableCell>
-                    <TableCell>{u.departamento?.nombre || "N/A"}</TableCell>
+                    <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
+                    <TableCell>{u.area?.departamento?.nombre || "N/A"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>
                     <TableCell>
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleEdit(u.id)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDelete(u.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <IconButton color="primary" onClick={() => handleEdit(u.id)}><EditIcon /></IconButton>
+                      <IconButton color="error" onClick={() => handleDelete(u.id)}><DeleteIcon /></IconButton>
                     </TableCell>
                   </TableRow>
                 ))
@@ -204,28 +155,15 @@ const UsersCrownP = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={totalUsers}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25]} component="div" count={totalUsers}
+          rowsPerPage={rowsPerPage} page={page}
+          onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
           labelRowsPerPage="Filas por página:"
         />
       </Paper>
 
-      <Modal
-        open={openModal}
-        onClose={handleCloseModal}
-        closeAfterTransition
-        BackdropComponent={Backdrop}
-        BackdropProps={{
-          timeout: 500,
-        }}
-      >
+      <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openModal}>
           <Box sx={modalStyle}>
             <CreateCrownUserForm

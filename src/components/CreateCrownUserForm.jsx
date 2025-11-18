@@ -1,16 +1,8 @@
 // src/components/CreateCrownUserForm.jsx
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Typography,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Button,
-  FormControlLabel, // 👈 AÑADIR
-  Switch            // 👈 AÑADIR
+  Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Button,
+  FormControlLabel, Switch, ListSubheader
 } from "@mui/material";
 import api from "../api/axios";
 
@@ -18,25 +10,25 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
   const [formData, setFormData] = useState({
     nombre: "",
     correo: "",
-    departamentoId: "",
+    areaId: "", // 👈 Cambiado de departamentoId a areaId
     usuario_login: "",
   });
-  const [isManager, setIsManager] = useState(false); // 👈 AÑADIR ESTADO
-  const [departments, setDepartments] = useState([]);
+  const [isManager, setIsManager] = useState(false);
+  const [areas, setAreas] = useState([]); // Ahora cargamos áreas
   
   useEffect(() => {
-    // Cargar Departamentos
-    const fetchDepartments = async () => {
+    const fetchAreas = async () => {
       try {
-        const res = await api.get("/departments/get");
-        setDepartments(res.data || []);
+        // Suponemos que el backend devuelve áreas ordenadas por departamento
+        const res = await api.get("/areas/get");
+        setAreas(res.data || []);
       } catch (err) {
-        console.error("Error fetching departments:", err);
-        setError("Error al cargar departamentos.");
+        console.error("Error fetching areas:", err);
+        setError("Error al cargar las áreas.");
       }
     };
-    fetchDepartments();
-  }, [setError]); // Dependencia corregida
+    fetchAreas();
+  }, [setError]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -49,8 +41,8 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
     
     const payload = {
       ...formData,
-      departamentoId: formData.departamentoId || null,
-      es_jefe_de_area: isManager // 👈 AÑADIR CAMPO AL PAYLOAD
+      areaId: formData.areaId || null,
+      es_jefe_de_area: isManager
     };
 
     try {
@@ -63,69 +55,54 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
     }
   };
 
+  // Agrupar áreas por departamento para el Select
+  const renderAreaOptions = () => {
+    const options = [];
+    let lastDept = null;
+
+    areas.forEach(area => {
+      if (area.departamento?.nombre !== lastDept) {
+        options.push(<ListSubheader key={`header-${area.departamentoId}`}>{area.departamento?.nombre}</ListSubheader>);
+        lastDept = area.departamento?.nombre;
+      }
+      options.push(
+        <MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>
+          {area.nombre}
+        </MenuItem>
+      );
+    });
+    return options;
+  };
+
   return (
     <Box>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        Crear nuevo usuario
-      </Typography>
+      <Typography variant="h6" sx={{ mb: 2 }}>Crear nuevo usuario</Typography>
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <TextField
-          label="Nombre"
-          name="nombre"
-          value={formData.nombre}
-          onChange={handleChange}
-          fullWidth
-          required
-        />
-        <TextField
-          label="Correo"
-          name="correo"
-          type="email"
-          value={formData.correo}
-          onChange={handleChange}
-          fullWidth
-          required
-        />
-        <FormControl fullWidth>
-          <InputLabel>Departamento</InputLabel>
+        <TextField label="Nombre" name="nombre" value={formData.nombre} onChange={handleChange} fullWidth required />
+        <TextField label="Correo" name="correo" type="email" value={formData.correo} onChange={handleChange} fullWidth required />
+        
+        {/* SELECCIONAR ÁREA */}
+        <FormControl fullWidth required>
+          <InputLabel>Área</InputLabel>
           <Select
-            name="departamentoId"
-            value={formData.departamentoId}
+            name="areaId"
+            value={formData.areaId}
             onChange={handleChange}
-            label="Departamento"
+            label="Área"
           >
-            <MenuItem value="">
-              <em>Ninguno</em>
-            </MenuItem>
-            {departments.map((dept) => (
-              <MenuItem key={dept.id} value={dept.id}>{dept.nombre}</MenuItem>
-            ))}
+            <MenuItem value=""><em>Ninguna</em></MenuItem>
+            {renderAreaOptions()}
           </Select>
         </FormControl>
         
-        <TextField
-          label="Usuario de Login"
-          name="usuario_login"
-          value={formData.usuario_login}
-          onChange={handleChange}
-          fullWidth
-        />
+        <TextField label="Usuario de Login" name="usuario_login" value={formData.usuario_login} onChange={handleChange} fullWidth />
 
-        {/* 👇 AÑADIR ESTE BLOQUE 👇 */}
         <FormControlLabel
-          control={
-            <Switch
-              checked={isManager}
-              onChange={(e) => setIsManager(e.target.checked)}
-            />
-          }
+          control={<Switch checked={isManager} onChange={(e) => setIsManager(e.target.checked)} />}
           label="Es Jefe de Área (Recibe notificaciones)"
         />
-        {/* 👆 FIN DEL BLOQUE NUEVO 👆 */}
 
-        <Button type="submit" variant="contained" color="primary">
-          Crear usuario
-        </Button>
+        <Button type="submit" variant="contained" color="primary">Crear usuario</Button>
       </Box>
     </Box>
   );

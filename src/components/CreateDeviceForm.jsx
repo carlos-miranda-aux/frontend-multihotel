@@ -1,6 +1,8 @@
+// src/components/CreateDeviceForm.jsx
 import React, { useState, useEffect, useContext } from "react";
 import {
-  Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Button, Grid, Divider, Stack,
+  Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
+  Button, Grid, Divider, Stack, ListSubheader
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
@@ -31,33 +33,32 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     garantia_numero_producto: "",
     garantia_inicio: "",
     garantia_fin: "",
-    departamentoId: "",
+    areaId: "", // 👈 CAMBIO: Usar areaId
     fecha_proxima_revision: "",
   });
 
-  // 1. Estado de errores
   const [errors, setErrors] = useState({});
 
   const [users, setUsers] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [operatingSystems, setOperatingSystems] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [areas, setAreas] = useState([]); // 👈 CAMBIO: Cargar áreas
   const { refreshAlerts } = useContext(AlertContext);
 
   useEffect(() => {
     const fetchFormData = async () => {
       try {
-        const [usersRes, deviceTypesRes, operatingSystemsRes, departmentsRes] =
+        const [usersRes, deviceTypesRes, operatingSystemsRes, areasRes] = 
           await Promise.all([
             api.get("/users/get/all"),
             api.get("/device-types/get"),
             api.get("/operating-systems/get"),
-            api.get("/departments/get"),
+            api.get("/areas/get"), // 👈 RUTA DE ÁREAS
           ]);
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
         setOperatingSystems(operatingSystemsRes.data);
-        setDepartments(departmentsRes.data);
+        setAreas(areasRes.data); // 👈 Guardar áreas
       } catch (err) {
         console.error("Error fetching form data:", err);
         setError("Error al cargar los datos del formulario.");
@@ -74,7 +75,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     }
   };
 
-  // 2. Lógica de validación
   const validate = () => {
     let tempErrors = {};
     if (!formData.nombre_equipo.trim()) tempErrors.nombre_equipo = "El nombre es obligatorio.";
@@ -82,7 +82,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     if (!formData.marca.trim()) tempErrors.marca = "La marca es obligatoria.";
     if (!formData.modelo.trim()) tempErrors.modelo = "El modelo es obligatorio.";
     if (!formData.tipoId) tempErrors.tipoId = "El tipo de equipo es obligatorio.";
-    // Etiqueta es opcional, no genera error si está vacía
     
     setErrors(tempErrors);
     return Object.keys(tempErrors).length === 0;
@@ -101,6 +100,12 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     const payload = {};
     for (const key in formData) {
       const value = formData[key];
+      // Convertir areaId a número o null
+      if (key === 'areaId') {
+        payload[key] = value ? Number(value) : null;
+        continue;
+      }
+
       if (typeof value === 'string') {
         const trimmedValue = value.trim();
         payload[key] = trimmedValue === "" ? null : trimmedValue;
@@ -116,7 +121,8 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     payload.garantia_inicio = localGarantiainicio ? localGarantiainicio.toISOString() : null;
     payload.garantia_fin = localGarantiaFin ? localGarantiaFin.toISOString() : null;
     payload.fecha_proxima_revision = localProximaRevision ? localProximaRevision.toISOString() : null;
-
+    
+    // El payload ya usa areaId, el backend debe manejarlo
     try {
       await api.post("/devices/post", payload);
       setMessage("Equipo creado exitosamente.");
@@ -127,6 +133,26 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       setError(err.response?.data?.error || "Error al crear el equipo.");
     }
   };
+  
+  // Agrupar áreas por departamento para el Select
+  const renderAreaOptions = () => {
+    const options = [];
+    let lastDept = null;
+
+    areas.forEach(area => {
+      if (area.departamento?.nombre && area.departamento.nombre !== lastDept) {
+        options.push(<ListSubheader key={`header-${area.departamentoId}`}>{area.departamento.nombre}</ListSubheader>);
+        lastDept = area.departamento.nombre;
+      }
+      options.push(
+        <MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>
+          {area.nombre}
+        </MenuItem>
+      );
+    });
+    return options;
+  };
+
 
   return (
     <Box sx={{ maxHeight: "85vh", overflowY: "auto", p: 3, bgcolor: "#f9f9f9", borderRadius: 2 }}>
@@ -136,119 +162,53 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
       <form onSubmit={handleCreateDevice} noValidate>
          {/* INFORMACIÓN GENERAL */}
-        <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
-          Información General
-        </Typography>
+        <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Información General</Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
-            <TextField
-              label="Etiqueta (Opcional)"
-              name="etiqueta"
-              value={formData.etiqueta}
-              onChange={handleChange}
-              fullWidth
-            />
+            <TextField label="Etiqueta (Opcional)" name="etiqueta" value={formData.etiqueta} onChange={handleChange} fullWidth />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              label="Número de Serie"
-              name="numero_serie"
-              value={formData.numero_serie}
-              onChange={handleChange}
-              fullWidth
-              required
-              error={!!errors.numero_serie}
-              helperText={errors.numero_serie}
-            />
+            <TextField label="Número de Serie" name="numero_serie" value={formData.numero_serie} onChange={handleChange} fullWidth required error={!!errors.numero_serie} helperText={errors.numero_serie} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              label="Nombre del equipo"
-              name="nombre_equipo"
-              value={formData.nombre_equipo}
-              onChange={handleChange}
-              fullWidth
-              required
-              error={!!errors.nombre_equipo}
-              helperText={errors.nombre_equipo}
-            />
+            <TextField label="Nombre del equipo" name="nombre_equipo" value={formData.nombre_equipo} onChange={handleChange} fullWidth required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo} />
           </Grid>
           <Grid item xs={12}>
-            <TextField
-              label="Descripción"
-              name="descripcion"
-              value={formData.descripcion}
-              onChange={handleChange}
-              fullWidth
-              multiline
-              minRows={2}
-            />
+            <TextField label="Descripción" name="descripcion" value={formData.descripcion} onChange={handleChange} fullWidth multiline minRows={2} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              label="IP del equipo"
-              name="ip_equipo"
-              value={formData.ip_equipo}
-              onChange={handleChange}
-              fullWidth
-            />
+            <TextField label="IP del equipo" name="ip_equipo" value={formData.ip_equipo} onChange={handleChange} fullWidth />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              label="Marca"
-              name="marca"
-              value={formData.marca}
-              onChange={handleChange}
-              fullWidth
-              required
-              error={!!errors.marca}
-              helperText={errors.marca}
-            />
+            <TextField label="Marca" name="marca" value={formData.marca} onChange={handleChange} fullWidth required error={!!errors.marca} helperText={errors.marca} />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              label="Modelo"
-              name="modelo"
-              value={formData.modelo}
-              onChange={handleChange}
-              fullWidth
-              required
-              error={!!errors.modelo}
-              helperText={errors.modelo}
-            />
+            <TextField label="Modelo" name="modelo" value={formData.modelo} onChange={handleChange} fullWidth required error={!!errors.modelo} helperText={errors.modelo} />
           </Grid>
         </Grid>
 
         {/* ASIGNACIÓN Y UBICACIÓN */}
-        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>
-          Asignación y Ubicación
-        </Typography>
+        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>Asignación y Ubicación</Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 180 }} error={!!errors.tipoId}>
               <InputLabel>Tipo *</InputLabel>
               <Select name="tipoId" value={formData.tipoId} onChange={handleChange} label="Tipo *">
-                <MenuItem value="">
-                  <em>Ninguno</em>
-                </MenuItem>
-                {deviceTypes.map((type) => (
-                  <MenuItem key={type.id} value={type.id}>
-                    {type.nombre}
-                  </MenuItem>
-                ))}
+                <MenuItem value=""><em>Ninguno</em></MenuItem>
+                {deviceTypes.map((type) => (<MenuItem key={type.id} value={type.id}>{type.nombre}</MenuItem>))}
               </Select>
               {errors.tipoId && <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>{errors.tipoId}</Typography>}
             </FormControl>
           </Grid>
-          {/* ... Resto de selects (Departamento, Usuario) ... */}
-           <Grid item xs={12} sm={4}>
+          {/* CAMBIO: Usar Área */}
+          <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 180 }}>
-              <InputLabel>Departamento</InputLabel>
-              <Select name="departamentoId" value={formData.departamentoId} onChange={handleChange} label="Departamento">
+              <InputLabel>Área</InputLabel>
+              <Select name="areaId" value={formData.areaId} onChange={handleChange} label="Área">
                 <MenuItem value=""><em>Ninguno</em></MenuItem>
-                {departments.map((dept) => (<MenuItem key={dept.id} value={dept.id}>{dept.nombre}</MenuItem>))}
+                {renderAreaOptions()}
               </Select>
             </FormControl>
           </Grid>
@@ -264,9 +224,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         </Grid>
 
         {/* SOFTWARE Y LICENCIAS */}
-        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>
-          Software y Licencias
-        </Typography>
+        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>Software y Licencias</Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
             <Grid item xs={12} sm={4}>
@@ -295,9 +253,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         </Grid>
 
         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 4 }}>
-          <Button type="submit" variant="contained" color="primary">
-            Crear Equipo
-          </Button>
+          <Button type="submit" variant="contained" color="primary">Crear Equipo</Button>
         </Stack>
       </form>
     </Box>

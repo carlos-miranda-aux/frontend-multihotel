@@ -13,7 +13,9 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Grid
+  Grid,
+  Fade, // 👈 CORRECCIÓN: Importar Fade
+  Divider // 👈 CORRECCIÓN: Importar Divider
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
@@ -29,6 +31,10 @@ const EditMaintenance = () => {
     fecha_realizacion: "",
     estado: "pendiente",
     deviceId: "",
+    // 👈 CORRECCIÓN: Añadir nuevos campos al estado
+    diagnostico: "",
+    acciones_realizadas: "",
+    observaciones: ""
   });
   
   const [devices, setDevices] = useState([]);
@@ -42,7 +48,6 @@ const EditMaintenance = () => {
         setLoading(true);
         const [maintenanceRes, devicesRes] = await Promise.all([
           api.get(`/maintenances/get/${id}`),
-          // 👈 CORRECCIÓN: Llamar a la nueva ruta "get/all-names"
           api.get("/devices/get/all-names"),
         ]);
 
@@ -54,9 +59,12 @@ const EditMaintenance = () => {
           fecha_realizacion: maintenanceData.fecha_realizacion ? new Date(maintenanceData.fecha_realizacion).toISOString().substring(0, 10) : "",
           estado: maintenanceData.estado || "pendiente",
           deviceId: maintenanceData.deviceId || "",
+          // 👈 CORRECCIÓN: Cargar los datos existentes
+          diagnostico: maintenanceData.diagnostico || "",
+          acciones_realizadas: maintenanceData.acciones_realizadas || "",
+          observaciones: maintenanceData.observaciones || ""
         });
         
-        // 👈 CORRECCIÓN: 'devicesRes.data' ahora es un array simple
         setDevices(devicesRes.data);
         setLoading(false);
       } catch (err) {
@@ -69,7 +77,19 @@ const EditMaintenance = () => {
   }, [id]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // 👈 CORRECCIÓN: Si marcan como "realizado", auto-rellenar la fecha
+    if (name === "estado" && value === "realizado" && !formData.fecha_realizacion) {
+      setFormData(prev => ({
+        ...prev,
+        estado: value,
+        fecha_realizacion: new Date().toISOString().substring(0, 10)
+      }));
+    } else {
+       setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleUpdate = async (e) => {
@@ -114,6 +134,10 @@ const EditMaintenance = () => {
       <Paper sx={{ p: 3 }}>
         <Box component="form" onSubmit={handleUpdate} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <Grid container spacing={2}>
+            {/* --- Sección de Detalles Programados --- */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>Detalles del Servicio</Typography>
+            </Grid>
             <Grid item xs={12}>
               <FormControl fullWidth required>
                 <InputLabel>Equipo (Device)</InputLabel>
@@ -127,7 +151,6 @@ const EditMaintenance = () => {
                     <em>Selecciona un equipo</em>
                   </MenuItem>
                   {devices.map((device) => (
-                    // 👈 CORRECCIÓN: Acceder a los datos del 'select'
                     <MenuItem key={device.id} value={device.id}>
                       {device.etiqueta} - {device.nombre_equipo || device.tipo?.nombre}
                     </MenuItem>
@@ -137,16 +160,18 @@ const EditMaintenance = () => {
             </Grid>
             <Grid item xs={12}>
               <TextField
-                label="Descripción"
+                label="Descripción (Tarea Programada)"
                 name="descripcion"
                 value={formData.descripcion}
                 onChange={handleChange}
                 fullWidth
                 multiline
                 rows={3}
+                InputProps={{ readOnly: true }} // 👈 Hacemos que la descripción original no se edite
+                helperText="La descripción de la tarea programada no se puede editar."
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <TextField
                 label="Fecha Programada"
                 name="fecha_programada"
@@ -158,18 +183,7 @@ const EditMaintenance = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Fecha Realización"
-                name="fecha_realizacion"
-                type="date"
-                value={formData.fecha_realizacion}
-                onChange={handleChange}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <FormControl fullWidth>
                 <InputLabel>Estado</InputLabel>
                 <Select
@@ -184,9 +198,72 @@ const EditMaintenance = () => {
                 </Select>
               </FormControl>
             </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Fecha Realización"
+                name="fecha_realizacion"
+                type="date"
+                value={formData.fecha_realizacion}
+                onChange={handleChange}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                // 👈 Deshabilitado si no está "realizado"
+                disabled={formData.estado !== 'realizado'}
+              />
+            </Grid>
+
+            {/* --- 👇 CORRECCIÓN: CAMPOS CONDICIONALES PARA EL REPORTE --- */}
+            <Fade in={formData.estado === 'realizado'} mountOnEnter unmountOnExit>
+              <Grid item container xs={12} spacing={2} sx={{ mt: 2 }}>
+                <Grid item xs={12}>
+                  <Divider />
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                    Reporte del Técnico
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Diagnóstico (Qué encontró)"
+                    name="diagnostico"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    value={formData.diagnostico}
+                    onChange={handleChange}
+                    helperText="Este campo aparecerá en el reporte exportado."
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Acciones Realizadas (Qué hizo)"
+                    name="acciones_realizadas"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    value={formData.acciones_realizadas}
+                    onChange={handleChange}
+                    helperText="Este campo aparecerá en el reporte exportado."
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Observaciones Adicionales"
+                    name="observaciones"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    value={formData.observaciones}
+                    onChange={handleChange}
+                    helperText="Este campo aparecerá en el reporte exportado."
+                  />
+                </Grid>
+              </Grid>
+            </Fade>
+            {/* --- 👆 FIN DE LA CORRECCIÓN --- */}
+
           </Grid>
           
-          <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
+          <Button type="submit" variant="contained" color="primary" sx={{ mt: 3, alignSelf: 'flex-end' }}>
             Guardar Cambios
           </Button>
         </Box>

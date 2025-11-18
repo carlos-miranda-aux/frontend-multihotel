@@ -13,8 +13,9 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  FormControlLabel, // 👈 AÑADIR
-  Switch            // 👈 AÑADIR
+  FormControlLabel, 
+  Switch,
+  ListSubheader // 👈 Importar para agrupar áreas
 } from "@mui/material";
 import api from "../api/axios";
 
@@ -25,36 +26,45 @@ const EditCrownUser = () => {
   const [formData, setFormData] = useState({
     nombre: "",
     correo: "",
-    departamentoId: "",
+    areaId: "", // 👈 CAMBIO: Usar areaId
     usuario_login: "",
   });
-  const [isManager, setIsManager] = useState(false); // 👈 AÑADIR ESTADO
-  const [departments, setDepartments] = useState([]);
+  const [isManager, setIsManager] = useState(false); 
+  const [areas, setAreas] = useState([]); // 👈 CAMBIO: Cargar áreas
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  
+  // Estado para el departamento derivado (solo display)
+  const [departmentName, setDepartmentName] = useState("N/A");
 
   useEffect(() => {
-    const fetchUserAndDepartments = async () => {
+    const fetchUserAndAreas = async () => {
       try {
         setLoading(true);
-        // Cargar ambos en paralelo
-        const [userResponse, deptResponse] = await Promise.all([
+        // Cargar usuario y áreas en paralelo
+        const [userResponse, areasRes] = await Promise.all([ // 👈 CAMBIO: areasRes
           api.get(`/users/get/${id}`),
-          api.get("/departments/get"),
+          api.get("/areas/get"), // 👈 CAMBIO: Usar ruta de áreas
         ]);
 
         const userData = userResponse.data;
+        const areasData = areasRes.data || [];
+        setAreas(areasData); // Guardar lista de áreas
+
         setFormData({
           nombre: userData.nombre || "",
           correo: userData.correo || "",
-          departamentoId: userData.departamentoId || "",
+          areaId: userData.areaId || "", // 👈 Cargar areaId
           usuario_login: userData.usuario_login || "",
         });
         
-        setIsManager(userData.es_jefe_de_area || false); // 👈 AÑADIR (cargar el valor)
+        setIsManager(userData.es_jefe_de_area || false);
+        
+        // Determinar y establecer el nombre del departamento
+        const assignedArea = areasData.find(a => a.id === userData.areaId);
+        setDepartmentName(assignedArea?.departamento?.nombre || "N/A");
 
-        setDepartments(deptResponse.data || []);
         setLoading(false);
       } catch (err) {
         console.error("Error al cargar datos:", err);
@@ -62,11 +72,18 @@ const EditCrownUser = () => {
         setLoading(false);
       }
     };
-    fetchUserAndDepartments();
+    fetchUserAndAreas();
   }, [id]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    // Actualizar nombre del departamento si se selecciona una nueva área
+    if (name === 'areaId') {
+      const selectedArea = areas.find(a => a.id === value);
+      setDepartmentName(selectedArea?.departamento?.nombre || "N/A");
+    }
   };
 
   const handleUpdateUser = async (e) => {
@@ -76,9 +93,14 @@ const EditCrownUser = () => {
 
     const payload = {
       ...formData,
-      departamentoId: formData.departamentoId || null,
-      es_jefe_de_area: isManager // 👈 AÑADIR CAMPO AL PAYLOAD
+      areaId: formData.areaId || null, // 👈 ENVIAR areaId
+      es_jefe_de_area: isManager
     };
+    
+    // Convertir areaId a número si no es nulo
+    if (payload.areaId) {
+        payload.areaId = Number(payload.areaId);
+    }
 
     try {
       await api.put(`/users/put/${id}`, payload);
@@ -88,6 +110,26 @@ const EditCrownUser = () => {
       setError(err.response?.data?.error || "Error al actualizar el usuario.");
     }
   };
+
+  // Agrupar áreas por departamento para el Select
+  const renderAreaOptions = () => {
+    const options = [];
+    let lastDept = null;
+
+    areas.forEach(area => {
+      if (area.departamento?.nombre && area.departamento.nombre !== lastDept) {
+        options.push(<ListSubheader key={`header-${area.departamentoId}`}>{area.departamento.nombre}</ListSubheader>);
+        lastDept = area.departamento.nombre;
+      }
+      options.push(
+        <MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>
+          {area.nombre}
+        </MenuItem>
+      );
+    });
+    return options;
+  };
+
 
   if (loading) {
     return (
@@ -108,7 +150,7 @@ const EditCrownUser = () => {
 
       <Paper sx={{ p: 3 }}>
         <Box component="form" onSubmit={handleUpdateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {/* ... (Campos Nombre, Correo, Departamento) ... */}
+          
           <TextField
             label="Nombre"
             name="nombre"
@@ -126,22 +168,32 @@ const EditCrownUser = () => {
             fullWidth
             required
           />
+          
+          {/* SELECTOR DE ÁREA */}
           <FormControl fullWidth>
-            <InputLabel>Departamento</InputLabel>
+            <InputLabel>Área</InputLabel>
             <Select
-              name="departamentoId"
-              value={formData.departamentoId}
+              name="areaId"
+              value={formData.areaId || ""} // Asegurar que sea string vacío si es null
               onChange={handleChange}
-              label="Departamento"
+              label="Área"
             >
               <MenuItem value="">
-                <em>Ninguno</em>
+                <em>Ninguna</em>
               </MenuItem>
-              {departments.map((dept) => (
-                <MenuItem key={dept.id} value={dept.id}>{dept.nombre}</MenuItem>
-              ))}
+              {renderAreaOptions()}
             </Select>
           </FormControl>
+          
+          {/* DEPARTAMENTO DERIVADO (SOLO LECTURA) */}
+          <TextField
+            label="Departamento (Automático)"
+            name="departamento"
+            value={departmentName}
+            fullWidth
+            InputProps={{ readOnly: true }}
+            disabled
+          />
           
           <TextField
             label="Usuario de Login"
@@ -151,7 +203,6 @@ const EditCrownUser = () => {
             fullWidth
           />
 
-          {/* 👇 AÑADIR ESTE BLOQUE 👇 */}
           <FormControlLabel
             control={
               <Switch
@@ -161,7 +212,6 @@ const EditCrownUser = () => {
             }
             label="Es Jefe de Área (Recibe notificaciones)"
           />
-          {/* 👆 FIN DEL BLOQUE NUEVO 👆 */}
 
           <Button type="submit" variant="contained" color="primary">
             Guardar cambios

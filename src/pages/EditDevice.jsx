@@ -59,6 +59,9 @@ const EditDevice = () => {
     observaciones_baja: "",
   });
 
+  // 1. Nuevo estado de errores para la validación
+  const [errors, setErrors] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
@@ -83,8 +86,7 @@ const EditDevice = () => {
           departmentsRes,
         ] = await Promise.all([
           api.get(`/devices/get/${id}`),
-          // 👈 CORRECCIÓN: Llamar a la nueva ruta "get/all"
-          api.get("/users/get/all"), 
+          api.get("/users/get/all"), // Ruta correcta (no paginada)
           api.get("/device-types/get"),
           api.get("/device-status/get"),
           api.get("/operating-systems/get"),
@@ -137,7 +139,6 @@ const EditDevice = () => {
           observaciones_baja: deviceData.observaciones_baja || "",
         }); 
         
-        // 👈 CORRECCIÓN: 'usersRes.data' ahora es un array simple
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
         setDeviceStatuses(deviceStatusesRes.data);
@@ -154,13 +155,44 @@ const EditDevice = () => {
   }, [id]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    // Limpiar el error del campo cuando el usuario escribe
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
+  };
+
+  // 2. Función de Validación (Igual que en CreateDeviceForm)
+  const validate = () => {
+    let tempErrors = {};
+    
+    if (!formData.nombre_equipo.trim()) tempErrors.nombre_equipo = "El nombre es obligatorio.";
+    if (!formData.numero_serie.trim()) tempErrors.numero_serie = "El número de serie es obligatorio.";
+    if (!formData.marca.trim()) tempErrors.marca = "La marca es obligatoria.";
+    if (!formData.modelo.trim()) tempErrors.modelo = "El modelo es obligatorio.";
+    
+    // Validar selects (que no estén vacíos o en string vacío)
+    if (!formData.tipoId) tempErrors.tipoId = "El tipo es obligatorio.";
+    if (!formData.estadoId) tempErrors.estadoId = "El estado es obligatorio.";
+
+    // Etiqueta es opcional -> No validamos
+
+    setErrors(tempErrors);
+    return Object.keys(tempErrors).length === 0;
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     setError("");
     setMessage("");
+
+    // 3. Ejecutar validación antes de enviar
+    if (!validate()) {
+      setError("Por favor corrige los errores antes de guardar.");
+      return;
+    }
 
     const payload = { ...formData };
     
@@ -214,9 +246,7 @@ const EditDevice = () => {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3, width: "100%" }}>
-        <form onSubmit={handleUpdate}>
-          {/* --- El resto del formulario (Grids, TextFields, etc.) sigue igual --- */}
-          
+        <form onSubmit={handleUpdate} noValidate>
           {/* DATOS GENERALES */}
           <Typography variant="h6" sx={{ mb: 1 }}>
             Datos generales
@@ -224,22 +254,65 @@ const EditDevice = () => {
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
-              <TextField label="Etiqueta" name="etiqueta" fullWidth value={formData.etiqueta} onChange={handleChange} />
+              <TextField
+                label="Etiqueta (Opcional)"
+                name="etiqueta"
+                fullWidth
+                value={formData.etiqueta}
+                onChange={handleChange}
+                // Ya no es required
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Nombre del equipo" name="nombre_equipo" fullWidth value={formData.nombre_equipo} onChange={handleChange} />
+              <TextField
+                label="Nombre del equipo"
+                name="nombre_equipo"
+                fullWidth
+                value={formData.nombre_equipo}
+                onChange={handleChange}
+                required
+                error={!!errors.nombre_equipo}
+                helperText={errors.nombre_equipo}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Número de serie" name="numero_serie" fullWidth value={formData.numero_serie} onChange={handleChange} />
+              <TextField
+                label="Número de serie"
+                name="numero_serie"
+                fullWidth
+                value={formData.numero_serie}
+                onChange={handleChange}
+                required
+                error={!!errors.numero_serie}
+                helperText={errors.numero_serie}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField label="IP del equipo" name="ip_equipo" fullWidth value={formData.ip_equipo} onChange={handleChange} />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Marca" name="marca" fullWidth value={formData.marca} onChange={handleChange} />
+              <TextField
+                label="Marca"
+                name="marca"
+                fullWidth
+                value={formData.marca}
+                onChange={handleChange}
+                required
+                error={!!errors.marca}
+                helperText={errors.marca}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField label="Modelo" name="modelo" fullWidth value={formData.modelo} onChange={handleChange} />
+              <TextField
+                label="Modelo"
+                name="modelo"
+                fullWidth
+                value={formData.modelo}
+                onChange={handleChange}
+                required
+                error={!!errors.modelo}
+                helperText={errors.modelo}
+              />
             </Grid>
             <Grid item xs={12}>
               <TextField
@@ -395,16 +468,15 @@ const EditDevice = () => {
             Estado
           </Typography>
           <Divider sx={{ mb: 2 }} />
-
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth disabled={isPermanentlyBaja}>
-                <InputLabel>Estado del equipo</InputLabel>
+              <FormControl fullWidth disabled={isPermanentlyBaja} error={!!errors.estadoId}>
+                <InputLabel>Estado del equipo *</InputLabel>
                 <Select
                   name="estadoId"
                   value={formData.estadoId || ''}
                   onChange={handleChange}
-                  label="Estado del equipo"
+                  label="Estado del equipo *"
                 >
                   <MenuItem value="">
                     <em>Ninguno</em>
@@ -415,9 +487,11 @@ const EditDevice = () => {
                     </MenuItem>
                   ))}
                 </Select>
+                {errors.estadoId && <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>{errors.estadoId}</Typography>}
               </FormControl>
             </Grid>
             
+            {/* Campos condicionales para BAJA */}
             <Fade in={formData.estadoId === bajaStatusId} mountOnEnter unmountOnExit>
               <Grid item container xs={12} spacing={2} sx={{ mt: 0 }}>
                 <Grid item xs={12}>
@@ -442,7 +516,6 @@ const EditDevice = () => {
                   </Grid>
               </Grid>
             </Fade>
-
           </Grid>
 
           {/* ACCIONES */}

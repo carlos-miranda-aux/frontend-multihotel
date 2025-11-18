@@ -1,22 +1,10 @@
-// src/components/CreateDeviceForm.jsx
 import React, { useState, useEffect, useContext } from "react";
 import {
-  Box,
-  Typography,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Button,
-  Grid,
-  Divider,
-  Stack,
+  Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Button, Grid, Divider, Stack,
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
 
-// Función para parsear la fecha como LOCAL
 const parseLocalDate = (dateString) => {
   if (!dateString) return null;
   const parts = dateString.split('-');
@@ -47,6 +35,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     fecha_proxima_revision: "",
   });
 
+  // 1. Estado de errores
+  const [errors, setErrors] = useState({});
+
   const [users, setUsers] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [operatingSystems, setOperatingSystems] = useState([]);
@@ -58,14 +49,11 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       try {
         const [usersRes, deviceTypesRes, operatingSystemsRes, departmentsRes] =
           await Promise.all([
-            // 👈 CORRECCIÓN: Llamar a la nueva ruta
-            api.get("/users/get/all"), 
+            api.get("/users/get/all"),
             api.get("/device-types/get"),
             api.get("/operating-systems/get"),
             api.get("/departments/get"),
           ]);
-        
-        // 👈 CORRECCIÓN: La respuesta es un array simple, no un objeto paginado
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
         setOperatingSystems(operatingSystemsRes.data);
@@ -76,16 +64,39 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       }
     };
     fetchFormData();
-  }, [setError]); // 👈 CORRECCIÓN: Dependencia correcta
+  }, [setError]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
+  };
+
+  // 2. Lógica de validación
+  const validate = () => {
+    let tempErrors = {};
+    if (!formData.nombre_equipo.trim()) tempErrors.nombre_equipo = "El nombre es obligatorio.";
+    if (!formData.numero_serie.trim()) tempErrors.numero_serie = "El número de serie es obligatorio.";
+    if (!formData.marca.trim()) tempErrors.marca = "La marca es obligatoria.";
+    if (!formData.modelo.trim()) tempErrors.modelo = "El modelo es obligatorio.";
+    if (!formData.tipoId) tempErrors.tipoId = "El tipo de equipo es obligatorio.";
+    // Etiqueta es opcional, no genera error si está vacía
+    
+    setErrors(tempErrors);
+    return Object.keys(tempErrors).length === 0;
   };
 
   const handleCreateDevice = async (e) => {
     e.preventDefault();
     setError("");
     setMessage("");
+
+    if (!validate()) {
+      setError("Por favor completa los campos obligatorios.");
+      return;
+    }
 
     const payload = {};
     for (const key in formData) {
@@ -109,7 +120,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     try {
       await api.post("/devices/post", payload);
       setMessage("Equipo creado exitosamente.");
-      refreshAlerts(); 
+      refreshAlerts();
       onDeviceCreated();
       onClose();
     } catch (err) {
@@ -123,8 +134,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         Crear nuevo equipo
       </Typography>
 
-      <form onSubmit={handleCreateDevice}>
-        {/* ... (El resto del formulario (Grid, TextField, etc.) sigue exactamente igual) ... */}
+      <form onSubmit={handleCreateDevice} noValidate>
          {/* INFORMACIÓN GENERAL */}
         <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
           Información General
@@ -133,12 +143,11 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <TextField
-              label="Etiqueta"
+              label="Etiqueta (Opcional)"
               name="etiqueta"
               value={formData.etiqueta}
               onChange={handleChange}
               fullWidth
-              required
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -149,6 +158,8 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
               onChange={handleChange}
               fullWidth
               required
+              error={!!errors.numero_serie}
+              helperText={errors.numero_serie}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -158,6 +169,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
               value={formData.nombre_equipo}
               onChange={handleChange}
               fullWidth
+              required
+              error={!!errors.nombre_equipo}
+              helperText={errors.nombre_equipo}
             />
           </Grid>
           <Grid item xs={12}>
@@ -187,6 +201,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
               value={formData.marca}
               onChange={handleChange}
               fullWidth
+              required
+              error={!!errors.marca}
+              helperText={errors.marca}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -196,6 +213,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
               value={formData.modelo}
               onChange={handleChange}
               fullWidth
+              required
+              error={!!errors.modelo}
+              helperText={errors.modelo}
             />
           </Grid>
         </Grid>
@@ -207,9 +227,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
-            <FormControl fullWidth sx={{ minWidth: 180 }}>
-              <InputLabel>Tipo</InputLabel>
-              <Select name="tipoId" value={formData.tipoId} onChange={handleChange} label="Tipo">
+            <FormControl fullWidth sx={{ minWidth: 180 }} error={!!errors.tipoId}>
+              <InputLabel>Tipo *</InputLabel>
+              <Select name="tipoId" value={formData.tipoId} onChange={handleChange} label="Tipo *">
                 <MenuItem value="">
                   <em>Ninguno</em>
                 </MenuItem>
@@ -219,45 +239,25 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                   </MenuItem>
                 ))}
               </Select>
+              {errors.tipoId && <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>{errors.tipoId}</Typography>}
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={4}>
+          {/* ... Resto de selects (Departamento, Usuario) ... */}
+           <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 180 }}>
               <InputLabel>Departamento</InputLabel>
-              <Select
-                name="departamentoId"
-                value={formData.departamentoId}
-                onChange={handleChange}
-                label="Departamento"
-              >
-                <MenuItem value="">
-                  <em>Ninguno</em>
-                </MenuItem>
-                {departments.map((dept) => (
-                  <MenuItem key={dept.id} value={dept.id}>
-                    {dept.nombre}
-                  </MenuItem>
-                ))}
+              <Select name="departamentoId" value={formData.departamentoId} onChange={handleChange} label="Departamento">
+                <MenuItem value=""><em>Ninguno</em></MenuItem>
+                {departments.map((dept) => (<MenuItem key={dept.id} value={dept.id}>{dept.nombre}</MenuItem>))}
               </Select>
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 180 }}>
               <InputLabel>Usuario Asignado</InputLabel>
-              <Select
-                name="usuarioId"
-                value={formData.usuarioId}
-                onChange={handleChange}
-                label="Usuario Asignado"
-              >
-                <MenuItem value="">
-                  <em>Ninguno</em>
-                </MenuItem>
-                {users.map((user) => (
-                  <MenuItem key={user.id} value={user.id}>
-                    {user.nombre}
-                  </MenuItem>
-                ))}
+              <Select name="usuarioId" value={formData.usuarioId} onChange={handleChange} label="Usuario Asignado">
+                <MenuItem value=""><em>Ninguno</em></MenuItem>
+                {users.map((user) => (<MenuItem key={user.id} value={user.id}>{user.nombre}</MenuItem>))}
               </Select>
             </FormControl>
           </Grid>
@@ -269,127 +269,31 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 200 }}>
-              <InputLabel>Sistema Operativo</InputLabel>
-              <Select
-                name="sistemaOperativoId"
-                value={formData.sistemaOperativoId}
-                onChange={handleChange}
-                label="Sistema Operativo"
-              >
-                <MenuItem value="">
-                  <em>Ninguno</em>
-                </MenuItem>
-                {operatingSystems.map((os) => (
-                  <MenuItem key={os.id} value={os.id}>
-                    {os.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
+                <InputLabel>Sistema Operativo</InputLabel>
+                <Select name="sistemaOperativoId" value={formData.sistemaOperativoId} onChange={handleChange} label="Sistema Operativo">
+                <MenuItem value=""><em>Ninguno</em></MenuItem>
+                {operatingSystems.map((os) => (<MenuItem key={os.id} value={os.id}>{os.nombre}</MenuItem>))}
+                </Select>
             </FormControl>
-          </Grid>
-
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Licencia de SO"
-              name="licencia_so"
-              value={formData.licencia_so}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Versión de Office"
-              name="office_version"
-              value={formData.office_version}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Tipo de Licencia de Office"
-              name="office_tipo_licencia"
-              value={formData.office_tipo_licencia}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Serial de Office"
-              name="office_serial"
-              value={formData.office_serial}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Clave de Office"
-              name="office_key"
-              value={formData.office_key}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid>
+            </Grid>
+            <Grid item xs={12} sm={4}><TextField label="Licencia de SO" name="licencia_so" value={formData.licencia_so} onChange={handleChange} fullWidth /></Grid>
+            <Grid item xs={12} sm={4}><TextField label="Versión de Office" name="office_version" value={formData.office_version} onChange={handleChange} fullWidth /></Grid>
+            <Grid item xs={12} sm={4}><TextField label="Tipo de Licencia de Office" name="office_tipo_licencia" value={formData.office_tipo_licencia} onChange={handleChange} fullWidth /></Grid>
+            <Grid item xs={12} sm={4}><TextField label="Serial de Office" name="office_serial" value={formData.office_serial} onChange={handleChange} fullWidth /></Grid>
+            <Grid item xs={12} sm={4}><TextField label="Clave de Office" name="office_key" value={formData.office_key} onChange={handleChange} fullWidth /></Grid>
         </Grid>
 
-        {/* GARANTÍA */}
-        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>
-          Garantía
-        </Typography>
+        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>Garantía</Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Número de producto de garantía"
-              name="garantia_numero_producto"
-              value={formData.garantia_numero_producto}
-              onChange={handleChange}
-              fullWidth
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Inicio de Garantía"
-              name="garantia_inicio"
-              type="date"
-              value={formData.garantia_inicio}
-              onChange={handleChange}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              label="Fin de Garantía"
-              name="garantia_fin"
-              type="date"
-              value={formData.garantia_fin}
-              onChange={handleChange}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Próxima Revisión Sugerida"
-              name="fecha_proxima_revision"
-              type="date"
-              value={formData.fecha_proxima_revision}
-              onChange={handleChange}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
+          <Grid item xs={12} sm={4}><TextField label="Número de producto de garantía" name="garantia_numero_producto" value={formData.garantia_numero_producto} onChange={handleChange} fullWidth /></Grid>
+          <Grid item xs={12} sm={4}><TextField label="Inicio de Garantía" name="garantia_inicio" type="date" value={formData.garantia_inicio} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
+          <Grid item xs={12} sm={4}><TextField label="Fin de Garantía" name="garantia_fin" type="date" value={formData.garantia_fin} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
+          <Grid item xs={12} sm={6}><TextField label="Próxima Revisión Sugerida" name="fecha_proxima_revision" type="date" value={formData.fecha_proxima_revision} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
         </Grid>
 
-        {/* BOTÓN CREAR */}
         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 4 }}>
           <Button type="submit" variant="contained" color="primary">
             Crear Equipo

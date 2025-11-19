@@ -1,4 +1,3 @@
-// src/pages/Maintenances.jsx
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box,
@@ -22,18 +21,19 @@ import {
   TablePagination,
   CircularProgress,
   TableSortLabel,
-  TextField // 👈 Importar TextField
+  TextField 
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import DownloadIcon from '@mui/icons-material/Download';
-import api from "../api/axios";
+// 👇 Rutas corregidas con extensiones explícitas
+import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
-import CreateMaintenanceForm from "../components/CreateMaintenanceForm";
-import { AuthContext } from "../context/AuthContext";
-import { AlertContext } from "../context/AlertContext";
-import { useSortableData } from "../hooks/useSortableData";
+import CreateMaintenanceForm from "../components/CreateMaintenanceForm.jsx";
+import { AuthContext } from "../context/AuthContext.jsx";
+import { AlertContext } from "../context/AlertContext.jsx";
+import { useSortableData } from "../hooks/useSortableData.js";
 
 const modalStyle = {
   position: 'absolute',
@@ -58,7 +58,7 @@ const Maintenances = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalMaintenances, setTotalMaintenances] = useState(0);
-  const [search, setSearch] = useState(""); // 👈 Estado search
+  const [search, setSearch] = useState(""); 
 
   const { user } = useContext(AuthContext);
   const { refreshAlerts } = useContext(AlertContext);
@@ -95,14 +95,15 @@ const Maintenances = () => {
   const handleDeleteMaintenance = async (m_id) => {
     setMessage("");
     setError("");
-    if (window.confirm("¿Estás seguro de que quieres eliminar este registro de mantenimiento?")) {
+    // Reemplaza window.confirm con un modal de confirmación si estás en un entorno iframe o si prefieres un diseño más limpio
+    if (window.confirm("¿Estás seguro de que quieres eliminar este registro de mantenimiento? Esta acción solo es posible para mantenimientos PENDIENTES.")) {
       try {
         await api.delete(`/maintenances/delete/${m_id}`);
         setMessage("Registro de mantenimiento eliminado.");
         fetchMaintenances(); 
         refreshAlerts(); 
       } catch (err) {
-        setError(err.response?.data?.error || "Error al eliminar el registro.");
+        setError(err.response?.data?.message || err.response?.data?.error || "Error al eliminar el registro.");
       }
     }
   };
@@ -112,7 +113,6 @@ const Maintenances = () => {
   };
 
   const handleExport = async (id) => {
-    // ... (código de exportación sin cambios)
     setMessage("");
     setError("");
     try {
@@ -203,7 +203,7 @@ const Maintenances = () => {
                     direction={sortConfig?.key === 'device.nombre_equipo' ? sortConfig.direction : 'asc'}
                     onClick={() => requestSort('device.nombre_equipo')}
                   >
-                    Equipo (Nombre)
+                    Equipo
                   </TableSortLabel>
                 </TableCell>
 
@@ -220,7 +220,7 @@ const Maintenances = () => {
                         direction={sortConfig?.key === 'device.usuario.nombre' ? sortConfig.direction : 'asc'}
                         onClick={() => requestSort('device.usuario.nombre')}
                     >
-                        Usuario Asignado
+                        Usuario
                     </TableSortLabel>
                 </TableCell>
 
@@ -245,7 +245,7 @@ const Maintenances = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center"> {/* ColSpan actualizado a 7 */}
+                  <TableCell colSpan={7} align="center"> 
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
@@ -273,15 +273,20 @@ const Maintenances = () => {
                       {formatDate(activeTab === 'pendiente' ? m.fecha_programada : m.fecha_realizacion)}
                     </TableCell>
                     <TableCell>
+                      {/* Mostrar botón de Exportar SOLO en Historial */}
                       {activeTab === 'historial' && (
                         <IconButton edge="end" color="secondary" onClick={() => handleExport(m.id)} title="Exportar formato">
                           <DownloadIcon fontSize="small" />
                         </IconButton>
                       )}
+                      
+                      {/* Botón de Editar siempre visible (dependiendo del rol) */}
                       <IconButton edge="end" color="primary" onClick={() => handleEditMaintenance(m.id)} title="Editar">
                         <EditIcon fontSize="small" />
                       </IconButton>
-                      {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && (
+                      
+                      {/* Ocultar el botón si el estado no es 'pendiente' */}
+                      {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && m.estado === 'pendiente' && (
                         <IconButton edge="end" color="error" onClick={() => handleDeleteMaintenance(m.id)} title="Eliminar">
                           <DeleteIcon fontSize="small" />
                         </IconButton>

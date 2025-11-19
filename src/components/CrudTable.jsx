@@ -18,12 +18,14 @@ import {
   Fade,
   Backdrop,
   TablePagination, // ✅ Habilitado
-  CircularProgress // ✅ Habilitado
+  CircularProgress, // ✅ Habilitado
+  TableSortLabel // 👈 Importado para el sorting
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
+import { useSortableData } from "../hooks/useSortableData"; // 👈 Importado el hook de sorting
 
 
 const CrudTable = ({ title, apiUrl }) => {
@@ -36,22 +38,26 @@ const CrudTable = ({ title, apiUrl }) => {
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // 👈 ESTADOS DE PAGINACIÓN
+  // Estados de Paginación
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+  
+  // 👈 1. Inicializar el hook de sorting (por defecto por nombre)
+  const { sortedItems, requestSort, sortConfig } = useSortableData(data, { key: 'nombre', direction: 'ascending' });
+
 
   useEffect(() => {
     fetchData();
-  }, [apiUrl, page, rowsPerPage]); // 👈 Dependencias de paginación y cambio de tabla
+  }, [apiUrl, page, rowsPerPage]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 👈 ENVIAR PARÁMETROS DE PAGINACIÓN
+      // ENVIAR PARÁMETROS DE PAGINACIÓN
       const response = await api.get(`${apiUrl}/get?page=${page + 1}&limit=${rowsPerPage}`);
       
-      // 👈 LEER LA NUEVA ESTRUCTURA PAGINADA DEL BACKEND
+      // LEER LA NUEVA ESTRUCTURA PAGINADA DEL BACKEND
       setData(response.data.data || response.data);
       setTotalCount(response.data.totalCount || response.data.length);
 
@@ -140,7 +146,7 @@ const CrudTable = ({ title, apiUrl }) => {
     setIsEdit(false);
   };
   
-  // 👈 HANDLERS DE PAGINACIÓN
+  // HANDLERS DE PAGINACIÓN
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -167,8 +173,28 @@ const CrudTable = ({ title, apiUrl }) => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Nombre</TableCell>
+                {/* 👈 2. Implementar TableSortLabel para ID */}
+                <TableCell sortDirection={sortConfig?.key === 'id' ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig?.key === 'id'}
+                    direction={sortConfig?.key === 'id' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('id')}
+                  >
+                    ID
+                  </TableSortLabel>
+                </TableCell>
+                
+                {/* 👈 3. Implementar TableSortLabel para Nombre */}
+                <TableCell sortDirection={sortConfig?.key === 'nombre' ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig?.key === 'nombre'}
+                    direction={sortConfig?.key === 'nombre' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('nombre')}
+                  >
+                    Nombre
+                  </TableSortLabel>
+                </TableCell>
+                
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -180,7 +206,8 @@ const CrudTable = ({ title, apiUrl }) => {
                     </TableCell>
                   </TableRow>
               ) : (
-                data.map((item) => (
+                // 👈 4. Usar sortedItems para renderizar
+                sortedItems.map((item) => ( 
                   <TableRow key={item.id}>
                     <TableCell>{item.id}</TableCell>
                     <TableCell>{item.nombre}</TableCell>
@@ -206,7 +233,7 @@ const CrudTable = ({ title, apiUrl }) => {
           </Table>
         </TableContainer>
 
-        {/* 👈 COMPONENTE DE PAGINACIÓN */}
+        {/* COMPONENTE DE PAGINACIÓN */}
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
@@ -220,7 +247,7 @@ const CrudTable = ({ title, apiUrl }) => {
 
       </Paper>
 
-      {/* Modal para añadir/editar (sin cambios en la lógica) */}
+      {/* Modal para añadir/editar */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}

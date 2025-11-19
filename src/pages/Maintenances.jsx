@@ -64,6 +64,7 @@ const Maintenances = () => {
   const { refreshAlerts } = useContext(AlertContext);
   const navigate = useNavigate();
 
+  // Ordenamiento inicial por 'fecha_programada' para consistencia con la vista 'pendiente'
   const { sortedItems: sortedMaintenances, requestSort, sortConfig } = useSortableData(maintenances, { key: 'fecha_programada', direction: 'descending' });
 
   const fetchMaintenances = useCallback(async () => {
@@ -83,7 +84,6 @@ const Maintenances = () => {
   }, [page, rowsPerPage, activeTab, search]); 
 
   useEffect(() => {
-    // ❌ ELIMINADO: Removimos el delay de 500ms
     fetchMaintenances();
   }, [fetchMaintenances]);
 
@@ -196,33 +196,56 @@ const Maintenances = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sortDirection={sortConfig?.key === 'device.etiqueta' ? sortConfig.direction : false}>
+                {/* 1. Nombre del Equipo (Sortable - using device.nombre_equipo) */}
+                <TableCell sortDirection={sortConfig?.key === 'device.nombre_equipo' ? sortConfig.direction : false}>
                   <TableSortLabel
-                    active={sortConfig?.key === 'device.etiqueta'}
-                    direction={sortConfig?.key === 'device.etiqueta' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('device.etiqueta')}
+                    active={sortConfig?.key === 'device.nombre_equipo'}
+                    direction={sortConfig?.key === 'device.nombre_equipo' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('device.nombre_equipo')}
                   >
-                    Equipo (Etiqueta)
+                    Equipo (Nombre)
                   </TableSortLabel>
                 </TableCell>
+
+                {/* 2. Descripción */}
                 <TableCell>Descripción</TableCell>
+
+                {/* 3. Serie */}
+                <TableCell>Serie</TableCell> 
+                
+                {/* 4. Usuario Asignado (Sortable) */}
+                <TableCell sortDirection={sortConfig?.key === 'device.usuario.nombre' ? sortConfig.direction : false}>
+                    <TableSortLabel
+                        active={sortConfig?.key === 'device.usuario.nombre'}
+                        direction={sortConfig?.key === 'device.usuario.nombre' ? sortConfig.direction : 'asc'}
+                        onClick={() => requestSort('device.usuario.nombre')}
+                    >
+                        Usuario Asignado
+                    </TableSortLabel>
+                </TableCell>
+
+                {/* 5. Estado */}
                 <TableCell>Estado</TableCell>
+                
+                {/* 6. Fecha Programada / Realización (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
-                    direction={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : 'asc'}
+                    direction={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : 'desc'}
                     onClick={() => requestSort(activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
                   >
                     {activeTab === 'pendiente' ? 'Fecha Programada' : 'Fecha Realización'}
                   </TableSortLabel>
                 </TableCell>
+                
+                {/* Acciones */}
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={7} align="center"> {/* ColSpan actualizado a 7 */}
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
@@ -230,14 +253,17 @@ const Maintenances = () => {
                 sortedMaintenances.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell>
+                      {/* Mostrar Nombre del equipo y etiqueta como subtítulo */}
                       <Typography variant="body2" fontWeight="bold">
-                        {m.device?.etiqueta || 'N/A'}
+                        {m.device?.nombre_equipo || 'N/A'}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
-                        {m.device?.nombre_equipo || 'Sin nombre'}
+                        {m.device?.etiqueta ? `(${m.device.etiqueta})` : 'Sin etiqueta'}
                       </Typography>
                     </TableCell>
                     <TableCell>{m.descripcion}</TableCell>
+                    <TableCell>{m.device?.numero_serie || 'N/A'}</TableCell> 
+                    <TableCell>{m.device?.usuario?.nombre || 'N/A'}</TableCell> 
                     <TableCell>
                       <Chip label={m.estado} size="small"
                         color={m.estado === 'pendiente' ? 'warning' : m.estado === 'realizado' ? 'success' : 'default'}
@@ -265,7 +291,7 @@ const Maintenances = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={7} align="center">
                     No hay mantenimientos en esta categoría.
                   </TableCell>
                 </TableRow>

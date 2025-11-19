@@ -35,7 +35,8 @@ const Disposals = () => {
   const [totalDisposals, setTotalDisposals] = useState(0);
   const [search, setSearch] = useState(""); // 👈 Estado search
 
-  const { sortedItems: sortedDisposals, requestSort, sortConfig } = useSortableData(disposals, { key: 'etiqueta', direction: 'ascending' });
+  // Se cambia a ordenar por 'nombre_equipo'
+  const { sortedItems: sortedDisposals, requestSort, sortConfig } = useSortableData(disposals, { key: 'nombre_equipo', direction: 'ascending' });
 
   useEffect(() => {
     // ✅ CORRECCIÓN: Eliminado el debounce de 500ms para carga instantánea.
@@ -99,16 +100,19 @@ const Disposals = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sortDirection={sortConfig?.key === 'etiqueta' ? sortConfig.direction : false}>
+                {/* 1. Nombre Equipo (Ordenable) */}
+                <TableCell sortDirection={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : false}>
                   <TableSortLabel
-                    active={sortConfig?.key === 'etiqueta'}
-                    direction={sortConfig?.key === 'etiqueta' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('etiqueta')}
+                    active={sortConfig?.key === 'nombre_equipo'}
+                    direction={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : 'asc'}
+                    onClick={() => requestSort('nombre_equipo')}
                   >
-                    Etiqueta
+                    Nombre Equipo
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>N° Serie</TableCell>
+                {/* 2. Serie */}
+                <TableCell>Serie</TableCell>
+                {/* 3. Tipo (Ordenable) */}
                 <TableCell sortDirection={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'tipo.nombre'}
@@ -118,7 +122,7 @@ const Disposals = () => {
                     Tipo
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>Estado</TableCell>
+                {/* 4. Motivo (Ordenable) */}
                 <TableCell sortDirection={sortConfig?.key === 'motivo_baja' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'motivo_baja'}
@@ -128,7 +132,9 @@ const Disposals = () => {
                     Motivo
                   </TableSortLabel>
                 </TableCell>
+                {/* 5. Observaciones */}
                 <TableCell>Observaciones</TableCell>
+                {/* 6. Fecha de Baja (Ordenable) */}
                 <TableCell sortDirection={sortConfig?.key === 'fecha_baja' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'fecha_baja'}
@@ -144,17 +150,16 @@ const Disposals = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={7} align="center"> {/* 6 datos + 1 acción = 7 */}
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : sortedDisposals.length > 0 ? (
                 sortedDisposals.map((disposal) => (
                   <TableRow key={disposal.id}>
-                    <TableCell>{disposal.etiqueta || 'N/A'}</TableCell>
+                    <TableCell>{disposal.nombre_equipo || 'N/A'}</TableCell>
                     <TableCell>{disposal.numero_serie || 'N/A'}</TableCell>
                     <TableCell>{disposal.tipo?.nombre || 'N/A'}</TableCell>
-                    <TableCell>{disposal.estado?.nombre || 'N/A'}</TableCell>
                     <TableCell>{disposal.motivo_baja || 'N/A'}</TableCell>
                     <TableCell>{disposal.observaciones_baja || 'N/A'}</TableCell>
                     <TableCell>
@@ -174,7 +179,7 @@ const Disposals = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={7} align="center">
                     No hay equipos dados de baja.
                   </TableCell>
                 </TableRow>

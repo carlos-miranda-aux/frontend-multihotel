@@ -84,7 +84,7 @@ const UsersCrownP = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Usuarios de Crown</Typography>
+        <Typography variant="h4">Usuarios de Crown Paradise</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             label="Buscar usuario..."
@@ -107,41 +107,34 @@ const UsersCrownP = () => {
           <Table>
             <TableHead>
               <TableRow>
+                {/* 1. Nombre del Usuario (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'nombre' ? sortConfig.direction : false}>
                   <TableSortLabel active={sortConfig?.key === 'nombre'} direction={sortConfig?.key === 'nombre' ? sortConfig.direction : 'asc'} onClick={() => requestSort('nombre')}>
                     Nombre
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>Correo</TableCell>
                 
-                {/* Columna AREA */}
+                {/* 2. Columna AREA (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'area.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel active={sortConfig?.key === 'area.nombre'} direction={sortConfig?.key === 'area.nombre' ? sortConfig.direction : 'asc'} onClick={() => requestSort('area.nombre')}>
                     Área
                   </TableSortLabel>
                 </TableCell>
                 
-                {/* Columna DEPARTAMENTO (Automática) */}
-                <TableCell sortDirection={sortConfig?.key === 'area.departamento.nombre' ? sortConfig.direction : false}>
-                  <TableSortLabel active={sortConfig?.key === 'area.departamento.nombre'} direction={sortConfig?.key === 'area.departamento.nombre' ? sortConfig.direction : 'asc'} onClick={() => requestSort('area.departamento.nombre')}>
-                    Departamento (Auto)
-                  </TableSortLabel>
-                </TableCell>
+                {/* 3. Columna Usuario Login */}
+                <TableCell>Usuario</TableCell>
 
-                <TableCell>Usuario Login</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 sortedUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell>{u.nombre}</TableCell>
-                    <TableCell>{u.correo}</TableCell>
                     <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
-                    <TableCell>{u.area?.departamento?.nombre || "N/A"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>
                     <TableCell>
                       <IconButton color="primary" onClick={() => handleEdit(u.id)}><EditIcon /></IconButton>

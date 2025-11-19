@@ -56,12 +56,12 @@ const Inventory = () => {
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
 
-  const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'etiqueta', direction: 'ascending' });
+  // Ordenamiento inicial por 'nombre_equipo'
+  const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'nombre_equipo', direction: 'ascending' });
 
   useEffect(() => {
-    // ❌ ELIMINADO: Removimos el delay de 500ms
     fetchDevices(); 
-  }, [page, rowsPerPage, search]); // 👈 Dependencia 'search'
+  }, [page, rowsPerPage, search]); 
 
   const fetchDevices = async () => {
     setLoading(true);
@@ -133,15 +133,7 @@ const Inventory = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sortDirection={sortConfig?.key === 'etiqueta' ? sortConfig.direction : false}>
-                  <TableSortLabel
-                    active={sortConfig?.key === 'etiqueta'}
-                    direction={sortConfig?.key === 'etiqueta' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('etiqueta')}
-                  >
-                    Etiqueta
-                  </TableSortLabel>
-                </TableCell>
+                {/* 1. Nombre del equipo (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'nombre_equipo'}
@@ -151,16 +143,28 @@ const Inventory = () => {
                     Nombre Equipo
                   </TableSortLabel>
                 </TableCell>
+                
+                {/* 2. Descripción */}
+                <TableCell>Descripción</TableCell>
+
+                {/* 3. Usuario Asignado (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'usuario.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'usuario.nombre'}
                     direction={sortConfig?.key === 'usuario.nombre' ? sortConfig.direction : 'asc'}
                     onClick={() => requestSort('usuario.nombre')}
                   >
-                    Usuario
+                    Usuario Asignado
                   </TableSortLabel>
                 </TableCell>
+                
+                {/* 4. IP */}
+                <TableCell>IP</TableCell>
+                
+                {/* 5. N° Serie */}
                 <TableCell>N° Serie</TableCell>
+
+                {/* 6. Tipo (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'tipo.nombre'}
@@ -170,22 +174,25 @@ const Inventory = () => {
                     Tipo
                   </TableSortLabel>
                 </TableCell>
+                
+                {/* Acciones */}
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
+                  <TableCell colSpan={7} align="center"> {/* ColSpan: 6 datos + 1 acción = 7 */}
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : (
                 sortedDevices.map((device) => (
                   <TableRow key={device.id}>
-                    <TableCell>{device.etiqueta}</TableCell>
                     <TableCell>{device.nombre_equipo}</TableCell>
+                    <TableCell>{device.descripcion || 'N/A'}</TableCell>
                     <TableCell>{device.usuario?.nombre || 'N/A'}</TableCell>
+                    <TableCell>{device.ip_equipo || 'N/A'}</TableCell>
                     <TableCell>{device.numero_serie}</TableCell>
                     <TableCell>{device.tipo?.nombre || 'N/A'}</TableCell>
                     <TableCell>

@@ -270,7 +270,7 @@ const AdminSettings = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell><TableSortLabel active={sortConfig?.key === 'nombre'} direction={sortConfig?.direction} onClick={() => requestSort('nombre')}>Nombre Área</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig?.key === 'departamento.nombre'} direction={sortConfig?.direction} onClick={() => requestSort('departamento.nombre')}>Departamento (Padre)</TableSortLabel></TableCell>
+                    <TableCell><TableSortLabel active={sortConfig?.key === 'departamento.nombre'} direction={sortConfig?.direction} onClick={() => requestSort('departamento.nombre')}>Departamento</TableSortLabel></TableCell>
                     <TableCell>Acciones</TableCell>
                   </TableRow>
                 </TableHead>

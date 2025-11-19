@@ -1,3 +1,4 @@
+// components/Topbar.jsx
 import React, { useContext } from "react";
 import {
   AppBar,
@@ -132,7 +133,11 @@ const TopBar = ({ onMenuClick }) => {
                     {(warrantyAlertsList || []).map(device => ( 
                       <MenuItem key={`w-${device.id}`} onClick={() => { navigate(`/inventory/edit/${device.id}`); handleAlertsClose(); }}>
                         <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
-                        <ListItemText primary="Garantía por Vencer" secondary={`${device.etiqueta} - Vence: ${formatDate(device.garantia_fin)}`} />
+                        <ListItemText 
+                          primary="Garantía por Vencer" 
+                          // 👈 CAMBIO: Muestra nombre_equipo || etiqueta
+                          secondary={`${device.nombre_equipo || device.etiqueta || 'N/A'} - Vence: ${formatDate(device.garantia_fin)}`} 
+                        />
                       </MenuItem>
                     ))}
                     {/* Alertas de Mantenimiento */}
@@ -141,7 +146,8 @@ const TopBar = ({ onMenuClick }) => {
                         <ListItemIcon><BuildIcon color="warning" /></ListItemIcon>
                         <ListItemText 
                           primary="Mantenimiento Pendiente" 
-                          secondary={`${maint.device?.etiqueta || 'N/A'} - ${maint.descripcion?.substring(0, 25) || ''}...`} 
+                          // Muestra nombre_equipo || etiqueta (ya actualizado antes)
+                          secondary={`${maint.device?.nombre_equipo || maint.device?.etiqueta || 'N/A'} - ${maint.descripcion?.substring(0, 25) || ''}...`} 
                         />
                       </MenuItem>
                     ))}

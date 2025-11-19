@@ -24,40 +24,46 @@ import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertContext } from "../context/AlertContext";
 
-// ... (WidgetCard sigue igual)
-const WidgetCard = ({ title, value, icon, color, onClick }) => (
-  <Paper
-    onClick={onClick}
-    sx={{
-      p: 3,
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      height: 140,
-      cursor: onClick ? 'pointer' : 'default',
-      transition: 'all 0.2s ease',
-      '&:hover': {
-        transform: onClick ? 'translateY(-4px)' : 'none',
-        boxShadow: 6,
-      },
-    }}
-    elevation={3}
-  >
-    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-      <Box sx={{ mr: 2, color: color }}>
-        {React.cloneElement(icon, { sx: { fontSize: 40 } })}
+/**
+ * Componente Tarjeta de Widget con diseño vertical mejorado.
+ */
+const WidgetCard = ({ title, value, icon, color, onClick }) => {
+  const theme = useTheme();
+  return (
+    <Paper
+      onClick={onClick}
+      sx={{
+        p: 3,
+        minHeight: 120, // Altura mínima para una mejor estética
+        display: 'flex',
+        flexDirection: 'column', // Layout vertical
+        justifyContent: 'space-between',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.2s ease',
+        borderLeft: `4px solid ${color}`, // Toque de diseño
+        '&:hover': {
+          transform: onClick ? 'translateY(-4px)' : 'none',
+          boxShadow: 6,
+        },
+      }}
+      elevation={3}
+    >
+      {/* Valor y Icono */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', mb: 1 }}>
+          <Typography variant="h3" component="div" fontWeight="bold" color={theme.palette.text.primary} sx={{ lineHeight: 1.2 }}>
+            {value}
+          </Typography>
+          <Box sx={{ color: color, opacity: 0.7 }}>
+            {React.cloneElement(icon, { sx: { fontSize: 40 } })}
+          </Box>
       </Box>
-      <Box>
-        <Typography variant="h4" component="div" fontWeight="bold">
-          {value}
-        </Typography>
-        <Typography color="textSecondary" variant="subtitle1" noWrap>
-          {title}
-        </Typography>
-      </Box>
-    </Box>
-  </Paper>
-);
+      {/* Título */}
+      <Typography color="textSecondary" variant="subtitle1" sx={{ mt: 1, fontWeight: 600 }}>
+        {title}
+      </Typography>
+    </Paper>
+  );
+};
 
 // --- Componente Principal del Home ---
 const Home = () => {
@@ -93,10 +99,7 @@ const Home = () => {
         try {
           setPageLoading(true); 
 
-          // 👈 CORRECCIÓN: Quitamos la llamada a /devices/get (viene del context)
-          // y leemos la respuesta paginada de /users/get
           const [usersRes] = await Promise.all([
-            // api.get("/devices/get"), // 👈 ELIMINADA
             api.get("/users/get?page=1&limit=1"), // Solo necesitamos el totalCount
           ]);
           
@@ -176,10 +179,10 @@ const Home = () => {
         Resumen del estado de tu infraestructura TI.
       </Typography>
 
-      {/* --- Widgets de Resumen (KPIs) --- */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      {/* --- Widgets de Resumen (KPIs) - Mantenemos 3 KPIs, md=4 para 33% cada uno --- */}
+      <Grid container spacing={3} sx={{ mb: 4 }}> 
         
-        <Grid item xs={12} sm={6} md={3}> 
+        <Grid item xs={12} sm={6} md={4}> 
           <WidgetCard
             title="Equipos Activos"
             value={stats.totalDevices}
@@ -189,7 +192,7 @@ const Home = () => {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <WidgetCard
             title="Usuarios Gestionados"
             value={stats.totalUsers}
@@ -199,7 +202,7 @@ const Home = () => {
           />
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <WidgetCard
             title="Tareas Pendientes" 
             value={stats.pendingTasksCount}
@@ -208,20 +211,12 @@ const Home = () => {
             onClick={() => navigate("/maintenances")}
           />
         </Grid>
-        
-        <Grid item xs={12} sm={6} md={3}>
-          <WidgetCard
-            title="Garantías en Riesgo"
-            value={stats.warrantyAlertsCount}
-            icon={<WarningIcon />}
-            color={stats.warrantyAlertsCount > 0 ? theme.palette.error.main : theme.palette.success.main}
-          />
-        </Grid>
       </Grid>
 
       {/* --- Columnas de Contenido (Listas de Alertas) --- */}
       <Grid container spacing={3}>
         
+        {/* Tareas Pendientes: Ocupa 100% en small, 7/12 en large */}
         <Grid item xs={12} lg={7}>
           <Paper sx={{ p: 3, height: '100%' }} elevation={3}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -243,8 +238,11 @@ const Home = () => {
                       <EventBusyIcon />
                     </ListItemIcon>
                     <ListItemText
-                      primary={<strong>{m.device?.etiqueta || 'Equipo no encontrado'}</strong>}
+                      // Muestra nombre del equipo.
+                      // pr: 12 para evitar solapamiento con el botón.
+                      primary={<strong>{m.device?.nombre_equipo || m.device?.etiqueta || 'Equipo no encontrado'}</strong>}
                       secondary={`TAREA: ${m.descripcion} (Prog: ${formatDate(m.fecha_programada)})`}
+                      sx={{ pr: 12 }} 
                     />
                   </ListItem>
                 ))}
@@ -257,7 +255,7 @@ const Home = () => {
           </Paper>
         </Grid>
         
-        {/* --- Columna 2: Alertas de Garantía (Gráfico actualizado) --- */}
+        {/* Garantías en Riesgo (PANEL VISUAL DETALLADO) */}
         <Grid item xs={12} lg={5}>
           <Paper sx={{ p: 3, height: '100%', border: 1, borderColor: warrantyAlertsList.length > 0 ? 'error.main' : 'transparent' }} elevation={3}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: warrantyAlertsList.length > 0 ? 'error.main' : 'text.primary' }}>
@@ -266,15 +264,17 @@ const Home = () => {
                 Alertas de Garantía (90 días)
               </Typography>
             </Box>
-
-            <Box sx={{ height: 120, width: '100%' }}>
+            
+            {/* Gráfico de Torta con Conteo Centrado */}
+            <Box sx={{ height: 200, width: '100%', position: 'relative' }}> 
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={warrantyData}
                     dataKey="value" nameKey="name"
                     cx="50%" cy="50%"
-                    outerRadius={45} innerRadius={30}
+                    outerRadius={70} 
+                    innerRadius={50} 
                   >
                     {warrantyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[entry.name.split(' ')[0]]} />
@@ -284,11 +284,32 @@ const Home = () => {
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
+              
+              {/* ✅ Texto Centrado Absolutamente en el Agujero de la Dona (AJUSTE FINO en 'top') */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: '45%', // 👈 AJUSTE: Subido a 47% para centrado visual
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  pointerEvents: 'none', 
+                }}
+              >
+                <Typography variant="h3" fontWeight="bold" 
+                  sx={{ 
+                    color: stats.warrantyAlertsCount > 0 ? theme.palette.error.main : theme.palette.success.main, 
+                    lineHeight: 1.1
+                  }}>
+                  {stats.warrantyAlertsCount}
+                </Typography>
+              </Box>
+
             </Box>
             
             <Divider sx={{ my: 2 }} />
 
-            {/* Lista de Alertas */}
+            {/* Lista de Alertas de Garantía */}
             {warrantyAlertsList.length > 0 ? (
               <List dense disablePadding>
                 {warrantyAlertsList.map((device) => (
@@ -302,6 +323,7 @@ const Home = () => {
                     <ListItemText
                       primary={<strong>{device.nombre_equipo || device.etiqueta}</strong>}
                       secondary={`Vence: ${formatDate(device.garantia_fin)} (Serie: ${device.numero_serie})`}
+                      sx={{ pr: 10 }} 
                     />
                   </ListItem>
                 ))}

@@ -23,6 +23,9 @@ import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSortableData } from "../hooks/useSortableData";
 
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+
 const Disposals = () => {
   const [disposals, setDisposals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -170,6 +173,8 @@ const Disposals = () => {
                         <IconButton
                           color="primary"
                           onClick={() => handleEdit(disposal.id)}
+                          // [APLICAR COLOR]
+                          sx={{ color: HOTEL_COLOR }}
                         >
                           <EditIcon />
                         </IconButton>

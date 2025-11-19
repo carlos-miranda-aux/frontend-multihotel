@@ -1,24 +1,43 @@
-import React, { useState } from "react";
+// src/Layouts/MainLayout.jsx
+import React from "react";
 import { Outlet } from "react-router-dom";
 import { Box } from "@mui/material";
 import TopBar from "../components/Topbar.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 
-const MainLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+// Definimos el ancho de la Sidebar para usarlo en el margen del contenido
+const SIDEBAR_WIDTH = '240px'; 
 
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+const MainLayout = () => {
+  // Se ha eliminado la lógica de estado (sidebarOpen, toggleSidebar)
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      {/* Sidebar */}
-      <Sidebar open={sidebarOpen} onClose={toggleSidebar} />
+      
+      {/* Sidebar - Ahora es permanente */}
+      {/* Se le pasa variant="permanent" y open={true} */}
+      <Sidebar 
+        open={true} 
+        variant="permanent" 
+        // Ya no necesitamos pasar onClose, pero es buena práctica mantenerla
+        onClose={() => {}} 
+      />
 
-      {/* Contenedor principal */}
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* TopBar siempre visible */}
-        <Box sx={{ zIndex: 1200 }}> {/* aseguramos que esté sobre el sidebar */}
-          <TopBar onMenuClick={toggleSidebar} />
+      {/* Contenedor principal del TopBar y Contenido */}
+      <Box 
+        sx={{ 
+          flex: 1, 
+          display: "flex", 
+          flexDirection: "column",
+          // [CORRECCIÓN CLAVE]: Se ELIMINA el margen izquierdo (ml: SIDEBAR_WIDTH)
+          // Ya que el 'display: flex' de la Box padre y el 'position: static' del Sidebar
+          // en modo 'permanent' hacen que este Box comience justo después del Sidebar.
+        }}
+      >
+        {/* TopBar */}
+        <Box sx={{ zIndex: 1200 }}>
+          {/* onMenuClick se deja vacío ya que el botón de menú ya no es necesario */}
+          <TopBar onMenuClick={() => {}} /> 
         </Box>
 
         {/* Área de contenido */}

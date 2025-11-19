@@ -8,6 +8,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
 
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+const HOTEL_HOVER_COLOR = "#8a2b7b";
+
 // Función para parsear la fecha como LOCAL
 const parseLocalDate = (dateString) => {
   if (!dateString) return null;
@@ -402,7 +406,12 @@ const EditDevice = () => {
 
           {/* ACCIONES (Campos idénticos) */}
           <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
-            <Button type="submit" variant="contained">Guardar cambios</Button>
+            <Button type="submit" variant="contained" 
+              // [APLICAR COLOR]
+              sx={{ backgroundColor: HOTEL_COLOR, ":hover": { backgroundColor: HOTEL_HOVER_COLOR } }}
+            >
+              Guardar cambios
+            </Button>
           </Stack>
         </form>
       </Paper>

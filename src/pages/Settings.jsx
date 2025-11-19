@@ -15,6 +15,10 @@ const Settings = () => {
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  
+  // Color del hotel: #A73698
+  const HOTEL_COLOR = "#A73698";
+  const HOTEL_HOVER_COLOR = "#8a2b7b";
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -77,7 +81,14 @@ const Settings = () => {
           fullWidth
           sx={{ mb: 2 }}
         />
-        <Button variant="contained" onClick={handleUpdate}>
+        <Button 
+            variant="contained" 
+            onClick={handleUpdate}
+            sx={{
+              backgroundColor: HOTEL_COLOR, // [APLICAR COLOR]
+              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
+            }}
+        >
           Cambiar contraseña
         </Button>
       </Paper>
@@ -95,6 +106,10 @@ const Settings = () => {
             variant="contained"
             color="primary"
             onClick={handleAdminSettings}
+            sx={{
+              backgroundColor: HOTEL_COLOR, // [APLICAR COLOR]
+              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
+            }}
           >
             Ir a configuración de administrador
           </Button>

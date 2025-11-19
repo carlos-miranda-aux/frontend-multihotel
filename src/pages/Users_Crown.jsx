@@ -18,6 +18,10 @@ const modalStyle = {
   width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+const HOTEL_HOVER_COLOR = "#8a2b7b";
+
 const UsersCrownP = () => {
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState("");
@@ -93,7 +97,12 @@ const UsersCrownP = () => {
             value={search}
             onChange={handleSearchChange}
           />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}
+            // [APLICAR COLOR]
+            sx={{
+              backgroundColor: HOTEL_COLOR,
+              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
+            }}>
             Crear Usuario
           </Button>
         </Box>
@@ -137,7 +146,12 @@ const UsersCrownP = () => {
                     <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>
                     <TableCell>
-                      <IconButton color="primary" onClick={() => handleEdit(u.id)}><EditIcon /></IconButton>
+                      <IconButton color="primary" onClick={() => handleEdit(u.id)} 
+                        // [APLICAR COLOR]
+                        sx={{ color: HOTEL_COLOR }}
+                      >
+                        <EditIcon />
+                      </IconButton>
                       <IconButton color="error" onClick={() => handleDelete(u.id)}><DeleteIcon /></IconButton>
                     </TableCell>
                   </TableRow>

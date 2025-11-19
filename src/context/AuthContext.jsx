@@ -1,14 +1,30 @@
+// src/context/AuthContext.jsx
 import { createContext, useState, useEffect } from "react";
 import DefaultAvatar from "../assets/Avatar.png"; // avatar por defecto
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  // Función auxiliar para obtener la inicial del nombre o username
+  const getAvatarInitials = (userData) => {
+      const name = userData?.nombre || userData?.username || "U";
+      return name[0].toUpperCase();
+  }
+
   // Inicializar user desde localStorage, con avatar por defecto
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
-    return savedUser
-      ? { ...JSON.parse(savedUser), avatar: JSON.parse(savedUser).avatar || DefaultAvatar }
+    const parsedUser = savedUser
+      ? JSON.parse(savedUser) 
+      : null;
+    
+    // Almacenamos el path de la imagen como 'avatarUrl' y la inicial calculada
+    return parsedUser
+      ? { 
+          ...parsedUser, 
+          avatarUrl: DefaultAvatar, // Usamos DefaultAvatar como URL para el tag <img>
+          initials: getAvatarInitials(parsedUser)
+        }
       : null;
   });
 
@@ -34,8 +50,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = (token, userData) => {
     setToken(token);
-    // Aseguramos que siempre tenga avatar
-    setUser({ ...userData, avatar: DefaultAvatar });
+    // Guardamos el path de la imagen y las iniciales calculadas
+    setUser({ 
+        ...userData, 
+        avatarUrl: DefaultAvatar, 
+        initials: getAvatarInitials(userData)
+    });
   };
 
   const logout = () => {
@@ -46,7 +66,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (updatedUser) => {
-    setUser({ ...updatedUser, avatar: DefaultAvatar });
+    // Cuando se actualiza el usuario, volvemos a calcular las propiedades
+    setUser({ 
+        ...updatedUser, 
+        avatarUrl: DefaultAvatar, 
+        initials: getAvatarInitials(updatedUser)
+    });
   };
 
   return (

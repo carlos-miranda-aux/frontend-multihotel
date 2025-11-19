@@ -1,18 +1,30 @@
-// components/Sidebar.jsx
+// src/components/Sidebar.jsx
 import React, { useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Divider } from "@mui/material";
+import { 
+    Drawer, 
+    List, 
+    ListItemButton, 
+    ListItemIcon, 
+    ListItemText, 
+    Box, 
+    Typography, 
+    Divider 
+} from "@mui/material";
+// Icons
 import HomeIcon from "@mui/icons-material/Home";
+import DevicesIcon from "@mui/icons-material/Devices"; // Cambiado de InventoryIcon en la referencia anterior
 import BuildIcon from "@mui/icons-material/Build";
-import DevicesIcon from "@mui/icons-material/Devices";
 import PeopleIcon from "@mui/icons-material/People";
-import DeleteIcon from "@mui/icons-material/Delete";
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import AssessmentIcon from '@mui/icons-material/Assessment'; //
-import LogoImg from "../assets/Logo.png";
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Cambiado de SettingsIcon en la referencia anterior
+import AssessmentIcon from '@mui/icons-material/Assessment'; // Añadido para Reportes
+import DeleteIcon from '@mui/icons-material/Delete'; // Añadido para Bajas
+import LogoImg from "../assets/Logo.png"; // Icono Logo
 import { AuthContext } from "../context/AuthContext";
 
-const Sidebar = ({ open, onClose }) => {
+const SIDEBAR_WIDTH = 240;
+
+const Sidebar = ({ open, onClose, variant = 'persistent' }) => { 
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useContext(AuthContext);
@@ -30,16 +42,31 @@ const Sidebar = ({ open, onClose }) => {
     { text: "Configuración Admin", icon: <AdminPanelSettingsIcon />, path: "/admin-settings" },
   ];
 
+  const isSelected = (path) => location.pathname === path;
+
+  const handleNavigation = (path) => {
+    navigate(path);
+  };
+
   return (
     <Drawer
-      variant="persistent"
+      // [CLAVE]: Utiliza el variant='permanent'
+      variant={variant} 
       anchor="left"
       open={open}
+      // onClose={onClose} // No usado en modo permanente
       sx={{
-        width: 240,
+        width: SIDEBAR_WIDTH,
         flexShrink: 0,
+        // Estilos para fijar el Drawer de forma permanente
+        ...(variant === 'permanent' && {
+          '& .MuiDrawer-paper': {
+            position: 'static', 
+            boxShadow: 'none',
+          }
+        }),
         "& .MuiDrawer-paper": {
-          width: 240,
+          width: SIDEBAR_WIDTH,
           boxSizing: "border-box",
           backgroundColor: "#f5f5f5",
         },
@@ -66,8 +93,8 @@ const Sidebar = ({ open, onClose }) => {
         {menuItems.map((item) => (
           <ListItemButton
             key={item.text}
-            selected={location.pathname === item.path}
-            onClick={() => navigate(item.path)}
+            selected={isSelected(item.path)}
+            onClick={() => handleNavigation(item.path)}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
@@ -75,15 +102,15 @@ const Sidebar = ({ open, onClose }) => {
         ))}
       </List>
       
-      {/* Mostramos el menú de administración solo si el usuario es ADMIN o EDITOR */}
+      {/* Menú de administración (Admin o Editor) */}
       {user && (user.rol === "ADMIN" || user.rol === "EDITOR") && (
         <List>
           <Divider />
           {adminItems.map((item) => (
             <ListItemButton
               key={item.text}
-              selected={location.pathname === item.path}
-              onClick={() => navigate(item.path)}
+              selected={isSelected(item.path)}
+              onClick={() => handleNavigation(item.path)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />

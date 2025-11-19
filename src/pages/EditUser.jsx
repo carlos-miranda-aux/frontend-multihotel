@@ -1,3 +1,4 @@
+// src/pages/EditUser.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -14,6 +15,10 @@ import {
 } from "@mui/material";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
+
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+const HOTEL_HOVER_COLOR = "#8a2b7b";
 
 const EditUser = () => {
   const { id } = useParams();
@@ -127,7 +132,15 @@ const EditUser = () => {
             fullWidth
             helperText="Dejar en blanco para no cambiar la contraseña."
           />
-          <Button type="submit" variant="contained" color="primary">
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary"
+            sx={{ 
+                backgroundColor: HOTEL_COLOR, 
+                ":hover": { backgroundColor: HOTEL_HOVER_COLOR } 
+            }}
+          >
             Guardar cambios
           </Button>
         </Box>

@@ -23,7 +23,7 @@ import BuildIcon from "@mui/icons-material/Build";
 // import EventNoteIcon from '@mui/icons-material/EventNote'; // 👈 ELIMINADO
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
-import Logo from "../assets/Logo.png";
+import Logo from "../assets/CrownLogo.png";
 import { useNavigate } from "react-router-dom";
 
 const TopBar = ({ onMenuClick }) => {
@@ -79,7 +79,7 @@ const TopBar = ({ onMenuClick }) => {
           </Box>
         </Box>
 
-        {/* Derecha: Alertas + Perfil */}
+        {/* Derecha: Alertas + Perfil (MODIFICADO) */}
         {user && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             
@@ -90,15 +90,22 @@ const TopBar = ({ onMenuClick }) => {
               </Badge>
             </IconButton>
 
-            {/* Perfil (Sin cambios) */}
+            {/* Perfil (MODIFICADO: Muestra Nombre y Avatar con Imagen) */}
             <Box
               sx={{ display: "flex", alignItems: "center", cursor: "pointer", gap: 1 }}
               onClick={handleProfileClick}
             >
-              <Avatar sx={{ bgcolor: "#9D3194" }}>
-                {user.username ? user.username[0].toUpperCase() : "U"}
+              {/* Usamos src={user.avatarUrl} para forzar la imagen. user.initials es el fallback. */}
+              <Avatar 
+                  sx={{ bgcolor: "#9D3194" }}
+                  src={user.avatarUrl} 
+              >
+                  {user.initials}
               </Avatar>
-              <Box>{user.username || user.nombre}</Box>
+              <Box>
+                {/* Muestra el nombre completo, o username si el nombre no existe */}
+                {user.nombre || user.username}
+              </Box>
             </Box>
 
             {/* Menú desplegable de Perfil (Sin cambios) */}

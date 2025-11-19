@@ -14,6 +14,9 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+
 const Reportes = () => {
   const apiBaseUrl = "http://localhost:3000/api"; // O usa tu variable de entorno
 
@@ -92,7 +95,8 @@ const Reportes = () => {
               <ListItem>
                 <ListItemButton onClick={() => handleExport(report.url)}>
                   <ListItemIcon>
-                    <DownloadIcon color="primary" />
+                    {/* [APLICAR COLOR] */}
+                    <DownloadIcon sx={{ color: HOTEL_COLOR }} />
                   </ListItemIcon>
                   <ListItemText
                     primary={report.name}

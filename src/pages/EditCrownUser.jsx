@@ -19,6 +19,10 @@ import {
 } from "@mui/material";
 import api from "../api/axios";
 
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+const HOTEL_HOVER_COLOR = "#8a2b7b";
+
 const EditCrownUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -213,7 +217,10 @@ const EditCrownUser = () => {
             label="Es Jefe de Área (Recibe notificaciones)"
           />
 
-          <Button type="submit" variant="contained" color="primary">
+          <Button type="submit" variant="contained" color="primary"
+             // [APLICAR COLOR]
+             sx={{ backgroundColor: HOTEL_COLOR, ":hover": { backgroundColor: HOTEL_HOVER_COLOR } }}
+          >
             Guardar cambios
           </Button>
         </Box>

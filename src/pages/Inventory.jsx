@@ -22,11 +22,13 @@ import {
   TextField // 👈 CORRECCIÓN: Importar TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete"; 
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateDeviceForm from "../components/CreateDeviceForm";
 import { AlertContext } from "../context/AlertContext";
+import { AuthContext } from "../context/AuthContext"; 
 import { useSortableData } from "../hooks/useSortableData";
 
 const modalStyle = {
@@ -40,6 +42,10 @@ const modalStyle = {
   p: 4,
   borderRadius: 2
 };
+
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+const HOTEL_HOVER_COLOR = "#8a2b7b";
 
 const Inventory = () => {
   const [devices, setDevices] = useState([]);
@@ -55,6 +61,7 @@ const Inventory = () => {
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
+  const { user } = useContext(AuthContext); // <-- Obteniendo el usuario
 
   // Ordenamiento inicial por 'nombre_equipo'
   const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'nombre_equipo', direction: 'ascending' });
@@ -78,6 +85,25 @@ const Inventory = () => {
       setLoading(false);
     }
   };
+  
+  // Función para ELIMINAR un equipo
+  const handleDelete = async (d_id) => {
+    setMessage("");
+    setError("");
+
+    if (window.confirm("¡ADVERTENCIA! ¿Estás seguro de que quieres ELIMINAR este equipo? Esta acción es PERMANENTE y solo se recomienda en equipos sin historial de mantenimiento.")) {
+      try {
+        await api.delete(`/devices/delete/${d_id}`); 
+        setMessage("Equipo eliminado permanentemente.");
+        fetchDevices(); 
+        refreshAlerts(); 
+      } catch (err) {
+        // Muestra el mensaje de error del backend (ej. si tiene registros de mantenimiento)
+        setError(err.response?.data?.error || err.response?.data?.message || "Error al eliminar el equipo.");
+      }
+    }
+  };
+
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -107,7 +133,7 @@ const Inventory = () => {
           Inventario de Equipos
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-           {/* 👈 CORRECCIÓN: Barra de Búsqueda */}
+           {/* 👈 Barra de Búsqueda */}
           <TextField
             label="Buscar equipo..."
             variant="outlined"
@@ -119,6 +145,11 @@ const Inventory = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenModal}
+            // [APLICAR COLOR]
+            sx={{
+              backgroundColor: HOTEL_COLOR,
+              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
+            }}
           >
             Crear Equipo
           </Button>
@@ -199,9 +230,22 @@ const Inventory = () => {
                       <IconButton
                         color="primary"
                         onClick={() => handleEdit(device.id)}
+                        title="Editar equipo"
+                        // [APLICAR COLOR]
+                        sx={{ color: HOTEL_COLOR }}
                       >
                         <EditIcon />
                       </IconButton>
+                      {/* Botón de eliminación (solo para ADMIN) */}
+                      {user?.rol === "ADMIN" && (
+                        <IconButton
+                            color="error"
+                            onClick={() => handleDelete(device.id)}
+                            title="Eliminar permanentemente"
+                        >
+                            <DeleteIcon />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

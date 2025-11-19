@@ -1,3 +1,5 @@
+// src/pages/Maintenances.jsx
+
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box,
@@ -46,6 +48,10 @@ const modalStyle = {
   p: 4,
   borderRadius: 2
 };
+
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+const HOTEL_HOVER_COLOR = "#8a2b7b";
 
 const Maintenances = () => {
   const [maintenances, setMaintenances] = useState([]);
@@ -175,6 +181,11 @@ const Maintenances = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenModal}
+            // [APLICAR COLOR]
+            sx={{
+              backgroundColor: HOTEL_COLOR,
+              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
+            }}
           >
             Nuevo Mantenimiento
           </Button>
@@ -281,7 +292,14 @@ const Maintenances = () => {
                       )}
                       
                       {/* Botón de Editar siempre visible (dependiendo del rol) */}
-                      <IconButton edge="end" color="primary" onClick={() => handleEditMaintenance(m.id)} title="Editar">
+                      <IconButton 
+                        edge="end" 
+                        color="primary" 
+                        onClick={() => handleEditMaintenance(m.id)} 
+                        title="Editar"
+                        // [APLICAR COLOR]
+                        sx={{ color: HOTEL_COLOR }}
+                      >
                         <EditIcon fontSize="small" />
                       </IconButton>
                       

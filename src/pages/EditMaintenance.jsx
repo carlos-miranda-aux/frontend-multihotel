@@ -20,6 +20,10 @@ import {
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
 
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+const HOTEL_HOVER_COLOR = "#8a2b7b";
+
 const EditMaintenance = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -263,7 +267,10 @@ const EditMaintenance = () => {
 
           </Grid>
           
-          <Button type="submit" variant="contained" color="primary" sx={{ mt: 3, alignSelf: 'flex-end' }}>
+          <Button type="submit" variant="contained" color="primary" 
+            // [APLICAR COLOR]
+            sx={{ mt: 3, alignSelf: 'flex-end', backgroundColor: HOTEL_COLOR, ":hover": { backgroundColor: HOTEL_HOVER_COLOR } }}
+          >
             Guardar Cambios
           </Button>
         </Box>

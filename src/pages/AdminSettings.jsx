@@ -24,6 +24,11 @@ const modalStyle = {
   width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
+// Color del hotel: #A73698
+const HOTEL_COLOR = "#A73698";
+const HOTEL_HOVER_COLOR = "#8a2b7b";
+
+
 const AdminSettings = () => {
   const [activeTable, setActiveTable] = useState(null);
   
@@ -200,7 +205,13 @@ const AdminSettings = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h5">Gestión de Usuarios del Sistema</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick}>Crear Usuario</Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} 
+                sx={{ 
+                    backgroundColor: HOTEL_COLOR, 
+                    ":hover": { backgroundColor: HOTEL_HOVER_COLOR } 
+                }}>
+                Crear Usuario
+            </Button>
           </Box>
           {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -226,7 +237,7 @@ const AdminSettings = () => {
                         <TableCell>{u.email}</TableCell>
                         <TableCell>{u.rol}</TableCell>
                         <TableCell>
-                          <IconButton color="primary" onClick={() => handleEditUser(u.id)} disabled={user.id === u.id}><EditIcon /></IconButton>
+                          <IconButton color="primary" onClick={() => handleEditUser(u.id)} disabled={user.id === u.id} sx={{ color: HOTEL_COLOR }}><EditIcon /></IconButton>
                           <IconButton color="error" onClick={() => handleDelete(u.id)} disabled={user.id === u.id}><DeleteIcon /></IconButton>
                         </TableCell>
                       </TableRow>
@@ -259,7 +270,13 @@ const AdminSettings = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h5">Gestión de Áreas</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick}>Nueva Área</Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} 
+                sx={{ 
+                    backgroundColor: HOTEL_COLOR, 
+                    ":hover": { backgroundColor: HOTEL_HOVER_COLOR } 
+                }}>
+                Nueva Área
+            </Button>
           </Box>
           {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -281,7 +298,7 @@ const AdminSettings = () => {
                         <TableCell>{area.nombre}</TableCell>
                         <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
                         <TableCell>
-                          <IconButton color="primary" onClick={() => handleEditArea(area)}><EditIcon /></IconButton>
+                          <IconButton color="primary" onClick={() => handleEditArea(area)} sx={{ color: HOTEL_COLOR }}><EditIcon /></IconButton>
                           <IconButton color="error" onClick={() => handleDelete(area.id)}><DeleteIcon /></IconButton>
                         </TableCell>
                       </TableRow>
@@ -327,6 +344,12 @@ const AdminSettings = () => {
             variant={activeTable === table.name ? "contained" : "outlined"}
             onClick={() => handleTableChange(table.name)} 
             startIcon={table.icon || <ListIcon />}
+            sx={{ 
+                ...(activeTable === table.name && { 
+                    backgroundColor: HOTEL_COLOR, 
+                    ":hover": { backgroundColor: HOTEL_HOVER_COLOR } 
+                })
+            }}
           >
             {table.name}
           </Button>

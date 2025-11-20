@@ -21,8 +21,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment'; // Añadido para Re
 import DeleteIcon from '@mui/icons-material/Delete'; // Añadido para Bajas
 import LogoImg from "../assets/Logo.png"; // Icono Logo
 import { AuthContext } from "../context/AuthContext";
-
-const SIDEBAR_WIDTH = 240;
+import "../components/styles/Sidebar.css"; // 👈 NUEVA IMPORTACIÓN
 
 const Sidebar = ({ open, onClose, variant = 'persistent' }) => { 
   const navigate = useNavigate();
@@ -55,20 +54,14 @@ const Sidebar = ({ open, onClose, variant = 'persistent' }) => {
       anchor="left"
       open={open}
       // onClose={onClose} // No usado en modo permanente
+      // ⚠️ Usamos una clase dinámica para aplicar estilos condicionales/fijos
+      className={variant === 'permanent' ? 'sidebar-drawer-permanent' : ''}
       sx={{
-        width: SIDEBAR_WIDTH,
-        flexShrink: 0,
-        // Estilos para fijar el Drawer de forma permanente
-        ...(variant === 'permanent' && {
-          '& .MuiDrawer-paper': {
-            position: 'static', 
-            boxShadow: 'none',
-          }
-        }),
         "& .MuiDrawer-paper": {
-          width: SIDEBAR_WIDTH,
+          // ✅ APLICAR ESTILOS FIJOS USANDO LA VARIABLE CSS
           boxSizing: "border-box",
-          backgroundColor: "#f5f5f5",
+          width: 'var(--sidebar-width)',
+          backgroundColor: '#f5f5f5'
         },
       }}
     >

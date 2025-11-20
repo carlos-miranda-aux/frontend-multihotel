@@ -11,6 +11,7 @@ import {
   Button,
 } from "@mui/material";
 import api from "../api/axios";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
 
 const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
   const [formData, setFormData] = useState({
@@ -93,7 +94,12 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
             <MenuItem value="ADMIN">ADMIN</MenuItem>
           </Select>
         </FormControl>
-        <Button type="submit" variant="contained" color="primary">
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary"
+          className="primary-action-button" // ✅ Clase aplicada
+        >
           Crear usuario
         </Button>
       </Box>

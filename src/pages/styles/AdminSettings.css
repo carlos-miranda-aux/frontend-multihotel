@@ -1,0 +1,13 @@
+/* src/pages/styles/AdminSettings.css */
+
+/* Estilo para botones de acción principal (Crear, Guardar, Ir a Configuración, etc.) */
+.admin-primary-button {
+    background-color: #A73698; /* Color fijo del tema */
+}
+
+.admin-primary-button:hover {
+    background-color: #8a2b7b; /* Color de hover fijo del tema */
+}
+
+/* Estilo para los botones de las tabs/selección de tabla (solo cuando están seleccionados) */
+/* Este estilo solo sobrescribe el background-color y hover del botón MUI en estado 'contained'. */

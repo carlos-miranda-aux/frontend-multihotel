@@ -67,7 +67,7 @@ const Reportes = () => {
       url: `${apiBaseUrl}/maintenances/export/all` 
     },
     { 
-      name: "Lista de Usuarios (Crown)", 
+      name: "Lista de Usuarios", 
       description: "Exporta todos los usuarios de la organización (empleados).", 
       url: `${apiBaseUrl}/users/export/all` // (Tendrás que crear esta ruta)
     },

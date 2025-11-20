@@ -22,9 +22,8 @@ import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSortableData } from "../hooks/useSortableData";
-
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
+// ❌ ELIMINAR: import "../pages/styles/Disposals.css"; 
+import "../pages/styles/ConfigButtons.css"; // 👈 USAR CLASES DE BOTONES/ICONOS
 
 const Disposals = () => {
   const [disposals, setDisposals] = useState([]);
@@ -173,8 +172,7 @@ const Disposals = () => {
                         <IconButton
                           color="primary"
                           onClick={() => handleEdit(disposal.id)}
-                          // [APLICAR COLOR]
-                          sx={{ color: HOTEL_COLOR }}
+                          className="action-icon-color" // 👈 Clase unificada
                         >
                           <EditIcon />
                         </IconButton>

@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
 
 const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setError }) => {
   const [formData, setFormData] = useState({
@@ -28,10 +29,8 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        // 👈 CORRECCIÓN: Llamar a la nueva ruta
+        // Pide la lista de dispositivos activos para el selector
         const res = await api.get("/devices/get/all-names");
-        
-        // 👈 CORRECCIÓN: La respuesta es un array simple
         setDevices(res.data); 
       } catch (err) {
         console.error("Error fetching devices:", err);
@@ -68,7 +67,11 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
 
   return (
     <Box>
-      <Typography variant="h6" sx={{ mb: 2 }}>
+      <Typography 
+        variant="h6" 
+        sx={{ mb: 2 }}
+        className="modal-title-color" // ✅ Aplicar clase al título
+      >
         Crear nuevo mantenimiento
       </Typography>
       <Box component="form" onSubmit={handleCreateMaintenance} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -87,7 +90,7 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
                 </MenuItem>
                 {devices.map((device) => (
                   <MenuItem key={device.id} value={device.id}>
-                    {/* 👈 CORRECCIÓN: Acceder a los datos del 'select' */}
+                    {/* Muestra etiqueta y nombre */}
                     {device.etiqueta} - {device.nombre_equipo || device.tipo?.nombre}
                   </MenuItem>
                 ))}
@@ -133,7 +136,13 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
             </FormControl>
           </Grid>
         </Grid>
-        <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary" 
+          sx={{ mt: 2 }}
+          className="primary-action-button" // ✅ Aplicar clase CSS
+        >
           Crear Mantenimiento
         </Button>
       </Box>

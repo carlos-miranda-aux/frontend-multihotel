@@ -19,7 +19,7 @@ import {
   TablePagination,
   CircularProgress,
   TableSortLabel,
-  TextField // 👈 CORRECCIÓN: Importar TextField
+  TextField // 👈 Importar TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete"; 
@@ -30,6 +30,7 @@ import CreateDeviceForm from "../components/CreateDeviceForm";
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
 import { useSortableData } from "../hooks/useSortableData";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR BOTONES Y ICONOS
 
 const modalStyle = {
   position: 'absolute',
@@ -43,9 +44,9 @@ const modalStyle = {
   borderRadius: 2
 };
 
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
-const HOTEL_HOVER_COLOR = "#8a2b7b";
+// ❌ ELIMINAR CONSTANTES
+// const HOTEL_COLOR = "#A73698";
+// const HOTEL_HOVER_COLOR = "#8a2b7b";
 
 const Inventory = () => {
   const [devices, setDevices] = useState([]);
@@ -145,11 +146,9 @@ const Inventory = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenModal}
-            // [APLICAR COLOR]
-            sx={{
-              backgroundColor: HOTEL_COLOR,
-              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
-            }}
+            // ✅ Aplicar la clase para el botón de acción principal
+            className="primary-action-button"
+            // ❌ Eliminar el sx original.
           >
             Crear Equipo
           </Button>
@@ -231,8 +230,9 @@ const Inventory = () => {
                         color="primary"
                         onClick={() => handleEdit(device.id)}
                         title="Editar equipo"
-                        // [APLICAR COLOR]
-                        sx={{ color: HOTEL_COLOR }}
+                        // ✅ Aplicar la clase para el color del icono
+                        className="action-icon-color"
+                        // ❌ Eliminar el sx original.
                       >
                         <EditIcon />
                       </IconButton>

@@ -7,10 +7,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
-
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
-const HOTEL_HOVER_COLOR = "#8a2b7b";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR ESTILOS
 
 // Función para parsear la fecha como LOCAL
 const parseLocalDate = (dateString) => {
@@ -404,11 +401,12 @@ const EditDevice = () => {
             </Fade>
           </Grid>
 
-          {/* ACCIONES (Campos idénticos) */}
+          {/* ACCIONES (Botón de guardar) */}
           <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
-            <Button type="submit" variant="contained" 
-              // [APLICAR COLOR]
-              sx={{ backgroundColor: HOTEL_COLOR, ":hover": { backgroundColor: HOTEL_HOVER_COLOR } }}
+            <Button 
+                type="submit" 
+                variant="contained" 
+                className="primary-action-button" // 👈 Aplicar clase CSS
             >
               Guardar cambios
             </Button>

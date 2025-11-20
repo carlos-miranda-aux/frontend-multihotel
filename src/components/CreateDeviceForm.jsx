@@ -6,6 +6,7 @@ import {
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
 
 const parseLocalDate = (dateString) => {
   if (!dateString) return null;
@@ -156,13 +157,23 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
   return (
     <Box sx={{ maxHeight: "85vh", overflowY: "auto", p: 3, bgcolor: "#f9f9f9", borderRadius: 2 }}>
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: "bold" }}>
+      <Typography 
+        variant="h5" 
+        sx={{ mb: 3, fontWeight: "bold" }}
+        className="modal-title-color" // 👈 Título principal
+      >
         Crear nuevo equipo
       </Typography>
 
       <form onSubmit={handleCreateDevice} noValidate>
          {/* INFORMACIÓN GENERAL */}
-        <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Información General</Typography>
+        <Typography 
+            variant="subtitle1" 
+            sx={{ mt: 2, mb: 1 }}
+            className="modal-subtitle-color" // 👈 APLICAR CLASE AQUÍ
+        >
+            Información General
+        </Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
@@ -189,7 +200,13 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         </Grid>
 
         {/* ASIGNACIÓN Y UBICACIÓN */}
-        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>Asignación y Ubicación</Typography>
+        <Typography 
+            variant="subtitle1" 
+            sx={{ mt: 3, mb: 1 }}
+            className="modal-subtitle-color" // 👈 APLICAR CLASE AQUÍ
+        >
+            Asignación y Ubicación
+        </Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
@@ -224,7 +241,13 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         </Grid>
 
         {/* SOFTWARE Y LICENCIAS */}
-        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>Software y Licencias</Typography>
+        <Typography 
+            variant="subtitle1" 
+            sx={{ mt: 3, mb: 1 }}
+            className="modal-subtitle-color" // 👈 APLICAR CLASE AQUÍ
+        >
+            Software y Licencias
+        </Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
             <Grid item xs={12} sm={4}>
@@ -243,7 +266,13 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             <Grid item xs={12} sm={4}><TextField label="Clave de Office" name="office_key" value={formData.office_key} onChange={handleChange} fullWidth /></Grid>
         </Grid>
 
-        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>Garantía</Typography>
+        <Typography 
+            variant="subtitle1" 
+            sx={{ mt: 3, mb: 1 }}
+            className="modal-subtitle-color" // 👈 APLICAR CLASE AQUÍ
+        >
+            Garantía
+        </Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}><TextField label="Número de producto de garantía" name="garantia_numero_producto" value={formData.garantia_numero_producto} onChange={handleChange} fullWidth /></Grid>
@@ -253,7 +282,14 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         </Grid>
 
         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 4 }}>
-          <Button type="submit" variant="contained" color="primary">Crear Equipo</Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary"
+            className="primary-action-button"
+          >
+            Crear Equipo
+          </Button>
         </Stack>
       </form>
     </Box>

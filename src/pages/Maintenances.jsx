@@ -1,5 +1,4 @@
 // src/pages/Maintenances.jsx
-
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box,
@@ -36,6 +35,8 @@ import CreateMaintenanceForm from "../components/CreateMaintenanceForm.jsx";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { AlertContext } from "../context/AlertContext.jsx";
 import { useSortableData } from "../hooks/useSortableData.js";
+// ❌ ELIMINAR: import "../pages/styles/Maintenances.css"; 
+import "../pages/styles/ConfigButtons.css"; // 👈 USAR CLASES DE BOTONES/ICONOS
 
 const modalStyle = {
   position: 'absolute',
@@ -48,10 +49,6 @@ const modalStyle = {
   p: 4,
   borderRadius: 2
 };
-
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
-const HOTEL_HOVER_COLOR = "#8a2b7b";
 
 const Maintenances = () => {
   const [maintenances, setMaintenances] = useState([]);
@@ -181,11 +178,7 @@ const Maintenances = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenModal}
-            // [APLICAR COLOR]
-            sx={{
-              backgroundColor: HOTEL_COLOR,
-              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
-            }}
+            className="primary-action-button" // 👈 Clase unificada
           >
             Nuevo Mantenimiento
           </Button>
@@ -297,8 +290,7 @@ const Maintenances = () => {
                         color="primary" 
                         onClick={() => handleEditMaintenance(m.id)} 
                         title="Editar"
-                        // [APLICAR COLOR]
-                        sx={{ color: HOTEL_COLOR }}
+                        className="action-icon-color" // 👈 Clase unificada
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>

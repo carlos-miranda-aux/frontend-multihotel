@@ -1,0 +1,29 @@
+/* src/pages/styles/ConfigButtons.css */
+
+/*
+  Esta clase anula el estilo 'primary' de MUI para forzar el color del tema.
+  Es necesaria porque sin un tema personalizado de MUI, el 'primary' es azul.
+*/
+.primary-action-button {
+    background-color: #A73698 !important; 
+    transition: background-color 0.25s; 
+}
+
+.primary-action-button:hover {
+    background-color: #8a2b7b !important; /* Color de hover forzado */
+}
+
+/* Estilo para iconos de acción (Editar, etc.) */
+.action-icon-color {
+    color: #A73698 !important; 
+}
+
+/* ✅ CORRECCIÓN: Estilo para el color del título principal en modales */
+.modal-title-color {
+    color: #333333; /* Color oscuro */
+}
+
+/* ✅ NUEVA REGLA: Estilo para los subtítulos/secciones dentro de los formularios */
+.modal-subtitle-color {
+    color: #555555; /* Gris oscuro para subtítulos */
+}

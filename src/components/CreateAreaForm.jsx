@@ -1,3 +1,4 @@
+// src/components/CreateAreaForm.jsx
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -11,6 +12,7 @@ import {
   Alert
 } from "@mui/material";
 import api from "../api/axios";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
 
 const CreateAreaForm = ({ onClose, onSuccess, initialData }) => {
   const [formData, setFormData] = useState({
@@ -24,7 +26,8 @@ const CreateAreaForm = ({ onClose, onSuccess, initialData }) => {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await api.get("/departments/get");
+        // Usamos limit=0 para obtener la lista completa para el selector
+        const res = await api.get("/departments/get?limit=0");
         setDepartments(res.data || []);
       } catch (err) {
         console.error("Error al cargar departamentos:", err);
@@ -73,7 +76,11 @@ const CreateAreaForm = ({ onClose, onSuccess, initialData }) => {
 
   return (
     <Box>
-      <Typography variant="h6" sx={{ mb: 2 }}>
+      <Typography 
+        variant="h6" 
+        sx={{ mb: 2 }}
+        className="modal-title-color" // ✅ Aplicar clase al título
+      >
         {initialData ? "Editar Área" : "Crear Nueva Área"}
       </Typography>
       
@@ -108,7 +115,12 @@ const CreateAreaForm = ({ onClose, onSuccess, initialData }) => {
           </Select>
         </FormControl>
 
-        <Button type="submit" variant="contained" color="primary">
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary"
+          className="primary-action-button" // ✅ Aplicar clase CSS
+        >
           {initialData ? "Guardar Cambios" : "Crear Área"}
         </Button>
       </Box>

@@ -15,10 +15,7 @@ import {
 } from "@mui/material";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
-
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
-const HOTEL_HOVER_COLOR = "#8a2b7b";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR ESTILOS
 
 const EditUser = () => {
   const { id } = useParams();
@@ -136,10 +133,7 @@ const EditUser = () => {
             type="submit" 
             variant="contained" 
             color="primary"
-            sx={{ 
-                backgroundColor: HOTEL_COLOR, 
-                ":hover": { backgroundColor: HOTEL_HOVER_COLOR } 
-            }}
+            className="primary-action-button" // 👈 Aplicar clase CSS
           >
             Guardar cambios
           </Button>

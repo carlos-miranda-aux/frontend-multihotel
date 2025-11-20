@@ -12,15 +12,16 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateCrownUserForm from "../components/CreateCrownUserForm";
 import { useSortableData } from "../hooks/useSortableData";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR BOTONES Y ICONOS
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
   width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
-const HOTEL_HOVER_COLOR = "#8a2b7b";
+// ❌ ELIMINAR CONSTANTES
+// const HOTEL_COLOR = "#A73698";
+// const HOTEL_HOVER_COLOR = "#8a2b7b";
 
 const UsersCrownP = () => {
   const [users, setUsers] = useState([]);
@@ -38,7 +39,6 @@ const UsersCrownP = () => {
   const { sortedItems: sortedUsers, requestSort, sortConfig } = useSortableData(users, { key: 'nombre', direction: 'ascending' });
 
   useEffect(() => {
-    // ❌ ELIMINADO: Removimos el delay de 500ms
     fetchUsers(); 
   }, [page, rowsPerPage, search]);
 
@@ -97,12 +97,13 @@ const UsersCrownP = () => {
             value={search}
             onChange={handleSearchChange}
           />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}
-            // [APLICAR COLOR]
-            sx={{
-              backgroundColor: HOTEL_COLOR,
-              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
-            }}>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            onClick={handleOpenModal}
+            // ✅ Aplicar clase CSS para el botón primario
+            className="primary-action-button"
+          >
             Crear Usuario
           </Button>
         </Box>
@@ -146,9 +147,11 @@ const UsersCrownP = () => {
                     <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>
                     <TableCell>
-                      <IconButton color="primary" onClick={() => handleEdit(u.id)} 
-                        // [APLICAR COLOR]
-                        sx={{ color: HOTEL_COLOR }}
+                      <IconButton 
+                        color="primary" 
+                        onClick={() => handleEdit(u.id)} 
+                        // ✅ Aplicar la clase para el color del icono
+                        className="action-icon-color"
                       >
                         <EditIcon />
                       </IconButton>

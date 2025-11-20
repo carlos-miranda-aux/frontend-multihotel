@@ -1,0 +1,55 @@
+.login-page {
+    min-height: 100vh; /* Ocupa toda la altura de la ventana */
+    width: 100vw;      /* Ocupa todo el ancho de la ventana */
+    background-color: #F8F9FA;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: "Poppins, sans-serif";
+}
+
+.login-paper {
+    padding: 4em;
+    border-radius: 0.5rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+}
+
+.login-logo {
+    margin-bottom: 2em; 
+}
+
+.login-subtitle {
+    margin-bottom: 3em; 
+    color: #555;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1em; /* gap: 2 */
+}
+
+.login-button {
+    background-color: #9D3194; /* Usar valor directo */
+    margin-top: 0.5rem; 
+    
+    /* Nota: Los estilos :hover en un archivo .css
+       no pueden usar & como en Sass. */
+}
+
+.login-button:hover {
+    background-color: #7a2473; /* Usar valor directo */
+}
+
+.login-link-text {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.login-link {
+    color: #9D3194; /* Usar valor directo */
+    text-decoration: none;
+}

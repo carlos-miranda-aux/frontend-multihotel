@@ -1,0 +1,14 @@
+/* src/pages/styles/Disposals.css */
+
+/* Contenedor de la barra de título y búsqueda */
+.disposals-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem; /* mb: 3 */
+}
+
+/* Estilo para el icono de editar (color primario del hotel) */
+.disposals-edit-icon {
+    color: #A73698;
+}

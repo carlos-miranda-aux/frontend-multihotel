@@ -1,0 +1,20 @@
+/* src/pages/styles/Home.css */
+
+/* Estilos para el WidgetCard (reemplaza gran parte de su prop sx) */
+.widget-card-base {
+    padding: 1.5rem; /* p: 3 */
+    min-height: 120px;
+    display: flex;
+    flex-direction: column; 
+    justify-content: space-between;
+    
+    /* Estilos de interactividad que antes estaban en sx */
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+/* Estilo de hover/elevación */
+.widget-card-base:hover {
+    transform: translateY(-4px); 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Simulación de boxShadow: 6 de MUI */
+}

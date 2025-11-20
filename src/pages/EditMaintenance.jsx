@@ -19,10 +19,7 @@ import {
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
-
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
-const HOTEL_HOVER_COLOR = "#8a2b7b";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR ESTILOS
 
 const EditMaintenance = () => {
   const { id } = useParams();
@@ -268,8 +265,9 @@ const EditMaintenance = () => {
           </Grid>
           
           <Button type="submit" variant="contained" color="primary" 
-            // [APLICAR COLOR]
-            sx={{ mt: 3, alignSelf: 'flex-end', backgroundColor: HOTEL_COLOR, ":hover": { backgroundColor: HOTEL_HOVER_COLOR } }}
+            // Aplicar clase CSS
+            className="primary-action-button"
+            sx={{ mt: 3, alignSelf: 'flex-end' }}
           >
             Guardar Cambios
           </Button>

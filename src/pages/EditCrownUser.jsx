@@ -18,10 +18,7 @@ import {
   ListSubheader // 👈 Importar para agrupar áreas
 } from "@mui/material";
 import api from "../api/axios";
-
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
-const HOTEL_HOVER_COLOR = "#8a2b7b";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR ESTILOS
 
 const EditCrownUser = () => {
   const { id } = useParams();
@@ -218,8 +215,7 @@ const EditCrownUser = () => {
           />
 
           <Button type="submit" variant="contained" color="primary"
-             // [APLICAR COLOR]
-             sx={{ backgroundColor: HOTEL_COLOR, ":hover": { backgroundColor: HOTEL_HOVER_COLOR } }}
+             className="primary-action-button" // 👈 Aplicar clase CSS
           >
             Guardar cambios
           </Button>

@@ -1,0 +1,20 @@
+/* src/components/styles/Sidebar.css */
+
+/* Define el ancho del Sidebar para usarlo en el componente */
+:root {
+    --sidebar-width: 240px;
+}
+
+/* Estilos de Drawer/Paper para fijar el layout y el color de fondo */
+.sidebar-drawer-paper {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    box-sizing: border-box;
+    background-color: #f5f5f5; /* Color de fondo fijo */
+}
+
+/* Estilos específicos cuando el Drawer es 'permanent' */
+.sidebar-drawer-permanent .MuiDrawer-paper {
+    position: static; 
+    box-shadow: none;
+}

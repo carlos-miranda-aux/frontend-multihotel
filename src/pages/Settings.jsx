@@ -1,9 +1,10 @@
-// pages/Settings.jsx
+// src/pages/Settings.jsx
 import React, { useState, useContext } from "react";
 import { Box, Typography, TextField, Button, Paper, Alert } from "@mui/material";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import "../pages/styles/ConfigButtons.css"; // 👈 REUTILIZAR LA IMPORTACIÓN
 
 const Settings = () => {
   const { user, setUser } = useContext(AuthContext);
@@ -16,9 +17,6 @@ const Settings = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
-  // Color del hotel: #A73698
-  const HOTEL_COLOR = "#A73698";
-  const HOTEL_HOVER_COLOR = "#8a2b7b";
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,10 +37,6 @@ const Settings = () => {
     } catch (err) {
       setError(err.response?.data?.error || "Error al cambiar contraseña.");
     }
-  };
-
-  const handleManageUsers = () => {
-    navigate("/user-manager");
   };
 
   const handleAdminSettings = () => {
@@ -84,10 +78,7 @@ const Settings = () => {
         <Button 
             variant="contained" 
             onClick={handleUpdate}
-            sx={{
-              backgroundColor: HOTEL_COLOR, // [APLICAR COLOR]
-              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
-            }}
+            className="primary-action-button" // 👈 Aplicar clase CSS
         >
           Cambiar contraseña
         </Button>
@@ -106,10 +97,7 @@ const Settings = () => {
             variant="contained"
             color="primary"
             onClick={handleAdminSettings}
-            sx={{
-              backgroundColor: HOTEL_COLOR, // [APLICAR COLOR]
-              ":hover": { backgroundColor: HOTEL_HOVER_COLOR },
-            }}
+            className="primary-action-button" // 👈 Aplicar clase CSS
           >
             Ir a configuración de administrador
           </Button>

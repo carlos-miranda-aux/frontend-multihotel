@@ -23,6 +23,7 @@ import api from "../api/axios";
 import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertContext } from "../context/AlertContext";
+import "../pages/styles/Home.css"; // 👈 NUEVA IMPORTACIÓN
 
 /**
  * Componente Tarjeta de Widget con diseño vertical mejorado.
@@ -32,19 +33,13 @@ const WidgetCard = ({ title, value, icon, color, onClick }) => {
   return (
     <Paper
       onClick={onClick}
+      // ✅ Usamos la clase CSS para layout y hover/transition
+      className="widget-card-base"
       sx={{
-        p: 3,
-        minHeight: 120, // Altura mínima para una mejor estética
-        display: 'flex',
-        flexDirection: 'column', // Layout vertical
-        justifyContent: 'space-between',
+        // Mantenemos solo estilos dinámicos (el borde es dinámico por el 'color')
+        borderLeft: `4px solid ${color}`, 
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.2s ease',
-        borderLeft: `4px solid ${color}`, // Toque de diseño
-        '&:hover': {
-          transform: onClick ? 'translateY(-4px)' : 'none',
-          boxShadow: 6,
-        },
+        // Eliminamos los estilos fijos como p, minHeight, display, y :hover
       }}
       elevation={3}
     >
@@ -71,7 +66,7 @@ const Home = () => {
     loading: alertLoading, 
     warrantyAlertsList,
     pendingMaintenancesList,
-    devices // 👈 CORRECCIÓN: Obtenemos devices del contexto
+    devices // 👈 Obtenemos devices del contexto
   } = useContext(AlertContext);
 
   const [stats, setStats] = useState({
@@ -116,7 +111,7 @@ const Home = () => {
           let safeCount = 0; 
           let expiringSoonCount = 0;
 
-          devices.forEach((d) => { // 👈 CORRECCIÓN: 'devices' es del contexto
+          devices.forEach((d) => { // 👈 'devices' es del contexto
             if (!d.garantia_fin) {
               safeCount++; 
             } else {
@@ -138,7 +133,7 @@ const Home = () => {
           
           // Calcular KPIs
           setStats({
-            totalDevices: devices.length, // 👈 CORRECCIÓN: 'devices' es del contexto
+            totalDevices: devices.length, // 👈 'devices' es del contexto
             totalUsers: usersTotal, // 👈 CORRECCIÓN
             pendingTasksCount: pendingMaintenancesList.length,
             warrantyAlertsCount: warrantyAlertsList.length,
@@ -179,7 +174,7 @@ const Home = () => {
         Resumen del estado de tu infraestructura TI.
       </Typography>
 
-      {/* --- Widgets de Resumen (KPIs) - Mantenemos 3 KPIs, md=4 para 33% cada uno --- */}
+      {/* --- Widgets de Resumen (KPIs) --- */}
       <Grid container spacing={3} sx={{ mb: 4 }}> 
         
         <Grid item xs={12} sm={6} md={4}> 
@@ -216,7 +211,7 @@ const Home = () => {
       {/* --- Columnas de Contenido (Listas de Alertas) --- */}
       <Grid container spacing={3}>
         
-        {/* Tareas Pendientes: Ocupa 100% en small, 7/12 en large */}
+        {/* Tareas Pendientes */}
         <Grid item xs={12} lg={7}>
           <Paper sx={{ p: 3, height: '100%' }} elevation={3}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -238,8 +233,6 @@ const Home = () => {
                       <EventBusyIcon />
                     </ListItemIcon>
                     <ListItemText
-                      // Muestra nombre del equipo.
-                      // pr: 12 para evitar solapamiento con el botón.
                       primary={<strong>{m.device?.nombre_equipo || m.device?.etiqueta || 'Equipo no encontrado'}</strong>}
                       secondary={`TAREA: ${m.descripcion} (Prog: ${formatDate(m.fecha_programada)})`}
                       sx={{ pr: 12 }} 
@@ -255,7 +248,7 @@ const Home = () => {
           </Paper>
         </Grid>
         
-        {/* Garantías en Riesgo (PANEL VISUAL DETALLADO) */}
+        {/* Garantías en Riesgo */}
         <Grid item xs={12} lg={5}>
           <Paper sx={{ p: 3, height: '100%', border: 1, borderColor: warrantyAlertsList.length > 0 ? 'error.main' : 'transparent' }} elevation={3}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: warrantyAlertsList.length > 0 ? 'error.main' : 'text.primary' }}>
@@ -285,11 +278,11 @@ const Home = () => {
                 </PieChart>
               </ResponsiveContainer>
               
-              {/* ✅ Texto Centrado Absolutamente en el Agujero de la Dona (AJUSTE FINO en 'top') */}
+              {/* Texto Centrado Absolutamente en el Agujero de la Dona */}
               <Box
                 sx={{
                   position: 'absolute',
-                  top: '45%', // 👈 AJUSTE: Subido a 47% para centrado visual
+                  top: '45%', 
                   left: '50%',
                   transform: 'translate(-50%, -50%)',
                   textAlign: 'center',

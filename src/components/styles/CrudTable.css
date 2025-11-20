@@ -1,0 +1,16 @@
+/* src/components/styles/CrudTable.css */
+
+/* Estilo para el botón de Añadir */
+.crud-add-button {
+    background-color: #A73698 !important; 
+    transition: background-color 0.25s;
+}
+
+.crud-add-button:hover {
+    background-color: #8a2b7b !important;
+}
+
+/* Estilo para el icono de editar en la tabla */
+.crud-edit-icon {
+    color: #A73698;
+}

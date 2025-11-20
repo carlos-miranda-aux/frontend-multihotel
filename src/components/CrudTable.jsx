@@ -26,7 +26,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useSortableData } from "../hooks/useSortableData"; // 👈 Importado el hook de sorting
-
+import "../components/styles/CrudTable.css"; // 👈 NUEVA IMPORTACIÓN
 
 const CrudTable = ({ title, apiUrl }) => {
   const [data, setData] = useState([]);
@@ -160,7 +160,13 @@ const CrudTable = ({ title, apiUrl }) => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">{title}</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}>
+        <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            onClick={handleOpenModal}
+            // ✅ Aplicar clase CSS
+            className="crud-add-button"
+        >
           Añadir
         </Button>
       </Box>
@@ -212,7 +218,11 @@ const CrudTable = ({ title, apiUrl }) => {
                     <TableCell>{item.id}</TableCell>
                     <TableCell>{item.nombre}</TableCell>
                     <TableCell>
-                      <IconButton color="primary" onClick={() => openEditModal(item)}>
+                      <IconButton 
+                          color="primary" 
+                          onClick={() => openEditModal(item)}
+                          className="crud-edit-icon" // 👈 Aplicar clase CSS al icono
+                      >
                         <EditIcon />
                       </IconButton>
                       <IconButton color="error" onClick={() => handleDelete(item.id)}>
@@ -283,6 +293,7 @@ const CrudTable = ({ title, apiUrl }) => {
               variant="contained"
               fullWidth
               onClick={isEdit ? handleEdit : handleCreate}
+              className="crud-add-button" // ✅ Aplicar clase CSS al botón del modal
             >
               {isEdit ? "Guardar cambios" : "Añadir"}
             </Button>

@@ -5,6 +5,7 @@ import {
   FormControlLabel, Switch, ListSubheader
 } from "@mui/material";
 import api from "../api/axios";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
 
 const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
   const [formData, setFormData] = useState({
@@ -19,8 +20,8 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
   useEffect(() => {
     const fetchAreas = async () => {
       try {
-        // Suponemos que el backend devuelve áreas ordenadas por departamento
-        const res = await api.get("/areas/get");
+        // Usamos limit=0 para obtener la lista completa para el selector
+        const res = await api.get("/areas/get?limit=0"); 
         setAreas(res.data || []);
       } catch (err) {
         console.error("Error fetching areas:", err);
@@ -76,7 +77,13 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
 
   return (
     <Box>
-      <Typography variant="h6" sx={{ mb: 2 }}>Crear nuevo usuario</Typography>
+      <Typography 
+        variant="h6" 
+        sx={{ mb: 2 }}
+        className="modal-title-color" // ✅ Aplicar clase al título
+      >
+        Crear nuevo usuario
+      </Typography>
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <TextField label="Nombre" name="nombre" value={formData.nombre} onChange={handleChange} fullWidth required />
         <TextField label="Correo" name="correo" type="email" value={formData.correo} onChange={handleChange} fullWidth required />
@@ -102,7 +109,14 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
           label="Es Jefe de Área (Recibe notificaciones)"
         />
 
-        <Button type="submit" variant="contained" color="primary">Crear usuario</Button>
+        <Button 
+          type="submit" 
+          variant="contained" 
+          color="primary"
+          className="primary-action-button" // ✅ Aplicar clase CSS
+        >
+          Crear usuario
+        </Button>
       </Box>
     </Box>
   );

@@ -18,15 +18,16 @@ import CrudTable from "../components/CrudTable";
 import CreateSystemUserForm from "../components/CreateSystemUserForm";
 import CreateAreaForm from "../components/CreateAreaForm"; 
 import { useSortableData } from "../hooks/useSortableData";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS MODULAR
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
   width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
-// Color del hotel: #A73698
-const HOTEL_COLOR = "#A73698";
-const HOTEL_HOVER_COLOR = "#8a2b7b";
+// ❌ ELIMINADAS:
+// const HOTEL_COLOR = "#A73698";
+// const HOTEL_HOVER_COLOR = "#8a2b7b";
 
 
 const AdminSettings = () => {
@@ -34,7 +35,7 @@ const AdminSettings = () => {
   
   // Estados generales
   const [dataList, setDataList] = useState([]); 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // ✅ CORREGIDO: Usando = en lugar de =>
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
@@ -88,10 +89,6 @@ const AdminSettings = () => {
         // Tablas CRUD genéricas
         const tableData = tables.find(t => t.name === activeTable);
         if (tableData) {
-            // CrudTable tiene su propia lógica de paginación que ya funciona,
-            // pero si la manejáramos aquí sería así:
-            // url = `${tableData.url}/get?page=${page + 1}&limit=${rowsPerPage}`;
-            // isPaginatedTable = true; 
             setLoading(false);
             return;
         } else {
@@ -205,11 +202,12 @@ const AdminSettings = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h5">Gestión de Usuarios del Sistema</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} 
-                sx={{ 
-                    backgroundColor: HOTEL_COLOR, 
-                    ":hover": { backgroundColor: HOTEL_HOVER_COLOR } 
-                }}>
+            <Button 
+                variant="contained" 
+                startIcon={<AddIcon />} 
+                onClick={handleCreateClick} 
+                className="primary-action-button" // 👈 Aplicar clase CSS
+            >
                 Crear Usuario
             </Button>
           </Box>
@@ -237,7 +235,7 @@ const AdminSettings = () => {
                         <TableCell>{u.email}</TableCell>
                         <TableCell>{u.rol}</TableCell>
                         <TableCell>
-                          <IconButton color="primary" onClick={() => handleEditUser(u.id)} disabled={user.id === u.id} sx={{ color: HOTEL_COLOR }}><EditIcon /></IconButton>
+                          <IconButton color="primary" onClick={() => handleEditUser(u.id)} disabled={user.id === u.id} sx={{ color: "#A73698" }}><EditIcon /></IconButton>
                           <IconButton color="error" onClick={() => handleDelete(u.id)} disabled={user.id === u.id}><DeleteIcon /></IconButton>
                         </TableCell>
                       </TableRow>
@@ -270,11 +268,12 @@ const AdminSettings = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h5">Gestión de Áreas</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} 
-                sx={{ 
-                    backgroundColor: HOTEL_COLOR, 
-                    ":hover": { backgroundColor: HOTEL_HOVER_COLOR } 
-                }}>
+            <Button 
+                variant="contained" 
+                startIcon={<AddIcon />} 
+                onClick={handleCreateClick} 
+                className="primary-action-button" // 👈 Aplicar clase CSS
+            >
                 Nueva Área
             </Button>
           </Box>
@@ -298,7 +297,7 @@ const AdminSettings = () => {
                         <TableCell>{area.nombre}</TableCell>
                         <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
                         <TableCell>
-                          <IconButton color="primary" onClick={() => handleEditArea(area)} sx={{ color: HOTEL_COLOR }}><EditIcon /></IconButton>
+                          <IconButton color="primary" onClick={() => handleEditArea(area)} sx={{ color: "#A73698" }}><EditIcon /></IconButton>
                           <IconButton color="error" onClick={() => handleDelete(area.id)}><DeleteIcon /></IconButton>
                         </TableCell>
                       </TableRow>
@@ -328,7 +327,6 @@ const AdminSettings = () => {
 
     // 3. TABLAS CRUD GENÉRICAS
     const tableData = tables.find(t => t.name === activeTable);
-    // CrudTable.jsx maneja su propia paginación y funciona con el backend paginado
     return <CrudTable title={tableData.name} apiUrl={tableData.url} />;
   };
 
@@ -344,10 +342,13 @@ const AdminSettings = () => {
             variant={activeTable === table.name ? "contained" : "outlined"}
             onClick={() => handleTableChange(table.name)} 
             startIcon={table.icon || <ListIcon />}
+            // ✅ APLICAR CLASE CSS A BOTONES DE SELECCIÓN ACTIVA
+            className={activeTable === table.name ? "primary-action-button" : ""}
             sx={{ 
+                // Aseguramos que el color se aplique cuando es 'contained'
                 ...(activeTable === table.name && { 
-                    backgroundColor: HOTEL_COLOR, 
-                    ":hover": { backgroundColor: HOTEL_HOVER_COLOR } 
+                    backgroundColor: "#A73698", 
+                    ":hover": { backgroundColor: "#8a2b7b" } 
                 })
             }}
           >

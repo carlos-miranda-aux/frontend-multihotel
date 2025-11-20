@@ -3,9 +3,10 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Modo claro base */
+  color-scheme: light;
+  color: #213547;
+  background-color: #ffffff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -15,28 +16,31 @@
 
 a {
   font-weight: 500;
-  color: #A73698; /* Usar valor directo */
+  color: #A73698;
   text-decoration: inherit;
 }
 a:hover {
-  color: #8a2b7b; /* Usar valor directo */
+  color: #8a2b7b;
 }
 
+/* ✅ CORRECCIÓN 1: Quitamos 'display: flex' del body. 
+   Esto evita que el body trate de comprimir o centrar el contenido. */
 body {
   margin: 0;
-  display: flex; /* Mantenemos display flex para algunos navegadores */
-  /* ❌ Eliminamos place-items: center y min-height para usar la regla de abajo */
   min-width: 320px;
-  min-height: 100vh; /* Aseguramos que body ocupe el alto de la ventana */
-  background-color: #ffffff; 
+  min-height: 100vh;
+  background-color: #f5f5f5; /* Fondo gris suave base */
 }
 
-/* 👈 SOLUCIÓN AL PROBLEMA DE CENTRADO EN LA VISTA */
+/* ✅ CORRECCIÓN 2: El #root ahora es un bloque estándar que ocupa el 100%.
+   Eliminamos 'display: flex', 'justify-content' y 'align-items'.
+   
+   - Tu Login.jsx ya tiene su propio centrado (Box flex).
+   - Tu MainLayout.jsx ya tiene su estructura de sidebar (Box flex).
+   Al quitarlo de aquí, se elimina el conflicto de tamaños. */
 #root {
-    width: 100%; /* Ocupa todo el ancho disponible */
-    display: 200%;
-    justify-content: center; /* Centrar horizontalmente */
-    align-items: center;     /* Centrar verticalmente */
+    width: 100%;
+    min-height: 100vh;
 }
 
 h1 {
@@ -56,22 +60,9 @@ button {
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #A73698; /* Usar valor directo */
+  border-color: #A73698;
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #8a2b7b; /* Usar valor directo */
-  }
-  button {
-    background-color: #f9f9f9;
-  }
 }

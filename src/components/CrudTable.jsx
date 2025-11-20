@@ -17,16 +17,17 @@ import {
   Modal,
   Fade,
   Backdrop,
-  TablePagination, // ✅ Habilitado
-  CircularProgress, // ✅ Habilitado
-  TableSortLabel // 👈 Importado para el sorting
+  TablePagination,
+  CircularProgress,
+  TableSortLabel
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
-import { useSortableData } from "../hooks/useSortableData"; // 👈 Importado el hook de sorting
-import "../components/styles/CrudTable.css"; // 👈 NUEVA IMPORTACIÓN
+import { useSortableData } from "../hooks/useSortableData";
+import "../components/styles/CrudTable.css";
+import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN AÑADIDA PARA LOS COLORES
 
 const CrudTable = ({ title, apiUrl }) => {
   const [data, setData] = useState([]);
@@ -43,9 +44,7 @@ const CrudTable = ({ title, apiUrl }) => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   
-  // 👈 1. Inicializar el hook de sorting (por defecto por nombre)
   const { sortedItems, requestSort, sortConfig } = useSortableData(data, { key: 'nombre', direction: 'ascending' });
-
 
   useEffect(() => {
     fetchData();
@@ -54,10 +53,8 @@ const CrudTable = ({ title, apiUrl }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // ENVIAR PARÁMETROS DE PAGINACIÓN
       const response = await api.get(`${apiUrl}/get?page=${page + 1}&limit=${rowsPerPage}`);
       
-      // LEER LA NUEVA ESTRUCTURA PAGINADA DEL BACKEND
       setData(response.data.data || response.data);
       setTotalCount(response.data.totalCount || response.data.length);
 
@@ -80,7 +77,7 @@ const CrudTable = ({ title, apiUrl }) => {
     try {
       await api.post(`${apiUrl}/post`, { nombre: itemName });
       setMessage("Elemento creado correctamente.");
-      setPage(0); // Volver a la primera página al crear
+      setPage(0);
       fetchData();
       setItemName("");
       setOpenModal(false);
@@ -115,7 +112,6 @@ const CrudTable = ({ title, apiUrl }) => {
       try {
         await api.delete(`${apiUrl}/delete/${id}`);
         setMessage("Elemento eliminado correctamente.");
-        // Retrocede la página si se elimina el último elemento
         if (data.length === 1 && page > 0) {
             setPage(page - 1);
         } else {
@@ -146,14 +142,13 @@ const CrudTable = ({ title, apiUrl }) => {
     setIsEdit(false);
   };
   
-  // HANDLERS DE PAGINACIÓN
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
 
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0); // Resetear a la primera página
+    setPage(0);
   };
 
   return (
@@ -164,7 +159,6 @@ const CrudTable = ({ title, apiUrl }) => {
             variant="contained" 
             startIcon={<AddIcon />} 
             onClick={handleOpenModal}
-            // ✅ Aplicar clase CSS
             className="crud-add-button"
         >
           Añadir
@@ -179,7 +173,6 @@ const CrudTable = ({ title, apiUrl }) => {
           <Table>
             <TableHead>
               <TableRow>
-                {/* 👈 2. Implementar TableSortLabel para ID */}
                 <TableCell sortDirection={sortConfig?.key === 'id' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'id'}
@@ -190,7 +183,6 @@ const CrudTable = ({ title, apiUrl }) => {
                   </TableSortLabel>
                 </TableCell>
                 
-                {/* 👈 3. Implementar TableSortLabel para Nombre */}
                 <TableCell sortDirection={sortConfig?.key === 'nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'nombre'}
@@ -212,7 +204,6 @@ const CrudTable = ({ title, apiUrl }) => {
                     </TableCell>
                   </TableRow>
               ) : (
-                // 👈 4. Usar sortedItems para renderizar
                 sortedItems.map((item) => ( 
                   <TableRow key={item.id}>
                     <TableCell>{item.id}</TableCell>
@@ -221,7 +212,7 @@ const CrudTable = ({ title, apiUrl }) => {
                       <IconButton 
                           color="primary" 
                           onClick={() => openEditModal(item)}
-                          className="crud-edit-icon" // 👈 Aplicar clase CSS al icono
+                          className="crud-edit-icon"
                       >
                         <EditIcon />
                       </IconButton>
@@ -243,7 +234,6 @@ const CrudTable = ({ title, apiUrl }) => {
           </Table>
         </TableContainer>
 
-        {/* COMPONENTE DE PAGINACIÓN */}
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
@@ -257,7 +247,6 @@ const CrudTable = ({ title, apiUrl }) => {
 
       </Paper>
 
-      {/* Modal para añadir/editar */}
       <Modal
         open={openModal}
         onClose={handleCloseModal}
@@ -279,7 +268,11 @@ const CrudTable = ({ title, apiUrl }) => {
             p: 4,
             borderRadius: 2
           }}>
-            <Typography variant="h6" mb={2}>
+            <Typography 
+              variant="h6" 
+              mb={2}
+              className="modal-title-color" /* 👈 CLASE AÑADIDA PARA CORREGIR EL COLOR */
+            >
               {isEdit ? "Editar elemento" : "Añadir nuevo elemento"}
             </Typography>
             <TextField
@@ -293,7 +286,7 @@ const CrudTable = ({ title, apiUrl }) => {
               variant="contained"
               fullWidth
               onClick={isEdit ? handleEdit : handleCreate}
-              className="crud-add-button" // ✅ Aplicar clase CSS al botón del modal
+              className="crud-add-button"
             >
               {isEdit ? "Guardar cambios" : "Añadir"}
             </Button>

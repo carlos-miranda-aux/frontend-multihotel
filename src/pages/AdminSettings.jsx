@@ -18,24 +18,19 @@ import CrudTable from "../components/CrudTable";
 import CreateSystemUserForm from "../components/CreateSystemUserForm";
 import CreateAreaForm from "../components/CreateAreaForm"; 
 import { useSortableData } from "../hooks/useSortableData";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS MODULAR
+import "./styles/ConfigButtons.css"; // 👈 Importación de estilos
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
   width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
-// ❌ ELIMINADAS:
-// const HOTEL_COLOR = "#A73698";
-// const HOTEL_HOVER_COLOR = "#8a2b7b";
-
-
 const AdminSettings = () => {
   const [activeTable, setActiveTable] = useState(null);
   
   // Estados generales
   const [dataList, setDataList] = useState([]); 
-  const [loading, setLoading] = useState(false); // ✅ CORREGIDO: Usando = en lugar de =>
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
@@ -77,16 +72,13 @@ const AdminSettings = () => {
       let url = "";
       let isPaginatedTable = false;
 
-      // Determinar el endpoint y si es paginado
       if (activeTable === "Gestión de Usuarios") {
         url = `/auth/get?page=${page + 1}&limit=${rowsPerPage}`;
         isPaginatedTable = true;
       } else if (activeTable === "Áreas") {
-        // 👈 ENVIAR PAGINACIÓN
         url = `/areas/get?page=${page + 1}&limit=${rowsPerPage}`; 
         isPaginatedTable = true;
       } else {
-        // Tablas CRUD genéricas
         const tableData = tables.find(t => t.name === activeTable);
         if (tableData) {
             setLoading(false);
@@ -100,11 +92,9 @@ const AdminSettings = () => {
       const response = await api.get(url);
 
       if (isPaginatedTable && response.data.data) {
-          // Usar la estructura paginada
           setDataList(response.data.data);
           setTotalCount(response.data.totalCount);
       } else {
-          // Fallback (e.g. si se devuelve una lista completa no paginada)
           setDataList(response.data);
           setTotalCount(response.data.length);
       }
@@ -121,11 +111,9 @@ const AdminSettings = () => {
     if (activeTable === "Gestión de Usuarios" || activeTable === "Áreas") {
       fetchData();
     }
-    // NOTA: Para las tablas CRUD genéricas, el fetch se maneja dentro de CrudTable.jsx
   }, [activeTable, fetchData]);
 
   // --- HANDLERS ---
-
   const handleDelete = async (id) => {
     if (!window.confirm("¿Estás seguro de eliminar este registro?")) return;
     
@@ -136,14 +124,11 @@ const AdminSettings = () => {
     try {
         await api.delete(url);
         setMessage("Registro eliminado correctamente.");
-        
-        // Ajustar página si se elimina el último elemento
         if (dataList.length === 1 && page > 0) {
              setPage(page - 1);
         } else {
              fetchData();
         }
-        
     } catch (err) {
       setError(err.response?.data?.error || "Error al eliminar.");
     }
@@ -169,10 +154,7 @@ const AdminSettings = () => {
     setEditingItem(null);
   };
 
-  // --- PAGINATION HANDLERS ---
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+  const handleChangePage = (event, newPage) => setPage(newPage);
 
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
@@ -181,7 +163,6 @@ const AdminSettings = () => {
   
   const handleTableChange = (tableName) => {
     setActiveTable(tableName);
-    // Resetear el estado de paginación al cambiar de tabla
     setPage(0); 
     setRowsPerPage(10);
     setTotalCount(0);
@@ -189,9 +170,6 @@ const AdminSettings = () => {
     setMessage(""); 
     setError(""); 
   }
-
-
-  // --- RENDERS ---
 
   const renderActiveTable = () => {
     if (!activeTable) return <Typography sx={{ mt: 4, textAlign: 'center', color: 'text.secondary' }}>Selecciona una opción.</Typography>;
@@ -202,12 +180,7 @@ const AdminSettings = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h5">Gestión de Usuarios del Sistema</Typography>
-            <Button 
-                variant="contained" 
-                startIcon={<AddIcon />} 
-                onClick={handleCreateClick} 
-                className="primary-action-button" // 👈 Aplicar clase CSS
-            >
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} className="primary-action-button">
                 Crear Usuario
             </Button>
           </Box>
@@ -235,18 +208,14 @@ const AdminSettings = () => {
                         <TableCell>{u.email}</TableCell>
                         <TableCell>{u.rol}</TableCell>
                         <TableCell>
-                          <IconButton color="primary" onClick={() => handleEditUser(u.id)} disabled={user.id === u.id} sx={{ color: "#A73698" }}><EditIcon /></IconButton>
+                          <IconButton color="primary" onClick={() => handleEditUser(u.id)} disabled={user.id === u.id} className="action-icon-color"><EditIcon /></IconButton>
                           <IconButton color="error" onClick={() => handleDelete(u.id)} disabled={user.id === u.id}><DeleteIcon /></IconButton>
                         </TableCell>
                       </TableRow>
                     ))
                   }
                    {!loading && dataList.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={5} align="center">
-                                No hay usuarios en el sistema.
-                            </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={5} align="center">No hay usuarios en el sistema.</TableCell></TableRow>
                     )}
                 </TableBody>
               </Table>
@@ -268,12 +237,7 @@ const AdminSettings = () => {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h5">Gestión de Áreas</Typography>
-            <Button 
-                variant="contained" 
-                startIcon={<AddIcon />} 
-                onClick={handleCreateClick} 
-                className="primary-action-button" // 👈 Aplicar clase CSS
-            >
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateClick} className="primary-action-button">
                 Nueva Área
             </Button>
           </Box>
@@ -297,18 +261,14 @@ const AdminSettings = () => {
                         <TableCell>{area.nombre}</TableCell>
                         <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
                         <TableCell>
-                          <IconButton color="primary" onClick={() => handleEditArea(area)} sx={{ color: "#A73698" }}><EditIcon /></IconButton>
+                          <IconButton color="primary" onClick={() => handleEditArea(area)} className="action-icon-color"><EditIcon /></IconButton>
                           <IconButton color="error" onClick={() => handleDelete(area.id)}><DeleteIcon /></IconButton>
                         </TableCell>
                       </TableRow>
                     ))
                   }
                    {!loading && dataList.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={3} align="center">
-                                No hay áreas registradas.
-                            </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={3} align="center">No hay áreas registradas.</TableCell></TableRow>
                     )}
                 </TableBody>
               </Table>
@@ -342,15 +302,8 @@ const AdminSettings = () => {
             variant={activeTable === table.name ? "contained" : "outlined"}
             onClick={() => handleTableChange(table.name)} 
             startIcon={table.icon || <ListIcon />}
-            // ✅ APLICAR CLASE CSS A BOTONES DE SELECCIÓN ACTIVA
-            className={activeTable === table.name ? "primary-action-button" : ""}
-            sx={{ 
-                // Aseguramos que el color se aplique cuando es 'contained'
-                ...(activeTable === table.name && { 
-                    backgroundColor: "#A73698", 
-                    ":hover": { backgroundColor: "#8a2b7b" } 
-                })
-            }}
+            // 👇 AQUÍ APLICAMOS LA NUEVA LÓGICA DE CLASES
+            className={activeTable === table.name ? "primary-action-button" : "selector-button-outlined"}
           >
             {table.name}
           </Button>
@@ -370,11 +323,7 @@ const AdminSettings = () => {
               <CreateSystemUserForm onClose={handleCloseModal} onUserCreated={fetchData} setMessage={setMessage} setError={setError} />
             )}
             {modalType === "AREA" && (
-              <CreateAreaForm 
-                onClose={handleCloseModal} 
-                onSuccess={fetchData} 
-                initialData={editingItem} 
-              />
+              <CreateAreaForm onClose={handleCloseModal} onSuccess={fetchData} initialData={editingItem} />
             )}
           </Box>
         </Fade>

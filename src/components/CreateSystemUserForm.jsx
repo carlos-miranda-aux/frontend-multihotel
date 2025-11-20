@@ -11,7 +11,7 @@ import {
   Button,
 } from "@mui/material";
 import api from "../api/axios";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
+import "../pages/styles/ConfigButtons.css"; // Asegúrate de que esta importación exista
 
 const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
   const [formData, setFormData] = useState({
@@ -19,7 +19,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     username: "",
     email: "",
     password: "",
-    rol: "", // 👈 Ahora el rol se inicializa vacío para que puedas seleccionarlo
+    rol: "",
   });
 
   const handleChange = (e) => {
@@ -42,7 +42,11 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
 
   return (
     <Box>
-      <Typography variant="h6" sx={{ mb: 2 }}>
+      <Typography 
+        variant="h6" 
+        sx={{ mb: 2 }}
+        className="modal-title-color" /* 👈 CLASE AÑADIDA PARA CORREGIR EL COLOR */
+      >
         Crear nuevo usuario del sistema
       </Typography>
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -80,7 +84,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
           fullWidth
           required
         />
-        <FormControl fullWidth required> {/* 👈 Añadido "required" */}
+        <FormControl fullWidth required>
           <InputLabel>Rol</InputLabel>
           <Select
             name="rol"
@@ -88,7 +92,6 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
             onChange={handleChange}
             label="Rol"
           >
-            {/* 👈 Se pueden añadir MenuItem preseleccionados si se desea */}
             <MenuItem value="USER">USER</MenuItem>
             <MenuItem value="EDITOR">EDITOR</MenuItem>
             <MenuItem value="ADMIN">ADMIN</MenuItem>
@@ -98,7 +101,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
           type="submit" 
           variant="contained" 
           color="primary"
-          className="primary-action-button" // ✅ Clase aplicada
+          className="primary-action-button"
         >
           Crear usuario
         </Button>

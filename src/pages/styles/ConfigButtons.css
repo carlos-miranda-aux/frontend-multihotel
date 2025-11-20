@@ -6,6 +6,7 @@
 */
 .primary-action-button {
     background-color: #A73698 !important; 
+    color: white !important; /* Aseguramos texto blanco */
     transition: background-color 0.25s; 
 }
 
@@ -26,4 +27,20 @@
 /* ✅ NUEVA REGLA: Estilo para los subtítulos/secciones dentro de los formularios */
 .modal-subtitle-color {
     color: #555555; /* Gris oscuro para subtítulos */
+}
+
+/* 👇 NUEVO: Estilo para botones de selección INACTIVOS (Outlined) para quitar el azul */
+.selector-button-outlined {
+    color: #A73698 !important;          /* Texto morado */
+    border-color: #A73698 !important;   /* Borde morado */
+}
+
+.selector-button-outlined:hover {
+    border-color: #8a2b7b !important;
+    background-color: rgba(167, 54, 152, 0.08) !important; /* Fondo tenue al pasar el mouse */
+}
+
+.page-header-color {
+    color: #A73698 !important; /* Morado Crown Paradise */
+    font-weight: bold !important;
 }

@@ -23,7 +23,7 @@ import api from "../api/axios";
 import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertContext } from "../context/AlertContext";
-import "../pages/styles/Home.css"; // 👈 NUEVA IMPORTACIÓN
+import "../pages/styles/Home.css"; 
 
 /**
  * Componente Tarjeta de Widget con diseño vertical mejorado.
@@ -33,13 +33,10 @@ const WidgetCard = ({ title, value, icon, color, onClick }) => {
   return (
     <Paper
       onClick={onClick}
-      // ✅ Usamos la clase CSS para layout y hover/transition
       className="widget-card-base"
       sx={{
-        // Mantenemos solo estilos dinámicos (el borde es dinámico por el 'color')
         borderLeft: `4px solid ${color}`, 
         cursor: onClick ? 'pointer' : 'default',
-        // Eliminamos los estilos fijos como p, minHeight, display, y :hover
       }}
       elevation={3}
     >
@@ -49,7 +46,8 @@ const WidgetCard = ({ title, value, icon, color, onClick }) => {
             {value}
           </Typography>
           <Box sx={{ color: color, opacity: 0.7 }}>
-            {React.cloneElement(icon, { sx: { fontSize: 40 } })}
+            {/* ✅ CAMBIO AQUÍ: fontSize aumentado a 60 */}
+            {React.cloneElement(icon, { sx: { fontSize: 60 } })} 
           </Box>
       </Box>
       {/* Título */}
@@ -66,7 +64,7 @@ const Home = () => {
     loading: alertLoading, 
     warrantyAlertsList,
     pendingMaintenancesList,
-    devices // 👈 Obtenemos devices del contexto
+    devices
   } = useContext(AlertContext);
 
   const [stats, setStats] = useState({
@@ -87,23 +85,16 @@ const Home = () => {
   };
 
   useEffect(() => {
-    // Solo ejecutamos esto cuando el contexto (alertLoading) haya terminado
     if (!alertLoading) {
-      
       const fetchPageSpecificData = async () => {
         try {
           setPageLoading(true); 
-
           const [usersRes] = await Promise.all([
-            api.get("/users/get?page=1&limit=1"), // Solo necesitamos el totalCount
+            api.get("/users/get?page=1&limit=1"), 
           ]);
-          
-          const usersTotal = usersRes.data.totalCount || 0; // 👈 CORRECCIÓN
-
-          // --- Lógica de Garantías (para el gráfico) ---
+          const usersTotal = usersRes.data.totalCount || 0; 
           const today = new Date();
           today.setHours(0, 0, 0, 0); 
-
           const ninetyDaysFromNow = new Date();
           ninetyDaysFromNow.setDate(today.getDate() + 90);
           ninetyDaysFromNow.setHours(0, 0, 0, 0);
@@ -111,17 +102,16 @@ const Home = () => {
           let safeCount = 0; 
           let expiringSoonCount = 0;
 
-          devices.forEach((d) => { // 👈 'devices' es del contexto
+          devices.forEach((d) => {
             if (!d.garantia_fin) {
               safeCount++; 
             } else {
               const expirationDate = new Date(d.garantia_fin);
               if (expirationDate < today) {
-                // Vencida, ignorar
               } else if (expirationDate >= today && expirationDate <= ninetyDaysFromNow) {
-                expiringSoonCount++; // En Riesgo
+                expiringSoonCount++; 
               } else {
-                safeCount++; // Vigente
+                safeCount++; 
               }
             }
           });
@@ -131,25 +121,21 @@ const Home = () => {
             { name: 'Riesgo (90d)', value: expiringSoonCount },
           ]);
           
-          // Calcular KPIs
           setStats({
-            totalDevices: devices.length, // 👈 'devices' es del contexto
-            totalUsers: usersTotal, // 👈 CORRECCIÓN
+            totalDevices: devices.length, 
+            totalUsers: usersTotal, 
             pendingTasksCount: pendingMaintenancesList.length,
             warrantyAlertsCount: warrantyAlertsList.length,
           });
-
           setPageLoading(false); 
-
         } catch (error) {
            console.error("Error cargando datos de Home:", error);
            setPageLoading(false);
         }
       };
-
       fetchPageSpecificData();
     }
-  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList, devices]); // 👈 'devices' añadido
+  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList, devices]); 
 
 
   const formatDate = (dateString) => {
@@ -212,7 +198,7 @@ const Home = () => {
       <Grid container spacing={3}>
         
         {/* Tareas Pendientes */}
-        <Grid item xs={12} lg={7}>
+        <Grid item xs={12} lg={6}>
           <Paper sx={{ p: 3, height: '100%' }} elevation={3}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Tareas Pendientes
@@ -249,7 +235,7 @@ const Home = () => {
         </Grid>
         
         {/* Garantías en Riesgo */}
-        <Grid item xs={12} lg={5}>
+        <Grid item xs={12} lg={6}>
           <Paper sx={{ p: 3, height: '100%', border: 1, borderColor: warrantyAlertsList.length > 0 ? 'error.main' : 'transparent' }} elevation={3}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: warrantyAlertsList.length > 0 ? 'error.main' : 'text.primary' }}>
               <WarningIcon sx={{ mr: 1 }} />

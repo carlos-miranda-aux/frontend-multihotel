@@ -3,7 +3,8 @@
 /* Estilos para el WidgetCard (reemplaza gran parte de su prop sx) */
 .widget-card-base {
     padding: 1.5rem; /* p: 3 */
-    min-height: 120px;
+    min-height: 150px; /* AUMENTADO de 120px/140px a 150px para más espacio */
+    min-width: 200px;
     display: flex;
     flex-direction: column; 
     justify-content: space-between;

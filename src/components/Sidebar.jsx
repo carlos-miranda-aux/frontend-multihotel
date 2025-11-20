@@ -29,7 +29,7 @@ const Sidebar = ({ open, onClose, variant = 'persistent' }) => {
   const { user } = useContext(AuthContext);
 
   const menuItems = [
-    { text: "Home", icon: <HomeIcon />, path: "/home" },
+    { text: "Inicio", icon: <HomeIcon />, path: "/home" },
     { text: "Mantenimientos", icon: <BuildIcon />, path: "/maintenances" },
     { text: "Equipos", icon: <DevicesIcon />, path: "/inventory" },
     { text: "Usuarios", icon: <PeopleIcon />, path: "/users" },

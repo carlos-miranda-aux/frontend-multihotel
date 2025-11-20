@@ -12,7 +12,8 @@ import {
   Alert,
 } from "@mui/material";
 
-import Logo from "../assets/Logo.png"; // Ruta de tu logo
+import Logo from "../assets/Logo.png"; // Logo del Sistema
+import HotelLogo from "../assets/cpcc.png"; // 👈 NUEVO: Importamos el logo del hotel
 
 const Login = () => {
   const navigate = useNavigate();
@@ -78,15 +79,29 @@ const Login = () => {
         sx={{
           padding: 4,
           borderRadius: 2,
-          maxWidth: 400,
+          maxWidth: 450,
           width: "100%",
           textAlign: "center",
         }}
       >
-        {/* Logo */}
-        <Box sx={{ mb: 2}}>
-          <img src={Logo} alt="SIMET Logo" style={{ width: "100px", height: "auto" }} />
+        {/* 1. Logo del HOTEL (Jerarquía Principal) */}
+        <Box sx={{ mb: 0.5 , display: "flex", justifyContent: "center" }}>
+          <img 
+            src={HotelLogo} 
+            alt="Crown Paradise Club" 
+            style={{ maxWidth: "150%", height: "auto" }} 
+          />
         </Box>
+
+        {/* 2. Logo del SISTEMA (Marca del software) */}
+        <Box sx={{ mb: 0.5 }}>
+          <img 
+            src={Logo} 
+            alt="SIMET Logo" 
+            style={{ width: "80px", height: "auto", opacity: 0.9 }} 
+          />
+        </Box>
+
         <Typography variant="subtitle1" sx={{ mb: 3, color: "#555" }}>
           Inicia sesión en tu cuenta
         </Typography>

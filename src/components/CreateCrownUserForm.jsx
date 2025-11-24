@@ -86,7 +86,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
       </Typography>
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <TextField label="Nombre" name="nombre" value={formData.nombre} onChange={handleChange} fullWidth required />
-        <TextField label="Correo" name="correo" type="email" value={formData.correo} onChange={handleChange} fullWidth required />
+        <TextField label="Correo" name="correo" type="email" value={formData.correo} onChange={handleChange} fullWidth />
         
         {/* SELECCIONAR ÁREA */}
         <FormControl fullWidth required>
@@ -106,7 +106,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
 
         <FormControlLabel
           control={<Switch checked={isManager} onChange={(e) => setIsManager(e.target.checked)} />}
-          label="Es Jefe de Área (Recibe notificaciones)"
+          label="Es Jefe de Área"
         />
 
         <Button 

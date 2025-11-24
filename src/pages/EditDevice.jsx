@@ -2,18 +2,30 @@
 import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, TextField, Button, Paper, Alert, FormControl, InputLabel, Select,
-  MenuItem, CircularProgress, Grid, Divider, Stack, Fade, ListSubheader
+  MenuItem, CircularProgress, Grid, Divider, Stack, Fade, ListSubheader,
+  OutlinedInput, Chip, Checkbox, ListItemText
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR ESTILOS
+import "../pages/styles/ConfigButtons.css"; 
 
-// Función para parsear la fecha como LOCAL
 const parseLocalDate = (dateString) => {
   if (!dateString) return null;
   const parts = dateString.split('-');
   return new Date(parts[0], parts[1] - 1, parts[2]);
+};
+
+// Props para el menú del select múltiple
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
 };
 
 const EditDevice = () => {
@@ -29,6 +41,7 @@ const EditDevice = () => {
     etiqueta: "",
     descripcion: "",
     usuarioId: "",
+    perfiles_usuario: [], // 👈 ARRAY PARA MULTI-SELECT
     tipoId: "",
     estadoId: "",
     sistemaOperativoId: "",
@@ -41,7 +54,7 @@ const EditDevice = () => {
     garantia_numero_producto: "",
     garantia_inicio: "",
     garantia_fin: "",
-    areaId: "", // 👈 CAMBIO: areaId
+    areaId: "", 
     fecha_proxima_revision: "",
     motivo_baja: "",
     observaciones_baja: "",
@@ -54,7 +67,7 @@ const EditDevice = () => {
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [deviceStatuses, setDeviceStatuses] = useState([]);
   const [operatingSystems, setOperatingSystems] = useState([]);
-  const [areas, setAreas] = useState([]); // 👈 CAMBIO: Cargar áreas
+  const [areas, setAreas] = useState([]); 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [bajaStatusId, setBajaStatusId] = useState(null);
@@ -70,14 +83,14 @@ const EditDevice = () => {
           deviceTypesRes,
           deviceStatusesRes,
           operatingSystemsRes,
-          areasRes, // 👈 CAMBIO: áreas
+          areasRes, 
         ] = await Promise.all([
           api.get(`/devices/get/${id}`),
           api.get("/users/get/all"), 
           api.get("/device-types/get"),
           api.get("/device-status/get"),
           api.get("/operating-systems/get"),
-          api.get("/areas/get"), // 👈 NUEVA RUTA
+          api.get("/areas/get?limit=0"), 
         ]);
 
         const deviceData = deviceResponse.data;
@@ -108,6 +121,10 @@ const EditDevice = () => {
           etiqueta: deviceData.etiqueta || "",
           descripcion: deviceData.descripcion || "",
           usuarioId: deviceData.usuarioId || "",
+          // 👈 TRANSFORMACIÓN: String de DB -> Array para el Select
+          perfiles_usuario: deviceData.perfiles_usuario 
+            ? deviceData.perfiles_usuario.split(',').map(s => s.trim()) // "Juan, Pedro" -> ["Juan", "Pedro"]
+            : [],
           tipoId: deviceData.tipoId || "",
           estadoId: deviceData.estadoId || "",
           sistemaOperativoId: deviceData.sistemaOperativoId || "",
@@ -120,7 +137,7 @@ const EditDevice = () => {
           garantia_numero_producto: deviceData.garantia_numero_producto || "",
           garantia_inicio: formatDateForInput(deviceData.garantia_inicio),
           garantia_fin: formatDateForInput(deviceData.garantia_fin),
-          areaId: deviceData.areaId || "", // 👈 CAMBIO: Cargar areaId
+          areaId: deviceData.areaId || "", 
           fecha_proxima_revision: formatDateForInput(deviceData.fecha_proxima_revision),
           motivo_baja: deviceData.motivo_baja || "",
           observaciones_baja: deviceData.observaciones_baja || "",
@@ -130,7 +147,7 @@ const EditDevice = () => {
         setDeviceTypes(deviceTypesRes.data);
         setDeviceStatuses(deviceStatusesRes.data);
         setOperatingSystems(operatingSystemsRes.data);
-        setAreas(areasRes.data); // 👈 Guardar áreas
+        setAreas(areasRes.data); 
       } catch (err) {
         console.error("Error al cargar el dispositivo:", err);
         setError("Error al cargar el dispositivo");
@@ -175,11 +192,15 @@ const EditDevice = () => {
 
     const payload = { ...formData };
     
-    // CAMBIO: Asegurar areaId es número o null
     payload.areaId = payload.areaId ? Number(payload.areaId) : null;
-    
-    // Quitar departamentoId del payload por si acaso
     delete payload.departamentoId;
+
+    // 👈 TRANSFORMACIÓN: Array del Select -> String para DB
+    if (Array.isArray(payload.perfiles_usuario)) {
+        payload.perfiles_usuario = payload.perfiles_usuario.length > 0 
+            ? payload.perfiles_usuario.join(", ") 
+            : null;
+    }
     
     const localGarantiainicio = parseLocalDate(payload.garantia_inicio);
     const localGarantiaFin = parseLocalDate(payload.garantia_fin);
@@ -208,12 +229,16 @@ const EditDevice = () => {
     }
   };
   
-  // Agrupar áreas por departamento para el Select
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
+    const sortedAreas = [...areas].sort((a, b) => {
+        const deptA = a.departamento?.nombre || "";
+        const deptB = b.departamento?.nombre || "";
+        return deptA.localeCompare(deptB);
+    });
 
-    areas.forEach(area => {
+    sortedAreas.forEach(area => {
       if (area.departamento?.nombre && area.departamento.nombre !== lastDept) {
         options.push(<ListSubheader key={`header-${area.departamentoId}`}>{area.departamento.nombre}</ListSubheader>);
         lastDept = area.departamento.nombre;
@@ -227,7 +252,6 @@ const EditDevice = () => {
     return options;
   };
 
-
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 6 }}>
@@ -236,10 +260,8 @@ const EditDevice = () => {
     );
   }
 
-  // Obtener el nombre del departamento del área seleccionada (solo para mostrar)
   const selectedArea = areas.find(a => a.id === formData.areaId);
   const departmentName = selectedArea?.departamento?.nombre || 'N/A';
-
 
   return (
     <Box sx={{ p: 4, width: "100%", minHeight: "100vh", bgcolor: "#f5f5f5" }}>
@@ -253,7 +275,7 @@ const EditDevice = () => {
 
       <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3, width: "100%" }}>
         <form onSubmit={handleUpdate} noValidate>
-          {/* DATOS GENERALES (Campos idénticos) */}
+          {/* DATOS GENERALES */}
           <Typography variant="h6" sx={{ mb: 1 }}>Datos generales</Typography>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
@@ -280,7 +302,7 @@ const EditDevice = () => {
             </Grid>
           </Grid>
 
-          {/* SOFTWARE (Campos idénticos) */}
+          {/* SOFTWARE */}
           <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Software y licencias</Typography>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
@@ -310,7 +332,7 @@ const EditDevice = () => {
             </Grid>
           </Grid>
 
-          {/* GARANTÍA (Campos idénticos) */}
+          {/* GARANTÍA */}
           <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Garantía</Typography>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
@@ -328,7 +350,7 @@ const EditDevice = () => {
             </Grid>
           </Grid>
 
-          {/* ASIGNACIÓN (Campos modificados) */}
+          {/* ASIGNACIÓN */}
           <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Asignación</Typography>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
@@ -361,6 +383,36 @@ const EditDevice = () => {
               </FormControl>
             </Grid>
 
+            {/* 👇 NUEVO SELECT MÚLTIPLE PARA PERFILES */}
+            <Grid item xs={12}>
+                <FormControl fullWidth>
+                <InputLabel id="perfiles-multiple-checkbox-label">Sesiones</InputLabel>
+                <Select
+                    labelId="perfiles-multiple-checkbox-label"
+                    name="perfiles_usuario"
+                    multiple
+                    value={formData.perfiles_usuario} // Array de nombres
+                    onChange={handleChange}
+                    input={<OutlinedInput label="Sesiones" />}
+                    renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                        <Chip key={value} label={value} size="small" />
+                        ))}
+                    </Box>
+                    )}
+                    MenuProps={MenuProps}
+                >
+                    {users.map((user) => (
+                    <MenuItem key={user.id} value={user.nombre}>
+                        <Checkbox checked={formData.perfiles_usuario.indexOf(user.nombre) > -1} />
+                        <ListItemText primary={user.nombre} />
+                    </MenuItem>
+                    ))}
+                </Select>
+                </FormControl>
+            </Grid>
+
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth error={!!errors.tipoId}>
                  <InputLabel>Tipo de Equipo *</InputLabel>
@@ -374,7 +426,7 @@ const EditDevice = () => {
             
           </Grid>
 
-          {/* ESTADO (Campos idénticos) */}
+          {/* ESTADO */}
           <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Estado</Typography>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
@@ -401,12 +453,12 @@ const EditDevice = () => {
             </Fade>
           </Grid>
 
-          {/* ACCIONES (Botón de guardar) */}
+          {/* ACCIONES */}
           <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
             <Button 
                 type="submit" 
                 variant="contained" 
-                className="primary-action-button" // 👈 Aplicar clase CSS
+                className="primary-action-button"
             >
               Guardar cambios
             </Button>

@@ -2,16 +2,28 @@
 import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
-  Button, Grid, Divider, Stack, ListSubheader
+  Button, Grid, Divider, Stack, ListSubheader, OutlinedInput, Chip, Checkbox, ListItemText
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
+import "../pages/styles/ConfigButtons.css";
 
 const parseLocalDate = (dateString) => {
   if (!dateString) return null;
   const parts = dateString.split('-');
   return new Date(parts[0], parts[1] - 1, parts[2]);
+};
+
+// Configuración para el menú desplegable múltiple
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
 };
 
 const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) => {
@@ -21,6 +33,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     descripcion: "",
     ip_equipo: "",
     usuarioId: "",
+    perfiles_usuario: [], // 👈 AHORA ES UN ARRAY PARA EL MULTI-SELECT
     tipoId: "",
     marca: "",
     modelo: "",
@@ -34,7 +47,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     garantia_numero_producto: "",
     garantia_inicio: "",
     garantia_fin: "",
-    areaId: "", // 👈 CAMBIO: Usar areaId
+    areaId: "", 
     fecha_proxima_revision: "",
   });
 
@@ -43,7 +56,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
   const [users, setUsers] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [operatingSystems, setOperatingSystems] = useState([]);
-  const [areas, setAreas] = useState([]); // 👈 CAMBIO: Cargar áreas
+  const [areas, setAreas] = useState([]); 
   const { refreshAlerts } = useContext(AlertContext);
 
   useEffect(() => {
@@ -54,12 +67,12 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             api.get("/users/get/all"),
             api.get("/device-types/get"),
             api.get("/operating-systems/get"),
-            api.get("/areas/get"), // 👈 RUTA DE ÁREAS
+            api.get("/areas/get?limit=0"), 
           ]);
         setUsers(usersRes.data);
         setDeviceTypes(deviceTypesRes.data);
         setOperatingSystems(operatingSystemsRes.data);
-        setAreas(areasRes.data); // 👈 Guardar áreas
+        setAreas(areasRes.data); 
       } catch (err) {
         console.error("Error fetching form data:", err);
         setError("Error al cargar los datos del formulario.");
@@ -101,9 +114,19 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     const payload = {};
     for (const key in formData) {
       const value = formData[key];
-      // Convertir areaId a número o null
+      
+      // Caso especial: areaId
       if (key === 'areaId') {
         payload[key] = value ? Number(value) : null;
+        continue;
+      }
+
+      // 👈 CASO ESPECIAL: perfiles_usuario (Array -> String)
+      if (key === 'perfiles_usuario') {
+        // Si es un array con datos, lo unimos por comas. Si está vacío, null.
+        payload[key] = (Array.isArray(value) && value.length > 0) 
+            ? value.join(", ") 
+            : null;
         continue;
       }
 
@@ -123,7 +146,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     payload.garantia_fin = localGarantiaFin ? localGarantiaFin.toISOString() : null;
     payload.fecha_proxima_revision = localProximaRevision ? localProximaRevision.toISOString() : null;
     
-    // El payload ya usa areaId, el backend debe manejarlo
     try {
       await api.post("/devices/post", payload);
       setMessage("Equipo creado exitosamente.");
@@ -135,12 +157,16 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     }
   };
   
-  // Agrupar áreas por departamento para el Select
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
+    const sortedAreas = [...areas].sort((a, b) => {
+        const deptA = a.departamento?.nombre || "";
+        const deptB = b.departamento?.nombre || "";
+        return deptA.localeCompare(deptB);
+    });
 
-    areas.forEach(area => {
+    sortedAreas.forEach(area => {
       if (area.departamento?.nombre && area.departamento.nombre !== lastDept) {
         options.push(<ListSubheader key={`header-${area.departamentoId}`}>{area.departamento.nombre}</ListSubheader>);
         lastDept = area.departamento.nombre;
@@ -154,24 +180,19 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     return options;
   };
 
-
   return (
     <Box sx={{ maxHeight: "85vh", overflowY: "auto", p: 3, bgcolor: "#f9f9f9", borderRadius: 2 }}>
       <Typography 
         variant="h5" 
         sx={{ mb: 3, fontWeight: "bold" }}
-        className="modal-title-color" // 👈 Título principal
+        className="modal-title-color"
       >
         Crear nuevo equipo
       </Typography>
 
       <form onSubmit={handleCreateDevice} noValidate>
-         {/* INFORMACIÓN GENERAL */}
-        <Typography 
-            variant="subtitle1" 
-            sx={{ mt: 2, mb: 1 }}
-            className="modal-subtitle-color" // 👈 APLICAR CLASE AQUÍ
-        >
+        {/* ... (INFORMACIÓN GENERAL - SIN CAMBIOS) ... */}
+        <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }} className="modal-subtitle-color">
             Información General
         </Typography>
         <Divider sx={{ mb: 2 }} />
@@ -200,11 +221,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         </Grid>
 
         {/* ASIGNACIÓN Y UBICACIÓN */}
-        <Typography 
-            variant="subtitle1" 
-            sx={{ mt: 3, mb: 1 }}
-            className="modal-subtitle-color" // 👈 APLICAR CLASE AQUÍ
-        >
+        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} className="modal-subtitle-color">
             Asignación y Ubicación
         </Typography>
         <Divider sx={{ mb: 2 }} />
@@ -219,7 +236,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
               {errors.tipoId && <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>{errors.tipoId}</Typography>}
             </FormControl>
           </Grid>
-          {/* CAMBIO: Usar Área */}
+          
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 180 }}>
               <InputLabel>Área</InputLabel>
@@ -229,25 +246,50 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
               </Select>
             </FormControl>
           </Grid>
+          
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 180 }}>
-              <InputLabel>Usuario Asignado</InputLabel>
-              <Select name="usuarioId" value={formData.usuarioId} onChange={handleChange} label="Usuario Asignado">
+              <InputLabel>Responsable (Jefe)</InputLabel>
+              <Select name="usuarioId" value={formData.usuarioId} onChange={handleChange} label="Responsable (Jefe)">
                 <MenuItem value=""><em>Ninguno</em></MenuItem>
                 {users.map((user) => (<MenuItem key={user.id} value={user.id}>{user.nombre}</MenuItem>))}
               </Select>
             </FormControl>
           </Grid>
+
+          {/* 👇 NUEVO SELECT MÚLTIPLE PARA PERFILES */}
+          <Grid item xs={12}>
+            <FormControl fullWidth>
+              <InputLabel id="perfiles-multiple-checkbox-label">Perfiles de Usuario (Sesiones extra)</InputLabel>
+              <Select
+                labelId="perfiles-multiple-checkbox-label"
+                name="perfiles_usuario"
+                multiple
+                value={formData.perfiles_usuario} // Debe ser array
+                onChange={handleChange}
+                input={<OutlinedInput label="Perfiles de Usuario (Sesiones extra)" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))}
+                  </Box>
+                )}
+                MenuProps={MenuProps}
+              >
+                {users.map((user) => (
+                  <MenuItem key={user.id} value={user.nombre}>
+                    <Checkbox checked={formData.perfiles_usuario.indexOf(user.nombre) > -1} />
+                    <ListItemText primary={user.nombre} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
         </Grid>
 
-        {/* SOFTWARE Y LICENCIAS */}
-        <Typography 
-            variant="subtitle1" 
-            sx={{ mt: 3, mb: 1 }}
-            className="modal-subtitle-color" // 👈 APLICAR CLASE AQUÍ
-        >
-            Software y Licencias
-        </Typography>
+        {/* ... (RESTO DEL FORMULARIO - SOFTWARE Y GARANTÍA - IGUAL) ... */}
+        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} className="modal-subtitle-color">Software y Licencias</Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
             <Grid item xs={12} sm={4}>
@@ -266,13 +308,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             <Grid item xs={12} sm={4}><TextField label="Clave de Office" name="office_key" value={formData.office_key} onChange={handleChange} fullWidth /></Grid>
         </Grid>
 
-        <Typography 
-            variant="subtitle1" 
-            sx={{ mt: 3, mb: 1 }}
-            className="modal-subtitle-color" // 👈 APLICAR CLASE AQUÍ
-        >
-            Garantía
-        </Typography>
+        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} className="modal-subtitle-color">Garantía</Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}><TextField label="Número de producto de garantía" name="garantia_numero_producto" value={formData.garantia_numero_producto} onChange={handleChange} fullWidth /></Grid>

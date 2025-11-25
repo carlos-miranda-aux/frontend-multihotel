@@ -5,43 +5,43 @@ import { Box } from "@mui/material";
 import TopBar from "../components/Topbar.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 
-// Definimos el ancho de la Sidebar para usarlo en el margen del contenido
-const SIDEBAR_WIDTH = '240px'; 
-
 const MainLayout = () => {
-  // Se ha eliminado la lógica de estado (sidebarOpen, toggleSidebar)
-
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    // 1. Contenedor "Padre" bloqueado al tamaño de la ventana (100vh)
+    // 'overflow: hidden' evita que aparezca doble barra de scroll
+    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       
-      {/* Sidebar - Ahora es permanente */}
-      {/* Se le pasa variant="permanent" y open={true} */}
+      {/* Sidebar Fijo a la izquierda */}
       <Sidebar 
         open={true} 
         variant="permanent" 
-        // Ya no necesitamos pasar onClose, pero es buena práctica mantenerla
         onClose={() => {}} 
       />
 
-      {/* Contenedor principal del TopBar y Contenido */}
+      {/* 2. Columna Derecha (Topbar + Contenido) */}
       <Box 
         sx={{ 
           flex: 1, 
           display: "flex", 
           flexDirection: "column",
-          // [CORRECCIÓN CLAVE]: Se ELIMINA el margen izquierdo (ml: SIDEBAR_WIDTH)
-          // Ya que el 'display: flex' de la Box padre y el 'position: static' del Sidebar
-          // en modo 'permanent' hacen que este Box comience justo después del Sidebar.
+          height: "100%", // Asegura que ocupe todo el alto disponible
         }}
       >
-        {/* TopBar */}
+        {/* TopBar Fijo arriba */}
+        {/* Al no ser parte del área con scroll, se quedará siempre visible */}
         <Box sx={{ zIndex: 1200 }}>
-          {/* onMenuClick se deja vacío ya que el botón de menú ya no es necesario */}
           <TopBar onMenuClick={() => {}} /> 
         </Box>
 
-        {/* Área de contenido */}
-        <Box sx={{ flex: 1, p: 3, mt: 0 }}>
+        {/* 3. Área de Contenido con Scroll Independiente */}
+        <Box 
+          component="main"
+          sx={{ 
+            flex: 1,        // Ocupa el espacio restante
+            p: 3,           // Padding
+            overflow: "auto" // 👈 AQUÍ ESTÁ LA MAGIA: Solo esto hace scroll
+          }}
+        >
           <Outlet />
         </Box>
       </Box>

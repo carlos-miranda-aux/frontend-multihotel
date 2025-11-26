@@ -11,17 +11,14 @@ import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateCrownUserForm from "../components/CreateCrownUserForm";
+import ImportButton from "../components/ImportButton"; // 👈 IMPORTACIÓN NUEVA
 import { useSortableData } from "../hooks/useSortableData";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR BOTONES Y ICONOS
+import "../pages/styles/ConfigButtons.css";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
   width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
-
-// ❌ ELIMINAR CONSTANTES
-// const HOTEL_COLOR = "#A73698";
-// const HOTEL_HOVER_COLOR = "#8a2b7b";
 
 const UsersCrownP = () => {
   const [users, setUsers] = useState([]);
@@ -97,11 +94,18 @@ const UsersCrownP = () => {
             value={search}
             onChange={handleSearchChange}
           />
+          
+          {/* 👇 BOTÓN DE IMPORTAR USUARIOS */}
+          <ImportButton 
+            endpoint="/users/import" 
+            onSuccess={fetchUsers} 
+            label="Importar"
+          />
+
           <Button 
             variant="contained" 
             startIcon={<AddIcon />} 
             onClick={handleOpenModal}
-            // ✅ Aplicar clase CSS para el botón primario
             className="primary-action-button"
           >
             Crear Usuario
@@ -117,21 +121,18 @@ const UsersCrownP = () => {
           <Table>
             <TableHead>
               <TableRow>
-                {/* 1. Nombre del Usuario (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'nombre' ? sortConfig.direction : false}>
                   <TableSortLabel active={sortConfig?.key === 'nombre'} direction={sortConfig?.key === 'nombre' ? sortConfig.direction : 'asc'} onClick={() => requestSort('nombre')}>
                     Nombre
                   </TableSortLabel>
                 </TableCell>
                 
-                {/* 2. Columna AREA (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'area.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel active={sortConfig?.key === 'area.nombre'} direction={sortConfig?.key === 'area.nombre' ? sortConfig.direction : 'asc'} onClick={() => requestSort('area.nombre')}>
                     Área
                   </TableSortLabel>
                 </TableCell>
                 
-                {/* 3. Columna Usuario Login */}
                 <TableCell>Usuario</TableCell>
 
                 <TableCell>Acciones</TableCell>
@@ -150,7 +151,6 @@ const UsersCrownP = () => {
                       <IconButton 
                         color="primary" 
                         onClick={() => handleEdit(u.id)} 
-                        // ✅ Aplicar la clase para el color del icono
                         className="action-icon-color"
                       >
                         <EditIcon />

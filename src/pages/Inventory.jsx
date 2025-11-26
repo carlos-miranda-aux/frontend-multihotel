@@ -19,7 +19,7 @@ import {
   TablePagination,
   CircularProgress,
   TableSortLabel,
-  TextField // 👈 Importar TextField
+  TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete"; 
@@ -27,10 +27,11 @@ import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateDeviceForm from "../components/CreateDeviceForm";
+import ImportButton from "../components/ImportButton"; // 👈 IMPORTACIÓN NUEVA
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
 import { useSortableData } from "../hooks/useSortableData";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR BOTONES Y ICONOS
+import "../pages/styles/ConfigButtons.css";
 
 const modalStyle = {
   position: 'absolute',
@@ -44,10 +45,6 @@ const modalStyle = {
   borderRadius: 2
 };
 
-// ❌ ELIMINAR CONSTANTES
-// const HOTEL_COLOR = "#A73698";
-// const HOTEL_HOVER_COLOR = "#8a2b7b";
-
 const Inventory = () => {
   const [devices, setDevices] = useState([]);
   const [message, setMessage] = useState("");
@@ -58,13 +55,12 @@ const Inventory = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalDevices, setTotalDevices] = useState(0);
-  const [search, setSearch] = useState(""); // 👈 Estado para búsqueda
+  const [search, setSearch] = useState(""); 
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  const { user } = useContext(AuthContext); // <-- Obteniendo el usuario
+  const { user } = useContext(AuthContext);
 
-  // Ordenamiento inicial por 'nombre_equipo'
   const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'nombre_equipo', direction: 'ascending' });
 
   useEffect(() => {
@@ -75,7 +71,6 @@ const Inventory = () => {
     setLoading(true);
     setError("");
     try {
-      // 👈 Enviar parámetro search
       const res = await api.get(`/devices/get?page=${page + 1}&limit=${rowsPerPage}&search=${search}`);
       setDevices(res.data.data);
       setTotalDevices(res.data.totalCount);
@@ -87,7 +82,6 @@ const Inventory = () => {
     }
   };
   
-  // Función para ELIMINAR un equipo
   const handleDelete = async (d_id) => {
     setMessage("");
     setError("");
@@ -99,16 +93,14 @@ const Inventory = () => {
         fetchDevices(); 
         refreshAlerts(); 
       } catch (err) {
-        // Muestra el mensaje de error del backend (ej. si tiene registros de mantenimiento)
         setError(err.response?.data?.error || err.response?.data?.message || "Error al eliminar el equipo.");
       }
     }
   };
 
-
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
-    setPage(0); // Resetear a página 1 al buscar
+    setPage(0);
   };
 
   const handleEdit = (id) => {
@@ -134,7 +126,6 @@ const Inventory = () => {
           Inventario de Equipos
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-           {/* 👈 Barra de Búsqueda */}
           <TextField
             label="Buscar equipo..."
             variant="outlined"
@@ -142,13 +133,22 @@ const Inventory = () => {
             value={search}
             onChange={handleSearchChange}
           />
+          
+          {/* 👇 BOTÓN DE IMPORTAR EQUIPOS */}
+          <ImportButton 
+            endpoint="/devices/import" 
+            onSuccess={() => { 
+                fetchDevices(); 
+                refreshAlerts(); // Actualizar alertas de garantía si aplica
+            }} 
+            label="Importar"
+          />
+
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={handleOpenModal}
-            // ✅ Aplicar la clase para el botón de acción principal
             className="primary-action-button"
-            // ❌ Eliminar el sx original.
           >
             Crear Equipo
           </Button>
@@ -163,7 +163,6 @@ const Inventory = () => {
           <Table>
             <TableHead>
               <TableRow>
-                {/* 1. Nombre del equipo (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'nombre_equipo'}
@@ -174,10 +173,8 @@ const Inventory = () => {
                   </TableSortLabel>
                 </TableCell>
                 
-                {/* 2. Descripción */}
                 <TableCell>Descripción</TableCell>
 
-                {/* 3. Usuario Asignado (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'usuario.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'usuario.nombre'}
@@ -188,13 +185,10 @@ const Inventory = () => {
                   </TableSortLabel>
                 </TableCell>
                 
-                {/* 4. IP */}
                 <TableCell>IP</TableCell>
                 
-                {/* 5. N° Serie */}
                 <TableCell>N° Serie</TableCell>
 
-                {/* 6. Tipo (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'tipo.nombre'}
@@ -205,14 +199,13 @@ const Inventory = () => {
                   </TableSortLabel>
                 </TableCell>
                 
-                {/* Acciones */}
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center"> {/* ColSpan: 6 datos + 1 acción = 7 */}
+                  <TableCell colSpan={7} align="center">
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
@@ -230,13 +223,10 @@ const Inventory = () => {
                         color="primary"
                         onClick={() => handleEdit(device.id)}
                         title="Editar equipo"
-                        // ✅ Aplicar la clase para el color del icono
                         className="action-icon-color"
-                        // ❌ Eliminar el sx original.
                       >
                         <EditIcon />
                       </IconButton>
-                      {/* Botón de eliminación (solo para ADMIN) */}
                       {user?.rol === "ADMIN" && (
                         <IconButton
                             color="error"

@@ -1,5 +1,5 @@
 // src/pages/Inventory.jsx
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box,
   Table,
@@ -25,9 +25,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete"; 
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom"; 
 import CreateDeviceForm from "../components/CreateDeviceForm";
-import ImportButton from "../components/ImportButton"; // 👈 IMPORTACIÓN NUEVA
+import ImportButton from "../components/ImportButton"; 
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
 import { useSortableData } from "../hooks/useSortableData";
@@ -57,21 +57,25 @@ const Inventory = () => {
   const [totalDevices, setTotalDevices] = useState(0);
   const [search, setSearch] = useState(""); 
 
+  // ESTADOS para manejar el filtro de la URL
+  const [activeFilter, setActiveFilter] = useState(""); 
+  const [searchParams, setSearchParams] = useSearchParams(); 
+
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
   const { user } = useContext(AuthContext);
 
   const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'nombre_equipo', direction: 'ascending' });
 
-  useEffect(() => {
-    fetchDevices(); 
-  }, [page, rowsPerPage, search]); 
-
-  const fetchDevices = async () => {
+  // 1. MODIFICACIÓN CLAVE: fetchDevices ahora usa el estado 'activeFilter' y se actualiza cuando este cambia.
+  const fetchDevices = useCallback(async () => { // 👈 Ya no recibe argumento
     setLoading(true);
     setError("");
     try {
-      const res = await api.get(`/devices/get?page=${page + 1}&limit=${rowsPerPage}&search=${search}`);
+      // Usar el estado 'activeFilter' directamente
+      const filterParam = activeFilter ? `&filter=${activeFilter}` : ""; 
+      
+      const res = await api.get(`/devices/get?page=${page + 1}&limit=${rowsPerPage}&search=${search}${filterParam}`);
       setDevices(res.data.data);
       setTotalDevices(res.data.totalCount);
     } catch (err) {
@@ -80,8 +84,32 @@ const Inventory = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, search, activeFilter]); // 👈 CLAVE: activeFilter añadido a las dependencias para que fetchDevices se recree
+
+  // 2. Efecto 1: Leer el parámetro de la URL al cargar o cambiar searchParams
+  useEffect(() => {
+    const filterFromUrl = searchParams.get('filter') || "";
+    // Solo actualizar si la URL es diferente al estado actual
+    if (filterFromUrl !== activeFilter) {
+      setActiveFilter(filterFromUrl);
+      setPage(0); // Forzar a la primera página si cambia el filtro
+    }
+  }, [searchParams, activeFilter]);
+
+  // 3. Efecto 2: Ejecutar fetchDevices cuando cambian las dependencias
+  useEffect(() => {
+      fetchDevices(); // 👈 Ya no requiere argumento
+  }, [fetchDevices]); // 👈 Solo depende de la función, que cambiará si page, rowsPerPage, search o activeFilter cambian
   
+  // Cuando se hace una búsqueda, limpiamos el filtro de URL.
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(0);
+    // LIMPIAR FILTRO DE URL AL BUSCAR y resetear estado
+    setSearchParams({});
+    setActiveFilter(""); // Resetear también el estado para consistencia
+  };
+
   const handleDelete = async (d_id) => {
     setMessage("");
     setError("");
@@ -90,17 +118,12 @@ const Inventory = () => {
       try {
         await api.delete(`/devices/delete/${d_id}`); 
         setMessage("Equipo eliminado permanentemente.");
-        fetchDevices(); 
+        fetchDevices(); // 👈 LLamada actualizada
         refreshAlerts(); 
       } catch (err) {
         setError(err.response?.data?.error || err.response?.data?.message || "Error al eliminar el equipo.");
       }
     }
-  };
-
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-    setPage(0);
   };
 
   const handleEdit = (id) => {
@@ -118,6 +141,20 @@ const Inventory = () => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
+  
+  // NUEVO HANDLER PARA LIMPIAR EL FILTRO ACTIVO
+  const handleClearFilter = () => {
+    setSearch("");
+    setPage(0);
+    setActiveFilter("");
+    setSearchParams({}); // Limpiar el parámetro 'filter' de la URL
+  }
+
+  const getFilterLabel = () => {
+    if (activeFilter === 'no-panda') return 'Mostrando: Sin Panda (X)';
+    if (activeFilter === 'warranty-risk') return 'Mostrando: Garantía en Riesgo (X)';
+    return '';
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -134,12 +171,23 @@ const Inventory = () => {
             onChange={handleSearchChange}
           />
           
-          {/* 👇 BOTÓN DE IMPORTAR EQUIPOS */}
+          {/* MOSTRAR BOTÓN PARA LIMPIAR FILTRO ACTIVO */}
+          {activeFilter && (
+            <Button 
+                variant="outlined"
+                color="error"
+                onClick={handleClearFilter}
+                sx={{ ml: 1 }}
+            >
+                {getFilterLabel()}
+            </Button>
+          )}
+
           <ImportButton 
             endpoint="/devices/import" 
             onSuccess={() => { 
-                fetchDevices(); 
-                refreshAlerts(); // Actualizar alertas de garantía si aplica
+                fetchDevices(); // 👈 LLamada actualizada
+                refreshAlerts(); 
             }} 
             label="Importar"
           />
@@ -270,7 +318,7 @@ const Inventory = () => {
             <CreateDeviceForm
               onClose={handleCloseModal}
               onDeviceCreated={() => {
-                fetchDevices(); 
+                fetchDevices(); // 👈 LLamada actualizada
                 refreshAlerts(); 
               }}
               setMessage={setMessage}

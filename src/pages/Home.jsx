@@ -343,7 +343,13 @@ const Home = () => {
             
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Button size="small" onClick={() => navigate("/inventory")}>Ver Equipos</Button>
+                {/* 👇 MODIFICACIÓN: Navegar a /inventory con filtro no-panda */}
+                <Button 
+                    size="small" 
+                    onClick={() => navigate("/inventory?filter=no-panda")} 
+                >
+                    Ver Equipos ({stats.devicesWithoutPanda})
+                </Button>
             </Box>
           </Paper>
         </Grid>
@@ -404,7 +410,13 @@ const Home = () => {
             
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Button size="small" onClick={() => navigate("/inventory")}>Ver Inventario</Button>
+                {/* 👇 MODIFICACIÓN: Navegar a /inventory con filtro warranty-risk */}
+                <Button 
+                    size="small" 
+                    onClick={() => navigate("/inventory?filter=warranty-risk")} 
+                >
+                    Ver Inventario ({stats.warrantyAlertsCount})
+                </Button>
             </Box>
           </Paper>
         </Grid>

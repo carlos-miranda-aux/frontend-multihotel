@@ -7,7 +7,7 @@ import {
   Typography,
   CircularProgress,
   List,
-  ListItemButton, // 👈 Usamos ListItemButton para interactividad
+  ListItemButton,
   ListItemText,
   ListItemIcon,
   Divider,
@@ -19,6 +19,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import PeopleIcon from '@mui/icons-material/People';
 import PieChartIcon from '@mui/icons-material/PieChart'; 
+import WindowIcon from '@mui/icons-material/Window'; 
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios"; 
 import { useTheme } from '@mui/material/styles';
@@ -73,6 +74,7 @@ const Home = () => {
   
   const [warrantyData, setWarrantyData] = useState([]);
   const [deviceTypeData, setDeviceTypeData] = useState([]); 
+  const [osData, setOsData] = useState([]); 
   const [pageLoading, setPageLoading] = useState(true); 
   
   const navigate = useNavigate();
@@ -84,6 +86,7 @@ const Home = () => {
   };
 
   const COLORS_TYPES = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A73698', '#8884d8'];
+  const COLORS_OS = ['#0050b3', '#1890ff', '#40a9ff', '#69c0ff', '#bae7ff'];
 
   useEffect(() => {
     if (!alertLoading) {
@@ -104,6 +107,7 @@ const Home = () => {
           let safeCount = 0; 
           let expiringSoonCount = 0;
           const typeCounts = {};
+          const osCounts = {}; 
 
           devices.forEach((d) => {
             // 1. Garantías
@@ -123,6 +127,20 @@ const Home = () => {
             // 2. Tipos de Equipo
             const typeName = d.tipo?.nombre || "Otros";
             typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
+
+            // 3. Sistemas Operativos (NORMALIZADO)
+            let osName = d.sistema_operativo?.nombre || "Sin SO";
+            
+            // A. Quitar espacios extra al inicio/final
+            osName = osName.trim();
+            
+            // B. Convertir a formato "Título" (Primera letra mayúscula, resto minúscula)
+            // Esto hace que "WINDOWS 10", "windows 10" y "Windows 10" sean iguales.
+            if (osName !== "Sin SO") {
+                osName = osName.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+            }
+
+            osCounts[osName] = (osCounts[osName] || 0) + 1;
           });
           
           setWarrantyData([
@@ -135,6 +153,17 @@ const Home = () => {
             value: typeCounts[key]
           }));
           setDeviceTypeData(typesArray);
+
+          // Formatear datos de SO
+          const osArray = Object.keys(osCounts).map(key => ({
+            name: key,
+            value: osCounts[key]
+          }));
+          
+          // Ordenar SO por cantidad (de mayor a menor) para que el gráfico se vea mejor
+          osArray.sort((a, b) => b.value - a.value);
+
+          setOsData(osArray);
           
           setStats({
             totalDevices: devices.length, 
@@ -221,7 +250,6 @@ const Home = () => {
             
             {pendingMaintenancesList.length > 0 ? (
               <List dense disablePadding>
-                {/* Mostramos hasta 5 tareas con navegación directa al hacer clic */}
                 {pendingMaintenancesList.slice(0, 5).map((m) => (
                   <ListItemButton 
                     key={`m-${m.id}`} 
@@ -247,8 +275,8 @@ const Home = () => {
           </Paper>
         </Grid>
         
-        {/* 2. Gráfico de Garantías (50%) */}
-        <Grid item xs={12} md={6}>
+        {/* 2. Gráfico de Garantías */}
+        <Grid item xs={12} md={4}>
           <Paper sx={{ p: 3, height: '100%', minHeight: 350, border: 1, borderColor: warrantyAlertsList.length > 0 ? 'error.main' : 'transparent' }} elevation={3}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: warrantyAlertsList.length > 0 ? 'error.main' : 'text.primary' }}>
               <WarningIcon sx={{ mr: 1 }} />
@@ -264,20 +292,20 @@ const Home = () => {
                     data={warrantyData}
                     dataKey="value" nameKey="name"
                     cx="50%" cy="50%"
-                    outerRadius={70} 
-                    innerRadius={50} 
+                    outerRadius={60} 
+                    innerRadius={40} 
                   >
                     {warrantyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS_WARRANTY[entry.name.split(' ')[0]] || theme.palette.grey[400]} />
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
               
               <Box sx={{ position: 'absolute', top: '45%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                <Typography variant="h3" fontWeight="bold" 
+                <Typography variant="h4" fontWeight="bold" 
                   sx={{ 
                     color: stats.warrantyAlertsCount > 0 ? theme.palette.error.main : theme.palette.success.main, 
                     lineHeight: 1.1
@@ -294,8 +322,8 @@ const Home = () => {
           </Paper>
         </Grid>
 
-        {/* 3. Gráfico de Tipos de Equipo (50%) */}
-        <Grid item xs={12} md={6}>
+        {/* 3. Gráfico de Tipos de Equipo */}
+        <Grid item xs={12} md={4}>
           <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={3}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
               <PieChartIcon sx={{ mr: 1, color: '#A73698' }} />
@@ -311,7 +339,7 @@ const Home = () => {
                     data={deviceTypeData}
                     dataKey="value" nameKey="name"
                     cx="50%" cy="50%"
-                    outerRadius={70}
+                    outerRadius={65}
                     label={(entry) => `${entry.value}`} 
                   >
                     {deviceTypeData.map((entry, index) => (
@@ -319,7 +347,39 @@ const Home = () => {
                     ))}
                   </Pie>
                   <Tooltip formatter={(value, name) => [`${value} equipos`, name]} />
-                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '12px' }} />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '14px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* 4. Gráfico de Sistemas Operativos (NUEVO) */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={3}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <WindowIcon sx={{ mr: 1, color: theme.palette.info.main }} />
+              <Typography variant="h6" fontWeight="bold">
+                Sistemas Operativos
+              </Typography>
+            </Box>
+
+            <Box sx={{ height: 250, width: '100%' }}> 
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={osData}
+                    dataKey="value" nameKey="name"
+                    cx="50%" cy="50%"
+                    outerRadius={80}
+                    label={(entry) => `${entry.value}`}
+                  >
+                    {osData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS_OS[index % COLORS_OS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value, name) => [`${value} equipos`, name]} />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '13px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </Box>

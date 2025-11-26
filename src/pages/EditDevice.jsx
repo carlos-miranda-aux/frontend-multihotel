@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, TextField, Button, Paper, Alert, FormControl, InputLabel, Select,
   MenuItem, CircularProgress, Grid, Divider, Stack, Fade, ListSubheader,
-  OutlinedInput, Chip, Checkbox, ListItemText
+  OutlinedInput, Chip, Checkbox, ListItemText, FormControlLabel, Switch // 👈 Importar
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
@@ -41,7 +41,7 @@ const EditDevice = () => {
     etiqueta: "",
     descripcion: "",
     usuarioId: "",
-    perfiles_usuario: [], // 👈 ARRAY PARA MULTI-SELECT
+    perfiles_usuario: [], 
     tipoId: "",
     estadoId: "",
     sistemaOperativoId: "",
@@ -51,6 +51,7 @@ const EditDevice = () => {
     office_tipo_licencia: "",
     office_serial: "",
     office_key: "",
+    es_panda: false, // 👈 Nuevo campo
     garantia_numero_producto: "",
     garantia_inicio: "",
     garantia_fin: "",
@@ -121,9 +122,9 @@ const EditDevice = () => {
           etiqueta: deviceData.etiqueta || "",
           descripcion: deviceData.descripcion || "",
           usuarioId: deviceData.usuarioId || "",
-          // 👈 TRANSFORMACIÓN: String de DB -> Array para el Select
+          // Transformación: String de DB -> Array para el Select
           perfiles_usuario: deviceData.perfiles_usuario 
-            ? deviceData.perfiles_usuario.split(',').map(s => s.trim()) // "Juan, Pedro" -> ["Juan", "Pedro"]
+            ? deviceData.perfiles_usuario.split(',').map(s => s.trim()) 
             : [],
           tipoId: deviceData.tipoId || "",
           estadoId: deviceData.estadoId || "",
@@ -134,6 +135,7 @@ const EditDevice = () => {
           office_tipo_licencia: deviceData.office_tipo_licencia || "",
           office_serial: deviceData.office_serial || "",
           office_key: deviceData.office_key || "",
+          es_panda: deviceData.es_panda || false, // 👈 Cargar estado de Panda
           garantia_numero_producto: deviceData.garantia_numero_producto || "",
           garantia_inicio: formatDateForInput(deviceData.garantia_inicio),
           garantia_fin: formatDateForInput(deviceData.garantia_fin),
@@ -150,7 +152,7 @@ const EditDevice = () => {
         setAreas(areasRes.data); 
       } catch (err) {
         console.error("Error al cargar el dispositivo:", err);
-        setError("Error al cargar el dispositivo");
+        setError("Error al cargar los datos del dispositivo.");
       } finally {
         setLoading(false);
       }
@@ -165,6 +167,11 @@ const EditDevice = () => {
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
     }
+  };
+  
+  // Handler para el Switch
+  const handleSwitchChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.checked });
   };
 
   const validate = () => {
@@ -195,7 +202,7 @@ const EditDevice = () => {
     payload.areaId = payload.areaId ? Number(payload.areaId) : null;
     delete payload.departamentoId;
 
-    // 👈 TRANSFORMACIÓN: Array del Select -> String para DB
+    // Transformación: Array del Select -> String para DB
     if (Array.isArray(payload.perfiles_usuario)) {
         payload.perfiles_usuario = payload.perfiles_usuario.length > 0 
             ? payload.perfiles_usuario.join(", ") 
@@ -214,6 +221,9 @@ const EditDevice = () => {
       payload.motivo_baja = null;
       payload.observaciones_baja = null;
     }
+    
+    // Asegurarse de que el booleano es_panda se envía correctamente
+    payload.es_panda = payload.es_panda; 
 
     try {
       await api.put(`/devices/put/${id}`, payload);
@@ -280,7 +290,7 @@ const EditDevice = () => {
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
              <Grid item xs={12} sm={6}>
-              <TextField label="Etiqueta (Opcional)" name="etiqueta" fullWidth value={formData.etiqueta} onChange={handleChange} />
+              <TextField label="Etiqueta" name="etiqueta" fullWidth value={formData.etiqueta} onChange={handleChange} />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField label="Nombre del equipo" name="nombre_equipo" fullWidth value={formData.nombre_equipo} onChange={handleChange} required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo} />
@@ -329,6 +339,17 @@ const EditDevice = () => {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField label="Clave de Office" name="office_key" fullWidth value={formData.office_key} onChange={handleChange} />
+            </Grid>
+            
+            {/* 👇 NUEVO CAMPO: ES PANDA */}
+            <Grid item xs={12} sm={12}>
+                <FormControlLabel
+                  control={<Switch checked={formData.es_panda} onChange={handleSwitchChange} name="es_panda" />}
+                  label="¿Tiene Panda instalado?"
+                  labelPlacement="start"
+                  sx={{ justifyContent: 'space-between', width: '100%', m: 0, pt: 1 }}
+                />
+                <Divider sx={{ mt: 1 }} />
             </Grid>
           </Grid>
 
@@ -383,7 +404,6 @@ const EditDevice = () => {
               </FormControl>
             </Grid>
 
-            {/* 👇 NUEVO SELECT MÚLTIPLE PARA PERFILES */}
             <Grid item xs={12}>
                 <FormControl fullWidth>
                 <InputLabel id="perfiles-multiple-checkbox-label">Sesiones</InputLabel>
@@ -391,7 +411,7 @@ const EditDevice = () => {
                     labelId="perfiles-multiple-checkbox-label"
                     name="perfiles_usuario"
                     multiple
-                    value={formData.perfiles_usuario} // Array de nombres
+                    value={formData.perfiles_usuario} 
                     onChange={handleChange}
                     input={<OutlinedInput label="Sesiones" />}
                     renderValue={(selected) => (
@@ -405,8 +425,8 @@ const EditDevice = () => {
                 >
                     {users.map((user) => (
                     <MenuItem key={user.id} value={user.nombre}>
-                        <Checkbox checked={formData.perfiles_usuario.indexOf(user.nombre) > -1} />
-                        <ListItemText primary={user.nombre} />
+                      <Checkbox checked={formData.perfiles_usuario.indexOf(user.nombre) > -1} />
+                      <ListItemText primary={user.nombre} />
                     </MenuItem>
                     ))}
                 </Select>

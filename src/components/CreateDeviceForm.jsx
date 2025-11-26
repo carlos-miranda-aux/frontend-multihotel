@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
-  Button, Grid, Divider, Stack, ListSubheader, OutlinedInput, Chip, Checkbox, ListItemText
+  Button, Grid, Divider, Stack, ListSubheader, OutlinedInput, Chip, Checkbox, ListItemText,
+  FormControlLabel, Switch
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
@@ -33,7 +34,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     descripcion: "",
     ip_equipo: "",
     usuarioId: "",
-    perfiles_usuario: [], // 👈 AHORA ES UN ARRAY PARA EL MULTI-SELECT
+    perfiles_usuario: [], 
     tipoId: "",
     marca: "",
     modelo: "",
@@ -44,6 +45,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     office_tipo_licencia: "",
     office_serial: "",
     office_key: "",
+    es_panda: false, // 👈 Nuevo campo
     garantia_numero_producto: "",
     garantia_inicio: "",
     garantia_fin: "",
@@ -88,6 +90,12 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       setErrors({ ...errors, [name]: "" });
     }
   };
+  
+  // Handler para el Switch
+  const handleSwitchChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.checked });
+  };
+
 
   const validate = () => {
     let tempErrors = {};
@@ -115,13 +123,19 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     for (const key in formData) {
       const value = formData[key];
       
-      // Caso especial: areaId
-      if (key === 'areaId') {
+      // Caso especial: IDs (numéricos/null)
+      if (key === 'areaId' || key === 'usuarioId' || key === 'tipoId' || key === 'sistemaOperativoId') {
         payload[key] = value ? Number(value) : null;
         continue;
       }
+      
+      // Caso especial: es_panda (boolean)
+      if (key === 'es_panda') {
+        payload[key] = value;
+        continue;
+      }
 
-      // 👈 CASO ESPECIAL: perfiles_usuario (Array -> String)
+      // Caso especial: perfiles_usuario (Array -> String)
       if (key === 'perfiles_usuario') {
         // Si es un array con datos, lo unimos por comas. Si está vacío, null.
         payload[key] = (Array.isArray(value) && value.length > 0) 
@@ -191,14 +205,14 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       </Typography>
 
       <form onSubmit={handleCreateDevice} noValidate>
-        {/* ... (INFORMACIÓN GENERAL - SIN CAMBIOS) ... */}
+        {/* ... (INFORMACIÓN GENERAL) ... */}
         <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }} className="modal-subtitle-color">
             Información General
         </Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
-            <TextField label="Etiqueta (Opcional)" name="etiqueta" value={formData.etiqueta} onChange={handleChange} fullWidth />
+            <TextField label="Etiqueta" name="etiqueta" value={formData.etiqueta} onChange={handleChange} fullWidth />
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField label="Número de Serie" name="numero_serie" value={formData.numero_serie} onChange={handleChange} fullWidth required error={!!errors.numero_serie} helperText={errors.numero_serie} />
@@ -250,14 +264,13 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 180 }}>
               <InputLabel>Responsable (Jefe)</InputLabel>
-              <Select name="usuarioId" value={formData.usuarioId} onChange={handleChange} label="Responsable (Jefe)">
+              <Select name="usuarioId" value={formData.usuarioId} onChange={handleChange} label="Responsable">
                 <MenuItem value=""><em>Ninguno</em></MenuItem>
                 {users.map((user) => (<MenuItem key={user.id} value={user.id}>{user.nombre}</MenuItem>))}
               </Select>
             </FormControl>
           </Grid>
 
-          {/* 👇 NUEVO SELECT MÚLTIPLE PARA PERFILES */}
           <Grid item xs={12}>
             <FormControl fullWidth>
               <InputLabel id="perfiles-multiple-checkbox-label">Perfiles de Usuario (Sesiones extra)</InputLabel>
@@ -265,9 +278,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                 labelId="perfiles-multiple-checkbox-label"
                 name="perfiles_usuario"
                 multiple
-                value={formData.perfiles_usuario} // Debe ser array
+                value={formData.perfiles_usuario} 
                 onChange={handleChange}
-                input={<OutlinedInput label="Perfiles de Usuario (Sesiones extra)" />}
+                input={<OutlinedInput label="Perfiles de Usuario" />}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {selected.map((value) => (
@@ -287,8 +300,8 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             </FormControl>
           </Grid>
         </Grid>
-
-        {/* ... (RESTO DEL FORMULARIO - SOFTWARE Y GARANTÍA - IGUAL) ... */}
+        
+        {/* SOFTWARE Y LICENCIAS */}
         <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} className="modal-subtitle-color">Software y Licencias</Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>
@@ -306,8 +319,20 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             <Grid item xs={12} sm={4}><TextField label="Tipo de Licencia de Office" name="office_tipo_licencia" value={formData.office_tipo_licencia} onChange={handleChange} fullWidth /></Grid>
             <Grid item xs={12} sm={4}><TextField label="Serial de Office" name="office_serial" value={formData.office_serial} onChange={handleChange} fullWidth /></Grid>
             <Grid item xs={12} sm={4}><TextField label="Clave de Office" name="office_key" value={formData.office_key} onChange={handleChange} fullWidth /></Grid>
+            
+            {/* 👇 NUEVO CAMPO: ES PANDA */}
+            <Grid item xs={12} sm={12}>
+                <FormControlLabel
+                  control={<Switch checked={formData.es_panda} onChange={handleSwitchChange} name="es_panda" />}
+                  label="¿Tiene Panda instalado?"
+                  labelPlacement="start"
+                  sx={{ justifyContent: 'space-between', width: '100%', m: 0, pt: 1 }}
+                />
+                <Divider sx={{ mt: 1 }} />
+            </Grid>
         </Grid>
 
+        {/* GARANTÍA */}
         <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} className="modal-subtitle-color">Garantía</Typography>
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={2}>

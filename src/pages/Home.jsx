@@ -21,6 +21,7 @@ import EventBusyIcon from '@mui/icons-material/EventBusy';
 import PeopleIcon from '@mui/icons-material/People';
 import WarningIcon from "@mui/icons-material/Warning";
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'; 
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser'; // 👈 NUEVO ICONO
 
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios"; 
@@ -74,7 +75,8 @@ const Home = () => {
     loading: alertLoading, 
     warrantyAlertsList,
     pendingMaintenancesList,
-    devices // Equipos activos (del Contexto)
+    devices, 
+    pandaStatus // 👈 Se usa para el conteo total
   } = useContext(AlertContext);
 
   const [stats, setStats] = useState({
@@ -82,11 +84,14 @@ const Home = () => {
     totalUsers: 0,
     pendingTasksCount: 0,
     monthlyDisposalsCount: 0,
-    warrantyAlertsCount: 0, // 👈 Importante para el número central
+    warrantyAlertsCount: 0, 
+    devicesWithPanda: 0, 
+    devicesWithoutPanda: 0 
   });
   
   // Datos para Gráfico
   const [warrantyData, setWarrantyData] = useState([]); 
+  const [pandaData, setPandaData] = useState([]); 
   const [currentMonthName, setCurrentMonthName] = useState("");
   const [pageLoading, setPageLoading] = useState(true); 
   
@@ -97,6 +102,11 @@ const Home = () => {
   const COLORS_WARRANTY = { 
     Vigentes: theme.palette.success.main, 
     Riesgo: theme.palette.warning.main    
+  };
+  // Colores para Panda
+  const COLORS_PANDA = { 
+    ConPanda: theme.palette.success.main, 
+    SinPanda: theme.palette.error.main
   };
 
   useEffect(() => {
@@ -110,7 +120,7 @@ const Home = () => {
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
 
-          // 1. Consultas API
+          // 1. Consultas API (disposals)
           const [usersRes, disposalsRes] = await Promise.all([
             api.get("/users/get?page=1&limit=1"),
             api.get("/disposals/get?page=1&limit=2000")
@@ -151,14 +161,24 @@ const Home = () => {
             { name: 'Vigentes', value: safeCount }, 
             { name: 'Riesgo (90d)', value: riskCount }
           ]);
+          
+          // C. Configurar datos de Panda para el gráfico (Usa pandaStatus del contexto)
+          setPandaData([
+            { name: 'Con Panda', value: pandaStatus.devicesWithPanda },
+            { name: 'Sin Panda', value: pandaStatus.devicesWithoutPanda }
+          ]);
 
-          // C. Actualizar Stats
+
+          // D. Actualizar Stats
           setStats({
-            totalDevices: devices.length,
+            // 👇 CORRECCIÓN CLAVE: Usar el totalActiveDevices de pandaStatus
+            totalDevices: pandaStatus.totalActiveDevices, 
             totalUsers: totalUsersCount,
             pendingTasksCount: pendingMaintenancesList.length,
             monthlyDisposalsCount: monthlyDisposals,
             warrantyAlertsCount: warrantyAlertsList.length,
+            devicesWithPanda: pandaStatus.devicesWithPanda, 
+            devicesWithoutPanda: pandaStatus.devicesWithoutPanda 
           });
 
           setPageLoading(false);
@@ -167,9 +187,10 @@ const Home = () => {
            setPageLoading(false);
         }
       };
+      // Se añade pandaStatus a las dependencias
       fetchSimpleData();
     }
-  }, [alertLoading, devices, pendingMaintenancesList, warrantyAlertsList]); 
+  }, [alertLoading, devices, pendingMaintenancesList, warrantyAlertsList, pandaStatus]); 
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -179,6 +200,10 @@ const Home = () => {
   if (alertLoading || pageLoading) {
     return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
   }
+  
+  // Determinar el color del widget de Panda (Rojo si hay faltantes, Verde si está al 100%)
+  const pandaColor = stats.devicesWithoutPanda > 0 ? theme.palette.error.main : theme.palette.success.main;
+
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -192,7 +217,7 @@ const Home = () => {
         <Grid item xs={12} sm={6} md={3}> 
           <WidgetCard 
             title="Equipos Activos" 
-            value={stats.totalDevices} 
+            value={stats.totalDevices} // ✅ Muestra el conteo total
             icon={<DevicesIcon />} 
             color={theme.palette.primary.main} 
             onClick={() => navigate("/inventory")} 
@@ -228,11 +253,11 @@ const Home = () => {
         </Grid>
       </Grid>
 
-      {/* ================= FILA 2: GESTIÓN Y RIESGO ================= */}
+      {/* ================= FILA 2: GESTIÓN, PANDA Y RIESGO ================= */}
       <Grid container spacing={3}>
         
         {/* LISTA: Tareas Pendientes (Prioridad 1) */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={4}> 
           <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={3}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -261,9 +286,70 @@ const Home = () => {
             )}
           </Paper>
         </Grid>
-
-        {/* GRÁFICO: Garantías (Estilo Restaurado: Número central + Botón inferior) */}
-        <Grid item xs={12} md={4}>
+        
+        {/* GRÁFICO: ESTATUS DE PANDA (NUEVO WIDGET) */}
+        <Grid item xs={12} sm={6} md={4}>
+          <Paper 
+            sx={{ 
+              p: 3, 
+              height: '100%', 
+              minHeight: 350, 
+              // Borde Rojo si hay faltantes
+              border: 1, 
+              borderColor: pandaColor
+            }} 
+            elevation={3}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: pandaColor }}>
+              <VerifiedUserIcon sx={{ mr: 1 }} />
+              <Typography variant="h6" fontWeight="bold">
+                Estado de Panda
+              </Typography>
+            </Box>
+            
+            <Box sx={{ height: 200, width: '100%', position: 'relative' }}> 
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pandaData}
+                    dataKey="value" nameKey="name"
+                    cx="50%" cy="50%"
+                    outerRadius={60} 
+                    innerRadius={40} 
+                  >
+                    {pandaData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS_PANDA[entry.name.split(' ')[0] === 'Con' ? 'ConPanda' : 'SinPanda']} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              {/* Texto central que muestra la carencia */}
+              <Box sx={{ position: 'absolute', top: '45%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                <Typography variant="h5" fontWeight="bold" 
+                  sx={{ 
+                    color: pandaColor, 
+                    lineHeight: 1.1
+                  }}>
+                  {stats.devicesWithoutPanda}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>
+                  SIN PANDA
+                </Typography>
+              </Box>
+            </Box>
+            
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Button size="small" onClick={() => navigate("/inventory")}>Ver Equipos</Button>
+            </Box>
+          </Paper>
+        </Grid>
+        
+        {/* GRÁFICO: Garantías */}
+        <Grid item xs={12} sm={6} md={4}>
           <Paper 
             sx={{ 
               p: 3, 
@@ -290,7 +376,7 @@ const Home = () => {
                     dataKey="value" nameKey="name"
                     cx="50%" cy="50%"
                     outerRadius={60} 
-                    innerRadius={40} // Anillo
+                    innerRadius={40} 
                   >
                     {warrantyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS_WARRANTY[entry.name.split(' ')[0]] || theme.palette.grey[400]} />
@@ -309,6 +395,9 @@ const Home = () => {
                     lineHeight: 1.1
                   }}>
                   {stats.warrantyAlertsCount}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>
+                  EN RIESGO
                 </Typography>
               </Box>
             </Box>

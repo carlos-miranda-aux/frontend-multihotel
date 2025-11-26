@@ -11,26 +11,31 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
-  Button
+  Button,
+  useTheme
 } from "@mui/material";
+// Iconos
 import DevicesIcon from "@mui/icons-material/Devices";
 import BuildIcon from "@mui/icons-material/Build";
-import WarningIcon from "@mui/icons-material/Warning";
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import PeopleIcon from '@mui/icons-material/People';
-import PieChartIcon from '@mui/icons-material/PieChart'; 
-import WindowIcon from '@mui/icons-material/Window'; 
+import WarningIcon from "@mui/icons-material/Warning";
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'; 
+
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios"; 
-import { useTheme } from '@mui/material/styles';
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { AlertContext } from "../context/AlertContext";
 import "../pages/styles/Home.css"; 
 
+// Gráficos Recharts
+import { 
+  PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer
+} from 'recharts';
+
 /**
- * Tarjeta de Widget (KPIs superiores)
+ * Componente de Tarjeta KPI (Indicadores Superiores)
  */
-const WidgetCard = ({ title, value, icon, color, onClick }) => {
+const WidgetCard = ({ title, value, icon, color, onClick, subtitle }) => {
   const theme = useTheme();
   return (
     <Paper
@@ -47,12 +52,19 @@ const WidgetCard = ({ title, value, icon, color, onClick }) => {
             {value}
           </Typography>
           <Box sx={{ color: color, opacity: 0.7 }}>
-            {React.cloneElement(icon, { sx: { fontSize: 60 } })} 
+            {React.cloneElement(icon, { sx: { fontSize: 50 } })} 
           </Box>
       </Box>
-      <Typography color="textSecondary" variant="subtitle1" sx={{ mt: 1, fontWeight: 600 }}>
-        {title}
-      </Typography>
+      <Box>
+        <Typography color="textSecondary" variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
+            {title}
+        </Typography>
+        {subtitle && (
+            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 0.5 }}>
+                {subtitle}
+            </Typography>
+        )}
+      </Box>
     </Paper>
   );
 };
@@ -62,124 +74,102 @@ const Home = () => {
     loading: alertLoading, 
     warrantyAlertsList,
     pendingMaintenancesList,
-    devices
+    devices // Equipos activos (del Contexto)
   } = useContext(AlertContext);
 
   const [stats, setStats] = useState({
     totalDevices: 0,
     totalUsers: 0,
     pendingTasksCount: 0,
-    warrantyAlertsCount: 0,
+    monthlyDisposalsCount: 0,
+    warrantyAlertsCount: 0, // 👈 Importante para el número central
   });
   
-  const [warrantyData, setWarrantyData] = useState([]);
-  const [deviceTypeData, setDeviceTypeData] = useState([]); 
-  const [osData, setOsData] = useState([]); 
+  // Datos para Gráfico
+  const [warrantyData, setWarrantyData] = useState([]); 
+  const [currentMonthName, setCurrentMonthName] = useState("");
   const [pageLoading, setPageLoading] = useState(true); 
   
   const navigate = useNavigate();
   const theme = useTheme();
 
-  const COLORS_WARRANTY = {
-    Vigentes: theme.palette.success.main,
-    Riesgo: theme.palette.warning.main,
+  // Colores Semáforo para Garantías
+  const COLORS_WARRANTY = { 
+    Vigentes: theme.palette.success.main, 
+    Riesgo: theme.palette.warning.main    
   };
-
-  const COLORS_TYPES = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A73698', '#8884d8'];
-  const COLORS_OS = ['#0050b3', '#1890ff', '#40a9ff', '#69c0ff', '#bae7ff'];
 
   useEffect(() => {
     if (!alertLoading) {
-      const fetchPageSpecificData = async () => {
+      const fetchSimpleData = async () => {
         try {
           setPageLoading(true); 
-          const [usersRes] = await Promise.all([
-            api.get("/users/get?page=1&limit=1"), 
-          ]);
-          const usersTotal = usersRes.data.totalCount || 0; 
           
-          const today = new Date();
-          today.setHours(0, 0, 0, 0); 
-          const ninetyDaysFromNow = new Date();
-          ninetyDaysFromNow.setDate(today.getDate() + 90);
-          ninetyDaysFromNow.setHours(0, 0, 0, 0);
+          const now = new Date();
+          setCurrentMonthName(now.toLocaleString('es-MX', { month: 'long' }));
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
 
+          // 1. Consultas API
+          const [usersRes, disposalsRes] = await Promise.all([
+            api.get("/users/get?page=1&limit=1"),
+            api.get("/disposals/get?page=1&limit=2000")
+          ]);
+          
+          const totalUsersCount = usersRes.data.totalCount || 0;
+          const allDisposals = disposalsRes.data.data || [];
+
+          // A. Bajas del Mes
+          let monthlyDisposals = 0;
+          allDisposals.forEach(d => {
+            if (d.fecha_baja) {
+                const dDate = new Date(d.fecha_baja);
+                if (dDate.getMonth() === currentMonth && dDate.getFullYear() === currentYear) {
+                    monthlyDisposals++;
+                }
+            }
+          });
+
+          // B. Garantías
+          const today = new Date(); today.setHours(0,0,0,0);
+          const ninetyDays = new Date(); ninetyDays.setDate(today.getDate() + 90);
+          
           let safeCount = 0; 
-          let expiringSoonCount = 0;
-          const typeCounts = {};
-          const osCounts = {}; 
+          let riskCount = 0;
 
           devices.forEach((d) => {
-            // 1. Garantías
-            if (!d.garantia_fin) {
-              safeCount++; 
+            if (d.garantia_fin) {
+              const exp = new Date(d.garantia_fin);
+              if (exp >= today && exp <= ninetyDays) riskCount++;
+              else if (exp > today) safeCount++;
             } else {
-              const expirationDate = new Date(d.garantia_fin);
-              if (expirationDate < today) {
-                 // Vencidas
-              } else if (expirationDate >= today && expirationDate <= ninetyDaysFromNow) {
-                expiringSoonCount++; 
-              } else {
-                safeCount++; 
-              }
+                safeCount++;
             }
-
-            // 2. Tipos de Equipo
-            const typeName = d.tipo?.nombre || "Otros";
-            typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
-
-            // 3. Sistemas Operativos (NORMALIZADO)
-            let osName = d.sistema_operativo?.nombre || "Sin SO";
-            
-            // A. Quitar espacios extra al inicio/final
-            osName = osName.trim();
-            
-            // B. Convertir a formato "Título" (Primera letra mayúscula, resto minúscula)
-            // Esto hace que "WINDOWS 10", "windows 10" y "Windows 10" sean iguales.
-            if (osName !== "Sin SO") {
-                osName = osName.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
-            }
-
-            osCounts[osName] = (osCounts[osName] || 0) + 1;
           });
           
           setWarrantyData([
-            { name: 'Vigentes', value: safeCount },
-            { name: 'Riesgo (90d)', value: expiringSoonCount },
+            { name: 'Vigentes', value: safeCount }, 
+            { name: 'Riesgo (90d)', value: riskCount }
           ]);
 
-          const typesArray = Object.keys(typeCounts).map(key => ({
-            name: key,
-            value: typeCounts[key]
-          }));
-          setDeviceTypeData(typesArray);
-
-          // Formatear datos de SO
-          const osArray = Object.keys(osCounts).map(key => ({
-            name: key,
-            value: osCounts[key]
-          }));
-          
-          // Ordenar SO por cantidad (de mayor a menor) para que el gráfico se vea mejor
-          osArray.sort((a, b) => b.value - a.value);
-
-          setOsData(osArray);
-          
+          // C. Actualizar Stats
           setStats({
-            totalDevices: devices.length, 
-            totalUsers: usersTotal, 
+            totalDevices: devices.length,
+            totalUsers: totalUsersCount,
             pendingTasksCount: pendingMaintenancesList.length,
+            monthlyDisposalsCount: monthlyDisposals,
             warrantyAlertsCount: warrantyAlertsList.length,
           });
-          setPageLoading(false); 
+
+          setPageLoading(false);
         } catch (error) {
-           console.error("Error cargando datos de Home:", error);
+           console.error("Error dashboard:", error);
            setPageLoading(false);
         }
       };
-      fetchPageSpecificData();
+      fetchSimpleData();
     }
-  }, [alertLoading, pendingMaintenancesList, warrantyAlertsList, devices]); 
+  }, [alertLoading, devices, pendingMaintenancesList, warrantyAlertsList]); 
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -187,98 +177,105 @@ const Home = () => {
   };
 
   if (alertLoading || pageLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
-        <CircularProgress />
-      </Box>
-    );
+    return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
   }
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        Panel de Control
-      </Typography>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>Panel de Control</Typography>
       <Typography variant="subtitle1" color="textSecondary" sx={{ mb: 4 }}>
-        Resumen del estado de tu infraestructura TI.
+        Resumen administrativo del inventario.
       </Typography>
-
-      {/* --- KPI Widgets --- */}
-      <Grid container spacing={3} sx={{ mb: 4 }}> 
-        <Grid item xs={12} sm={6} md={4}> 
-          <WidgetCard
-            title="Equipos Activos"
-            value={stats.totalDevices}
-            icon={<DevicesIcon />}
-            color={theme.palette.primary.main}
-            onClick={() => navigate("/inventory")}
+      
+      {/* ================= FILA 1: KPIs (4 Tarjetas) ================= */}
+      <Grid container spacing={3} sx={{ mb: 3 }}> 
+        <Grid item xs={12} sm={6} md={3}> 
+          <WidgetCard 
+            title="Equipos Activos" 
+            value={stats.totalDevices} 
+            icon={<DevicesIcon />} 
+            color={theme.palette.primary.main} 
+            onClick={() => navigate("/inventory")} 
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <WidgetCard
-            title="Usuarios Gestionados"
-            value={stats.totalUsers}
-            icon={<PeopleIcon />}
-            color={theme.palette.secondary.main}
-            onClick={() => navigate("/users")}
+        <Grid item xs={12} sm={6} md={3}>
+          <WidgetCard 
+            title="Usuarios Gestionados" 
+            value={stats.totalUsers} 
+            icon={<PeopleIcon />} 
+            color={theme.palette.secondary.main} 
+            onClick={() => navigate("/users")} 
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <WidgetCard
+        <Grid item xs={12} sm={6} md={3}>
+          <WidgetCard 
             title="Tareas Pendientes" 
-            value={stats.pendingTasksCount}
-            icon={<BuildIcon />}
-            color={stats.pendingTasksCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
-            onClick={() => navigate("/maintenances")}
+            value={stats.pendingTasksCount} 
+            icon={<BuildIcon />} 
+            color={stats.pendingTasksCount > 0 ? theme.palette.warning.main : theme.palette.success.main} 
+            onClick={() => navigate("/maintenances")} 
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <WidgetCard 
+            title={`Bajas en ${currentMonthName}`} 
+            value={stats.monthlyDisposalsCount} 
+            icon={<DeleteSweepIcon />} 
+            color={theme.palette.error.main} 
+            onClick={() => navigate("/disposals")}
+            subtitle="Equipos dados de baja este mes"
           />
         </Grid>
       </Grid>
 
-      {/* --- SECCIÓN PRINCIPAL --- */}
+      {/* ================= FILA 2: GESTIÓN Y RIESGO ================= */}
       <Grid container spacing={3}>
         
-        {/* 1. Tareas Pendientes (OCUPA EL 100% DEL ANCHO) */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, height: '100%', minHeight: 300 }} elevation={3}>
+        {/* LISTA: Tareas Pendientes (Prioridad 1) */}
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={3}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="h6" fontWeight="bold">
-                  Tareas Pendientes
-                </Typography>
-                <Button size="small" onClick={() => navigate("/maintenances")}>Ver todas</Button>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <EventBusyIcon sx={{ mr: 1, color: theme.palette.warning.main }} />
+                    <Typography variant="h6" fontWeight="bold">Mantenimientos Pendientes</Typography>
+                </Box>
+                <Button size="small" onClick={() => navigate("/maintenances")}>Ver todo ({stats.pendingTasksCount})</Button>
             </Box>
             <Divider sx={{ mb: 2 }} />
             
             {pendingMaintenancesList.length > 0 ? (
               <List dense disablePadding>
                 {pendingMaintenancesList.slice(0, 5).map((m) => (
-                  <ListItemButton 
-                    key={`m-${m.id}`} 
-                    divider
-                    onClick={() => navigate(`/maintenances/edit/${m.id}`)}
-                    alignItems="flex-start"
-                  >
-                    <ListItemIcon sx={{ minWidth: 40, mt: 0.5, color: theme.palette.warning.main }}>
-                      <EventBusyIcon />
-                    </ListItemIcon>
+                  <ListItemButton key={`m-${m.id}`} divider onClick={() => navigate(`/maintenances/edit/${m.id}`)} alignItems="flex-start">
                     <ListItemText
-                      primary={<strong>{m.device?.nombre_equipo || m.device?.etiqueta || 'Equipo no encontrado'}</strong>}
-                      secondary={`TAREA: ${m.descripcion} — FECHA: ${formatDate(m.fecha_programada)}`}
+                      primary={<strong>{m.device?.nombre_equipo || 'Equipo Desconocido'}</strong>}
+                      secondary={`${m.descripcion} — ${formatDate(m.fecha_programada)}`}
                     />
                   </ListItemButton>
                 ))}
               </List>
             ) : (
-              <Typography color="textSecondary" sx={{ textAlign: 'center', pt: 4 }}>
-                No hay tareas pendientes. ¡Buen trabajo!
-              </Typography>
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography color="textSecondary">¡Todo al día! No hay tareas pendientes.</Typography>
+              </Box>
             )}
           </Paper>
         </Grid>
-        
-        {/* 2. Gráfico de Garantías */}
+
+        {/* GRÁFICO: Garantías (Estilo Restaurado: Número central + Botón inferior) */}
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, height: '100%', minHeight: 350, border: 1, borderColor: warrantyAlertsList.length > 0 ? 'error.main' : 'transparent' }} elevation={3}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: warrantyAlertsList.length > 0 ? 'error.main' : 'text.primary' }}>
+          <Paper 
+            sx={{ 
+              p: 3, 
+              height: '100%', 
+              minHeight: 350, 
+              // Borde rojo si hay alertas, transparente si no
+              border: 1, 
+              borderColor: stats.warrantyAlertsCount > 0 ? 'error.main' : 'transparent' 
+            }} 
+            elevation={3}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: stats.warrantyAlertsCount > 0 ? 'error.main' : 'text.primary' }}>
               <WarningIcon sx={{ mr: 1 }} />
               <Typography variant="h6" fontWeight="bold">
                 Garantías (90 días)
@@ -293,17 +290,18 @@ const Home = () => {
                     dataKey="value" nameKey="name"
                     cx="50%" cy="50%"
                     outerRadius={60} 
-                    innerRadius={40} 
+                    innerRadius={40} // Anillo
                   >
                     {warrantyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS_WARRANTY[entry.name.split(' ')[0]] || theme.palette.grey[400]} />
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
               
+              {/* Número Central Absoluto */}
               <Box sx={{ position: 'absolute', top: '45%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
                 <Typography variant="h4" fontWeight="bold" 
                   sx={{ 
@@ -322,70 +320,6 @@ const Home = () => {
           </Paper>
         </Grid>
 
-        {/* 3. Gráfico de Tipos de Equipo */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={3}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <PieChartIcon sx={{ mr: 1, color: '#A73698' }} />
-              <Typography variant="h6" fontWeight="bold">
-                Tipos de Equipo
-              </Typography>
-            </Box>
-
-            <Box sx={{ height: 250, width: '100%' }}> 
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={deviceTypeData}
-                    dataKey="value" nameKey="name"
-                    cx="50%" cy="50%"
-                    outerRadius={65}
-                    label={(entry) => `${entry.value}`} 
-                  >
-                    {deviceTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS_TYPES[index % COLORS_TYPES.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value, name) => [`${value} equipos`, name]} />
-                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '14px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* 4. Gráfico de Sistemas Operativos (NUEVO) */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={3}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <WindowIcon sx={{ mr: 1, color: theme.palette.info.main }} />
-              <Typography variant="h6" fontWeight="bold">
-                Sistemas Operativos
-              </Typography>
-            </Box>
-
-            <Box sx={{ height: 250, width: '100%' }}> 
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={osData}
-                    dataKey="value" nameKey="name"
-                    cx="50%" cy="50%"
-                    outerRadius={80}
-                    label={(entry) => `${entry.value}`}
-                  >
-                    {osData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS_OS[index % COLORS_OS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value, name) => [`${value} equipos`, name]} />
-                  <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '13px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
-        
       </Grid>
     </Box>
   );

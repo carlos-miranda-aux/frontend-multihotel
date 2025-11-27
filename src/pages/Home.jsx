@@ -116,7 +116,7 @@ const Home = () => {
     if (!alertLoading) {
       const fetchSimpleData = async () => {
         try {
-          setPageLoading(true); 
+          // setPageLoading(true); // <<-- LÍNEA ELIMINADA PARA CORREGIR EL FLICKER
           
           const now = new Date();
           setCurrentMonthName(now.toLocaleString('es-MX', { month: 'long' }));
@@ -185,7 +185,10 @@ const Home = () => {
             expiredWarrantiesCount: pandaStatus.expiredWarrantiesCount 
           });
 
-          setPageLoading(false);
+          // Asegurar que la pantalla de carga inicial desaparezca después de la primera carga
+          if (pageLoading) {
+            setPageLoading(false);
+          }
         } catch (error) {
            console.error("Error dashboard:", error);
            setPageLoading(false);
@@ -194,7 +197,7 @@ const Home = () => {
       // Se añade totalPendingMaintenancesCount como dependencia para que se actualicen las stats
       fetchSimpleData();
     }
-  }, [alertLoading, devices, totalPendingMaintenancesCount, pendingMaintenancesList, warrantyAlertsList, pandaStatus]); 
+  }, [alertLoading, devices, totalPendingMaintenancesCount, pendingMaintenancesList, warrantyAlertsList, pandaStatus, pageLoading]); 
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -265,7 +268,7 @@ const Home = () => {
         {/* 👇 NUEVO WIDGET: GARANTÍAS EXPIRADAS */}
         <Grid item xs={12} sm={6} md={2}> 
           <WidgetCard 
-            title="Garantías Expiradas (Riesgo)" 
+            title="Garantías Expiradas" 
             value={stats.expiredWarrantiesCount} 
             icon={<AccessTimeFilledIcon />} 
             color={expiredColor} 
@@ -313,7 +316,6 @@ const Home = () => {
         
         {/* GRÁFICO: ESTATUS DE PANDA (Resto de los gráficos) */}
         <Grid item xs={12} sm={6} md={4}>
-        {/* ... (Contenido del gráfico Panda) */}
           <Paper 
             sx={{ 
               p: 3, 

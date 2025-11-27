@@ -158,12 +158,6 @@ const TopBar = ({ onMenuClick }) => {
           </>
         )}
       </List>
-      <Divider />
-      <Box sx={{ p: 1, textAlign: 'center' }}>
-        <Button onClick={() => { handleAlertsClose(); navigate('/maintenances'); }} size="small" variant="text">
-          Ver todos los Mantenimientos Pendientes
-        </Button>
-      </Box>
     </Menu>
   );
 
@@ -198,7 +192,7 @@ const TopBar = ({ onMenuClick }) => {
             <IconButton color="inherit" onClick={handleAlertsClick}>
               <Badge badgeContent={totalAlertCount} color="error">
                 <NotificationsIcon />
-              </Badge>
+              </Badge>  
             </IconButton>
 
             {/* Perfil (MODIFICADO: Muestra Nombre y Avatar con Imagen) */}

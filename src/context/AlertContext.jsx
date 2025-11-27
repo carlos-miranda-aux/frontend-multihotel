@@ -29,15 +29,76 @@ const getFiveBusinessDaysFromNow = () => {
     return targetDate;
 }
 
+// Lógica base de fetching, recibe los setters para actualizar el estado
+const _fetchAlertLogic = async (setters) => {
+    const { 
+        setDevices, setPandaStatus, setTotalPendingMaintenancesCount,
+        setPendingMaintenancesList, setWarrantyAlertsList, setTotalAlertCount
+    } = setters;
+    
+    const [devicesRes, maintenancesRes, pandaStatusRes] = await Promise.all([
+        api.get("/devices/get?page=1&limit=1000"), 
+        api.get("/maintenances/get?status=pendiente&limit=1000"), 
+        api.get("/devices/get/panda-status") 
+    ]);
+
+    const devicesData = devicesRes.data.data || [];
+    const allPendingMaintenances = maintenancesRes.data.data || []; 
+    const totalPendingCount = maintenancesRes.data.totalCount || 0; 
+
+    setDevices(devicesData); 
+    setPandaStatus(pandaStatusRes.data); 
+
+    // Guardar el conteo TOTAL para el KPI del Dashboard
+    setTotalPendingMaintenancesCount(totalPendingCount); 
+
+    // 1. Lógica de Mantenimientos (FILTRADO POR 5 DÍAS HÁBILES)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
+    const fiveBusinessDaysFromNow = getFiveBusinessDaysFromNow();
+    
+    const criticalMaintenances = allPendingMaintenances.filter(m => {
+        if (!m.fecha_programada) return false;
+        
+        const scheduledDate = new Date(m.fecha_programada);
+        const isDue = scheduledDate.getTime() >= today.getTime() && scheduledDate.getTime() <= fiveBusinessDaysFromNow.getTime();
+        
+        return isDue && isBusinessDay(scheduledDate);
+    });
+
+    criticalMaintenances.sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada));
+
+    setPendingMaintenancesList(criticalMaintenances); 
+    
+    // 2. Lógica de Garantías (Por Vencer - 90 días)
+    const ninetyDaysFromNow = new Date();
+    ninetyDaysFromNow.setDate(today.getDate() + 90);
+    ninetyDaysFromNow.setHours(0, 0, 0, 0);
+
+    const expiringList = [];
+
+    devicesData.forEach((d) => {
+      if (d.garantia_fin) {
+        const expirationDate = new Date(d.garantia_fin);
+        if (expirationDate >= today && expirationDate <= ninetyDaysFromNow) {
+          expiringList.push(d);
+        }
+      }
+    });
+
+    setWarrantyAlertsList(expiringList);
+    
+    // 3. Sumar todas las alertas (solo críticas para la campana)
+    setTotalAlertCount(criticalMaintenances.length + expiringList.length);
+};
+
+
 export const AlertProvider = ({ children }) => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Usado solo para el estado inicial de la página
   const [devices, setDevices] = useState([]);
   const [warrantyAlertsList, setWarrantyAlertsList] = useState([]);
-  // Lista filtrada (solo 5 días hábiles) para el widget de tareas críticas y Topbar
   const [pendingMaintenancesList, setPendingMaintenancesList] = useState([]); 
-  // Contiene el conteo total para el KPI superior del Dashboard
   const [totalPendingMaintenancesCount, setTotalPendingMaintenancesCount] = useState(0); 
-  // Contiene la suma de alertas de garantía y mantenimientos (filtrados) para la campana del Topbar
   const [totalAlertCount, setTotalAlertCount] = useState(0); 
   
   const [pandaStatus, setPandaStatus] = useState({
@@ -46,82 +107,36 @@ export const AlertProvider = ({ children }) => {
       devicesWithoutPanda: 0,
       expiredWarrantiesCount: 0 
   });
+  
+  // Colección de setters para pasar a la lógica base
+  const setters = { 
+      setDevices, setPandaStatus, setTotalPendingMaintenancesCount,
+      setPendingMaintenancesList, setWarrantyAlertsList, setTotalAlertCount
+  };
 
-  const fetchAlertData = async () => {
+  // Función para la carga inicial (maneja el estado de 'loading' de la página)
+  const fetchInitialData = async () => {
     try {
-      setLoading(true);
-
-      // Peticiones al backend
-      const [devicesRes, maintenancesRes, pandaStatusRes] = await Promise.all([
-        api.get("/devices/get?page=1&limit=1000"), 
-        api.get("/maintenances/get?status=pendiente&limit=1000"), // Traemos TODAS las pendientes
-        api.get("/devices/get/panda-status") 
-      ]);
-
-      const devicesData = devicesRes.data.data || [];
-      const allPendingMaintenances = maintenancesRes.data.data || []; // Lista completa de pendientes
-      const totalPendingCount = maintenancesRes.data.totalCount || 0; // Conteo TOTAL de pendientes
-
-      setDevices(devicesData); 
-      setPandaStatus(pandaStatusRes.data); 
-
-      // Guardar el conteo TOTAL para el KPI del Dashboard
-      setTotalPendingMaintenancesCount(totalPendingCount); 
-
-      // 1. Lógica de Mantenimientos (FILTRADO POR 5 DÍAS HÁBILES)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); 
-      const fiveBusinessDaysFromNow = getFiveBusinessDaysFromNow();
-      
-      const criticalMaintenances = allPendingMaintenances.filter(m => {
-          if (!m.fecha_programada) return false;
-          
-          const scheduledDate = new Date(m.fecha_programada);
-          // Solo incluir si la fecha programada es HOY o posterior,
-          // Y menor o igual a la fecha límite calculada (5to día hábil al final del día).
-          const isDue = scheduledDate.getTime() >= today.getTime() && scheduledDate.getTime() <= fiveBusinessDaysFromNow.getTime();
-          
-          // Además, solo mostrar si es un día hábil (para evitar que un fin de semana se cuele en la lista crítica)
-          return isDue && isBusinessDay(scheduledDate);
-      });
-
-      // Ordenar por fecha programada más cercana
-      criticalMaintenances.sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada));
-
-      // Almacenamos SOLO las críticas para el widget del Dashboard y el Topbar.
-      setPendingMaintenancesList(criticalMaintenances); 
-      
-      // 2. Lógica de Garantías (Por Vencer - 90 días)
-      const ninetyDaysFromNow = new Date();
-      ninetyDaysFromNow.setDate(today.getDate() + 90);
-      ninetyDaysFromNow.setHours(0, 0, 0, 0);
-
-      const expiringList = [];
-
-      devicesData.forEach((d) => {
-        if (d.garantia_fin) {
-          const expirationDate = new Date(d.garantia_fin);
-          if (expirationDate >= today && expirationDate <= ninetyDaysFromNow) {
-            expiringList.push(d);
-          }
-        }
-      });
-
-      setWarrantyAlertsList(expiringList);
-      
-      // 3. Sumar todas las alertas
-      // totalAlertCount (para la campana del Topbar) = Mantenimientos CRÍTICOS (filtrados) + Alertas de Garantía
-      setTotalAlertCount(criticalMaintenances.length + expiringList.length);
-
-      setLoading(false);
+      setLoading(true); // Activa el spinner de la página
+      await _fetchAlertLogic(setters);
     } catch (error) {
       console.error("Error cargando datos de alertas:", error);
-      setLoading(false);
+    } finally {
+      setLoading(false); // Desactiva el spinner de la página
     }
+  };
+  
+  // Función para el refresco manual (NO toca el estado 'loading' para evitar el flicker)
+  const refreshAlerts = async () => {
+      try {
+          await _fetchAlertLogic(setters);
+      } catch (error) {
+          console.error("Error refrescando alertas:", error);
+      }
   };
 
   useEffect(() => {
-    fetchAlertData();
+    fetchInitialData();
   }, []);
 
   return (
@@ -130,11 +145,11 @@ export const AlertProvider = ({ children }) => {
         loading,
         devices, 
         warrantyAlertsList,
-        pendingMaintenancesList, // Lista filtrada (5 días hábiles)
-        totalPendingMaintenancesCount, // Conteo TOTAL (sin filtrar) para el KPI
-        totalAlertCount, // Conteo filtrado (para la campana)
+        pendingMaintenancesList, 
+        totalPendingMaintenancesCount, 
+        totalAlertCount, 
         pandaStatus, 
-        refreshAlerts: fetchAlertData,
+        refreshAlerts: refreshAlerts, // 👈 Se expone la función que NO causa flicker
       }}
     >
       {children}

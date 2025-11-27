@@ -13,7 +13,6 @@ import {
   List,
   ListItemText,
   ListItemIcon,
-  // useTheme, <-- ELIMINADO para evitar crash
   ListItemButton,
   Avatar,
   Button
@@ -32,7 +31,6 @@ import { AlertContext } from "../context/AlertContext";
 import { useNavigate } from "react-router-dom";
 import Logo from "../assets/CrownLogo.png";
 
-// Renombrado a TopBar para consistencia (importado en MainLayout)
 const TopBar = ({ onMenuClick }) => { 
   const { user, logout } = useContext(AuthContext);
   const { 
@@ -52,8 +50,16 @@ const TopBar = ({ onMenuClick }) => {
   const handleProfileClose = () => setProfileAnchorEl(null);
   
   const handleAlertsClick = (event) => {
-      refreshAlerts(); 
+      event.preventDefault(); // Detener la acción por defecto
+      
+      // 1. Abrir inmediatamente el menú (inicia el renderizado de MUI)
       setAlertsAnchorEl(event.currentTarget);
+      
+      // 2. CORRECCIÓN CLAVE: Llamar a refreshAlerts después de un pequeño delay.
+      // Esto permite que el componente de Home estabilice su estado ANTES de que los nuevos datos lleguen.
+      setTimeout(() => {
+          refreshAlerts(); 
+      }, 100); // 100ms es suficiente para resolver el flicker
   };
   const handleAlertsClose = () => setAlertsAnchorEl(null);
 
@@ -115,7 +121,7 @@ const TopBar = ({ onMenuClick }) => {
       sx={{ '.MuiMenu-paper': { width: 360, maxWidth: '90%' } }}
     >
       <Typography variant="h6" sx={{ px: 2, pt: 1, pb: 1 }}>
-        Notificaciones ({totalAlertCount})
+        Notificaciones Críticas ({totalAlertCount})
       </Typography>
       <Divider />
       <List sx={{ maxHeight: 400, overflowY: 'auto' }}>
@@ -153,6 +159,11 @@ const TopBar = ({ onMenuClick }) => {
         )}
       </List>
       <Divider />
+      <Box sx={{ p: 1, textAlign: 'center' }}>
+        <Button onClick={() => { handleAlertsClose(); navigate('/maintenances'); }} size="small" variant="text">
+          Ver todos los Mantenimientos Pendientes
+        </Button>
+      </Box>
     </Menu>
   );
 

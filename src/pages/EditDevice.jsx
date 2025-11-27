@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, TextField, Button, Paper, Alert, FormControl, InputLabel, Select,
   MenuItem, CircularProgress, Grid, Divider, Stack, Fade, ListSubheader,
-  OutlinedInput, Chip, Checkbox, ListItemText, FormControlLabel, Switch // 👈 Importar
+  OutlinedInput, Chip, Checkbox, ListItemText, FormControlLabel, Switch 
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
@@ -51,8 +51,10 @@ const EditDevice = () => {
     office_tipo_licencia: "",
     office_serial: "",
     office_key: "",
-    es_panda: false, // 👈 Nuevo campo
+    es_panda: false,
     garantia_numero_producto: "",
+    garantia_numero_reporte: "", // 👈 NUEVO CAMPO
+    garantia_notes: "",         // 👈 NUEVO CAMPO
     garantia_inicio: "",
     garantia_fin: "",
     areaId: "", 
@@ -73,6 +75,10 @@ const EditDevice = () => {
   const [error, setError] = useState("");
   const [bajaStatusId, setBajaStatusId] = useState(null);
   const [isPermanentlyBaja, setIsPermanentlyBaja] = useState(false);
+  
+  // 👇 NUEVO ESTADO PARA EL SWITCH DE GARANTÍA
+  const [isWarrantyApplied, setIsWarrantyApplied] = useState(false);
+
 
   useEffect(() => {
     const fetchDeviceData = async () => {
@@ -113,6 +119,10 @@ const EditDevice = () => {
         if (bajaStatus && deviceData.estadoId === bajaStatus.id) {
           setIsPermanentlyBaja(true);
         }
+        
+        // Determinar si el switch de garantía debe estar activo al cargar
+        const hasWarrantyData = deviceData.garantia_numero_reporte || deviceData.garantia_notes;
+        setIsWarrantyApplied(!!hasWarrantyData); // Activar si hay datos
 
         setFormData({
           nombre_equipo: deviceData.nombre_equipo || "",
@@ -135,7 +145,9 @@ const EditDevice = () => {
           office_tipo_licencia: deviceData.office_tipo_licencia || "",
           office_serial: deviceData.office_serial || "",
           office_key: deviceData.office_key || "",
-          es_panda: deviceData.es_panda || false, // 👈 Cargar estado de Panda
+          es_panda: deviceData.es_panda || false,
+          garantia_numero_reporte: deviceData.garantia_numero_reporte || "", // 👈 Cargar
+          garantia_notes: deviceData.garantia_notes || "",                   // 👈 Cargar
           garantia_numero_producto: deviceData.garantia_numero_producto || "",
           garantia_inicio: formatDateForInput(deviceData.garantia_inicio),
           garantia_fin: formatDateForInput(deviceData.garantia_fin),
@@ -169,9 +181,22 @@ const EditDevice = () => {
     }
   };
   
-  // Handler para el Switch
+  // Handler para el Switch de Panda
   const handleSwitchChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.checked });
+  };
+  
+  // 👇 Handler para el Switch de Garantía
+  const handleWarrantySwitch = (e) => {
+    setIsWarrantyApplied(e.target.checked);
+    // Si se desactiva, limpiar campos de reporte para que se envíen como null
+    if (!e.target.checked) {
+        setFormData(prev => ({
+            ...prev,
+            garantia_numero_reporte: "",
+            garantia_notes: ""
+        }));
+    }
   };
 
   const validate = () => {
@@ -209,6 +234,13 @@ const EditDevice = () => {
             : null;
     }
     
+    // 👇 Si el switch de garantía está apagado, forzar los campos de reporte a null
+    if (!isWarrantyApplied) {
+        payload.garantia_numero_reporte = null;
+        payload.garantia_notes = null;
+    }
+
+
     const localGarantiainicio = parseLocalDate(payload.garantia_inicio);
     const localGarantiaFin = parseLocalDate(payload.garantia_fin);
     const localProximaRevision = parseLocalDate(payload.fecha_proxima_revision);
@@ -366,6 +398,47 @@ const EditDevice = () => {
             <Grid item xs={12} sm={6}>
               <TextField label="Fin de garantía" type="date" name="garantia_fin" fullWidth value={formData.garantia_fin} onChange={handleChange} InputLabelProps={{ shrink: true }} />
             </Grid>
+            
+            {/* 👇 NUEVO SWITCH DE ACCIÓN */}
+            <Grid item xs={12}>
+                <FormControlLabel
+                  control={<Switch checked={isWarrantyApplied} onChange={handleWarrantySwitch} name="isWarrantyApplied" />}
+                  label="Se aplica garantía"
+                  labelPlacement="start"
+                  sx={{ justifyContent: 'space-between', width: '100%', m: 0, pt: 1 }}
+                />
+                <Divider sx={{ mt: 1, mb: 2 }} />
+            </Grid>
+
+            {/* 👇 CAMPOS CONDICIONALES */}
+            <Fade in={isWarrantyApplied} mountOnEnter unmountOnExit>
+              <Grid container spacing={2} sx={{ p: 2 }}>
+                  <Grid item xs={12} sm={6}>
+                      <TextField 
+                          label="N° Reporte" 
+                          name="garantia_numero_reporte" 
+                          value={formData.garantia_numero_reporte} 
+                          onChange={handleChange} 
+                          fullWidth 
+                          helperText="Registro de proveedor." 
+                      />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                      <TextField 
+                          label="Notas" 
+                          name="garantia_notes" 
+                          value={formData.garantia_notes} 
+                          onChange={handleChange} 
+                          fullWidth 
+                          multiline 
+                          rows={2} 
+                          helperText="Detalles del servicio." 
+                      />
+                  </Grid>
+              </Grid>
+            </Fade>
+            {/* 👆 FIN CAMPOS CONDICIONALES */}
+
             <Grid item xs={12} sm={6}>
               <TextField label="Próxima Revisión Sugerida" name="fecha_proxima_revision" type="date" value={formData.fecha_proxima_revision} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
             </Grid>

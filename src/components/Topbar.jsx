@@ -1,60 +1,160 @@
-// components/Topbar.jsx
-import React, { useContext } from "react";
+// src/components/Topbar.jsx
+import React, { useContext, useState } from "react";
 import {
   AppBar,
   Toolbar,
+  Typography,
   IconButton,
   Box,
+  Badge,
   Menu,
   MenuItem,
-  Avatar,
-  Badge,
-  Typography,
+  Divider,
   List,
-  ListItem,
   ListItemText,
   ListItemIcon,
-  Divider
+  // useTheme, <-- ELIMINADO para evitar crash
+  ListItemButton,
+  Avatar,
+  Button
 } from "@mui/material";
+// Import ALL icons used
 import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import WarningIcon from "@mui/icons-material/Warning";
 import BuildIcon from "@mui/icons-material/Build";
-// import EventNoteIcon from '@mui/icons-material/EventNote'; // 👈 ELIMINADO
+import LogoutIcon from '@mui/icons-material/Logout';
+import SettingsIcon from '@mui/icons-material/Settings';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
+import AccessTimeIcon from '@mui/icons-material/AccessTime'; 
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
-import Logo from "../assets/CrownLogo.png";
 import { useNavigate } from "react-router-dom";
+import Logo from "../assets/CrownLogo.png";
 
-const TopBar = ({ onMenuClick }) => {
+// Renombrado a TopBar para consistencia (importado en MainLayout)
+const TopBar = ({ onMenuClick }) => { 
   const { user, logout } = useContext(AuthContext);
-  // Usar el contexto de alertas (sin pendingRevisionsList)
-  const { totalAlertCount, warrantyAlertsList, pendingMaintenancesList } = useContext(AlertContext); // 👈 MODIFICADO
+  const { 
+    totalAlertCount,
+    warrantyAlertsList, 
+    pendingMaintenancesList, 
+    loading, 
+    refreshAlerts 
+  } = useContext(AlertContext);
 
-  const [profileAnchorEl, setProfileAnchorEl] = React.useState(null);
-  const [alertsAnchorEl, setAlertsAnchorEl] = React.useState(null);
+  const [profileAnchorEl, setProfileAnchorEl] = useState(null);
+  const [alertsAnchorEl, setAlertsAnchorEl] = useState(null);
   const navigate = useNavigate();
 
+  // ... (handlers de perfil y navegación)
   const handleProfileClick = (event) => setProfileAnchorEl(event.currentTarget);
   const handleProfileClose = () => setProfileAnchorEl(null);
   
-  const handleAlertsClick = (event) => setAlertsAnchorEl(event.currentTarget);
+  const handleAlertsClick = (event) => {
+      refreshAlerts(); 
+      setAlertsAnchorEl(event.currentTarget);
+  };
   const handleAlertsClose = () => setAlertsAnchorEl(null);
+
 
   const handleLogout = () => {
     logout();
     handleProfileClose();
   };
+  
   const handleSettings = () => {
     navigate("/settings");
     handleProfileClose();
   };
+  
   const handleLogoClick = () => navigate("/home");
 
+  // Helper para formatear fechas
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
-  }
+  };
+
+  // Combina las dos listas de alertas para mostrar en el menú desplegable
+  const combinedAlerts = [
+    // Mantenimientos Críticos (5 Días Hábiles)
+    ...pendingMaintenancesList.map(m => ({
+        id: `m-${m.id}`,
+        type: 'Mantenimiento Crítico',
+        primary: m.device?.nombre_equipo || m.device?.etiqueta || 'Equipo Desconocido',
+        secondary: `Fecha: ${formatDate(m.fecha_programada)} - ${m.descripcion?.substring(0, 25) || ''}...`,
+        // USANDO COLOR HARDCODEADO (Warning/Orange)
+        icon: <BuildIcon sx={{ color: '#ff9800' }} />, 
+        path: `/maintenances/edit/${m.id}`
+    })),
+    // Garantías por Vencer (90 días)
+    ...warrantyAlertsList.map(d => ({
+        id: `w-${d.id}`,
+        type: 'Garantía por Vencer',
+        primary: d.nombre_equipo || d.etiqueta || 'N/A',
+        secondary: `Vence: ${formatDate(d.garantia_fin)}`,
+        // USANDO COLOR HARDCODEADO (Error/Red)
+        icon: <WarningIcon sx={{ color: '#f44336' }} />, 
+        path: `/inventory/edit/${d.id}`
+    }))
+  ];
+
+  // Ordenar por tipo (mantenimiento primero, luego garantía)
+  combinedAlerts.sort((a, b) => {
+      if (a.type === 'Mantenimiento Crítico' && b.type !== 'Mantenimiento Crítico') return -1;
+      if (a.type !== 'Mantenimiento Crítico' && b.type === 'Mantenimiento Crítico') return 1;
+      return 0;
+  });
+
+  const renderAlertMenu = (
+    <Menu
+      anchorEl={alertsAnchorEl}
+      open={Boolean(alertsAnchorEl)}
+      onClose={handleAlertsClose}
+      sx={{ '.MuiMenu-paper': { width: 360, maxWidth: '90%' } }}
+    >
+      <Typography variant="h6" sx={{ px: 2, pt: 1, pb: 1 }}>
+        Notificaciones ({totalAlertCount})
+      </Typography>
+      <Divider />
+      <List sx={{ maxHeight: 400, overflowY: 'auto' }}>
+        {loading ? (
+            <MenuItem disabled>Cargando alertas...</MenuItem>
+        ) : combinedAlerts.length === 0 ? (
+          <ListItemText primary="No hay alertas críticas" secondary="¡Todo en orden!" sx={{ px: 2, py: 1 }}/>
+        ) : (
+          <>
+            {combinedAlerts.map(alert => ( 
+              <MenuItem key={alert.id} onClick={() => { 
+                navigate(alert.path); 
+                handleAlertsClose(); 
+              }}>
+                <ListItemIcon>{alert.icon}</ListItemIcon>
+                <ListItemText 
+                  primary={<Typography variant="subtitle2" fontWeight="bold">{alert.type}</Typography>}
+                  secondary={
+                    <React.Fragment>
+                        <Typography 
+                            component="span"
+                            variant="body2"
+                            color="text.primary"
+                        >
+                            {alert.primary}
+                        </Typography>
+                        <br/>
+                        {alert.secondary}
+                    </React.Fragment>
+                  }
+                />
+              </MenuItem>
+            ))}
+          </>
+        )}
+      </List>
+      <Divider />
+    </Menu>
+  );
 
   return (
     <AppBar
@@ -95,7 +195,6 @@ const TopBar = ({ onMenuClick }) => {
               sx={{ display: "flex", alignItems: "center", cursor: "pointer", gap: 1 }}
               onClick={handleProfileClick}
             >
-              {/* Usamos src={user.avatarUrl} para forzar la imagen. user.initials es el fallback. */}
               <Avatar 
                   sx={{ bgcolor: "#9D3194" }}
                   src={user.avatarUrl} 
@@ -114,57 +213,22 @@ const TopBar = ({ onMenuClick }) => {
               open={Boolean(profileAnchorEl)}
               onClose={handleProfileClose}
             >
-              <MenuItem onClick={handleSettings}>Configuraciones</MenuItem>
-              <MenuItem onClick={handleLogout}>Cerrar sesión</MenuItem>
+              <MenuItem onClick={handleSettings}>
+                 <ListItemIcon>
+                    <SettingsIcon fontSize="small" />
+                 </ListItemIcon>
+                 Configuraciones
+              </MenuItem>
+              <MenuItem onClick={handleLogout}>
+                 <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                 </ListItemIcon>
+                 Cerrar sesión
+              </MenuItem>
             </Menu>
 
             {/* Menú desplegable de Alertas */}
-            <Menu
-              anchorEl={alertsAnchorEl}
-              open={Boolean(alertsAnchorEl)}
-              onClose={handleAlertsClose}
-              sx={{ '.MuiMenu-paper': { width: 360, maxWidth: '90%' } }}
-            >
-              <Typography variant="h6" sx={{ px: 2, pt: 1, pb: 1 }}>
-                Notificaciones
-              </Typography>
-              <Divider />
-              <List sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                {totalAlertCount === 0 ? (
-                  <ListItem>
-                    <ListItemText primary="No hay alertas nuevas" secondary="¡Todo en orden!" />
-                  </ListItem>
-                ) : (
-                  <>
-                    {/* Alertas de Garantía */}
-                    {(warrantyAlertsList || []).map(device => ( 
-                      <MenuItem key={`w-${device.id}`} onClick={() => { navigate(`/inventory/edit/${device.id}`); handleAlertsClose(); }}>
-                        <ListItemIcon><WarningIcon color="error" /></ListItemIcon>
-                        <ListItemText 
-                          primary="Garantía por Vencer" 
-                          // 👈 CAMBIO: Muestra nombre_equipo || etiqueta
-                          secondary={`${device.nombre_equipo || device.etiqueta || 'N/A'} - Vence: ${formatDate(device.garantia_fin)}`} 
-                        />
-                      </MenuItem>
-                    ))}
-                    {/* Alertas de Mantenimiento */}
-                    {(pendingMaintenancesList || []).map(maint => ( 
-                      <MenuItem key={`m-${maint.id}`} onClick={() => { navigate(`/maintenances/edit/${maint.id}`); handleAlertsClose(); }}>
-                        <ListItemIcon><BuildIcon color="warning" /></ListItemIcon>
-                        <ListItemText 
-                          primary="Mantenimiento Pendiente" 
-                          // Muestra nombre_equipo || etiqueta (ya actualizado antes)
-                          secondary={`${maint.device?.nombre_equipo || maint.device?.etiqueta || 'N/A'} - ${maint.descripcion?.substring(0, 25) || ''}...`} 
-                        />
-                      </MenuItem>
-                    ))}
-                    
-                    {/* 👇 BLOQUE DE REVISIONES ELIMINADO 👇 */}
-                    
-                  </>
-                )}
-              </List>
-            </Menu>
+            {renderAlertMenu}
 
           </Box>
         )}

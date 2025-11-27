@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
   Button, Grid, Divider, Stack, ListSubheader, OutlinedInput, Chip, Checkbox, ListItemText,
-  FormControlLabel, Switch
+  FormControlLabel, Switch, Fade // 👈 Importar Fade
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
@@ -45,8 +45,10 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     office_tipo_licencia: "",
     office_serial: "",
     office_key: "",
-    es_panda: false, // 👈 Nuevo campo
+    es_panda: false,
     garantia_numero_producto: "",
+    garantia_numero_reporte: "", // 👈 NUEVO CAMPO
+    garantia_notes: "",         // 👈 NUEVO CAMPO
     garantia_inicio: "",
     garantia_fin: "",
     areaId: "", 
@@ -54,6 +56,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
   });
 
   const [errors, setErrors] = useState({});
+
+  // 👇 NUEVO ESTADO PARA EL SWITCH DE GARANTÍA
+  const [isWarrantyApplied, setIsWarrantyApplied] = useState(false);
 
   const [users, setUsers] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
@@ -91,9 +96,22 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     }
   };
   
-  // Handler para el Switch
+  // Handler para el Switch de Panda
   const handleSwitchChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.checked });
+  };
+  
+  // 👇 Handler para el Switch de Garantía
+  const handleWarrantySwitch = (e) => {
+    setIsWarrantyApplied(e.target.checked);
+    // Si se desactiva, limpiar campos de reporte para que se envíen como null
+    if (!e.target.checked) {
+        setFormData(prev => ({
+            ...prev,
+            garantia_numero_reporte: "",
+            garantia_notes: ""
+        }));
+    }
   };
 
 
@@ -143,6 +161,13 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             : null;
         continue;
       }
+      
+      // 👇 Caso especial para los campos de reporte de garantía: forzar a null si el switch está apagado
+      if (!isWarrantyApplied && (key === 'garantia_numero_reporte' || key === 'garantia_notes')) {
+          payload[key] = null;
+          continue;
+      }
+
 
       if (typeof value === 'string') {
         const trimmedValue = value.trim();
@@ -205,7 +230,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       </Typography>
 
       <form onSubmit={handleCreateDevice} noValidate>
-        {/* ... (INFORMACIÓN GENERAL) ... */}
+        {/* INFORMACIÓN GENERAL */}
         <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }} className="modal-subtitle-color">
             Información General
         </Typography>
@@ -263,7 +288,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
           
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth sx={{ minWidth: 180 }}>
-              <InputLabel>Responsable (Jefe)</InputLabel>
+              <InputLabel>Responsable</InputLabel>
               <Select name="usuarioId" value={formData.usuarioId} onChange={handleChange} label="Responsable">
                 <MenuItem value=""><em>Ninguno</em></MenuItem>
                 {users.map((user) => (<MenuItem key={user.id} value={user.id}>{user.nombre}</MenuItem>))}
@@ -273,7 +298,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
           <Grid item xs={12}>
             <FormControl fullWidth>
-              <InputLabel id="perfiles-multiple-checkbox-label">Perfiles de Usuario (Sesiones extra)</InputLabel>
+              <InputLabel id="perfiles-multiple-checkbox-label">Perfiles de Usuarios</InputLabel>
               <Select
                 labelId="perfiles-multiple-checkbox-label"
                 name="perfiles_usuario"
@@ -320,7 +345,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             <Grid item xs={12} sm={4}><TextField label="Serial de Office" name="office_serial" value={formData.office_serial} onChange={handleChange} fullWidth /></Grid>
             <Grid item xs={12} sm={4}><TextField label="Clave de Office" name="office_key" value={formData.office_key} onChange={handleChange} fullWidth /></Grid>
             
-            {/* 👇 NUEVO CAMPO: ES PANDA */}
+            {/* SWITCH DE PANDA */}
             <Grid item xs={12} sm={12}>
                 <FormControlLabel
                   control={<Switch checked={formData.es_panda} onChange={handleSwitchChange} name="es_panda" />}
@@ -339,6 +364,47 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
           <Grid item xs={12} sm={4}><TextField label="Número de producto de garantía" name="garantia_numero_producto" value={formData.garantia_numero_producto} onChange={handleChange} fullWidth /></Grid>
           <Grid item xs={12} sm={4}><TextField label="Inicio de Garantía" name="garantia_inicio" type="date" value={formData.garantia_inicio} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
           <Grid item xs={12} sm={4}><TextField label="Fin de Garantía" name="garantia_fin" type="date" value={formData.garantia_fin} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
+          
+          {/* 👇 NUEVO SWITCH DE ACCIÓN */}
+          <Grid item xs={12}>
+                <FormControlLabel
+                  control={<Switch checked={isWarrantyApplied} onChange={handleWarrantySwitch} name="isWarrantyApplied" />}
+                  label="¿Se aplicó garantía?"
+                  labelPlacement="start"
+                  sx={{ justifyContent: 'space-between', width: '100%', m: 0, pt: 1 }}
+                />
+                <Divider sx={{ mt: 1, mb: 2 }} />
+          </Grid>
+
+          {/* 👇 CAMPOS CONDICIONALES */}
+          <Fade in={isWarrantyApplied} mountOnEnter unmountOnExit>
+            <Grid container spacing={2} sx={{ p: 2 }}>
+                <Grid item xs={12} sm={6}>
+                    <TextField 
+                        label="N° Reporte" 
+                        name="garantia_numero_reporte" 
+                        value={formData.garantia_numero_reporte} 
+                        onChange={handleChange} 
+                        fullWidth 
+                        helperText="Registro." 
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <TextField 
+                        label="Notas" 
+                        name="garantia_notes" 
+                        value={formData.garantia_notes} 
+                        onChange={handleChange} 
+                        fullWidth 
+                        multiline 
+                        rows={2} 
+                        helperText="Detalles del servicio." 
+                    />
+                </Grid>
+            </Grid>
+          </Fade>
+          {/* 👆 FIN CAMPOS CONDICIONALES */}
+          
           <Grid item xs={12} sm={6}><TextField label="Próxima Revisión Sugerida" name="fecha_proxima_revision" type="date" value={formData.fecha_proxima_revision} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} /></Grid>
         </Grid>
 

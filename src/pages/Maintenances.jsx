@@ -158,6 +158,12 @@ const Maintenances = () => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
+  
+  const getTypeChipColor = (type) => {
+    if (type === 'Correctivo') return 'error';
+    if (type === 'Preventivo') return 'info';
+    return 'default';
+  }
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
@@ -210,14 +216,17 @@ const Maintenances = () => {
                     Equipo
                   </TableSortLabel>
                 </TableCell>
+                
+                {/* 2. Tipo de Mantenimiento */}
+                <TableCell>Tipo</TableCell> {/* 👈 NUEVA COLUMNA */}
 
-                {/* 2. Descripción */}
+                {/* 3. Descripción */}
                 <TableCell>Descripción</TableCell>
 
-                {/* 3. Serie */}
+                {/* 4. Serie */}
                 <TableCell>Serie</TableCell> 
                 
-                {/* 4. Usuario Asignado (Sortable) */}
+                {/* 5. Usuario Asignado (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === 'device.usuario.nombre' ? sortConfig.direction : false}>
                     <TableSortLabel
                         active={sortConfig?.key === 'device.usuario.nombre'}
@@ -228,10 +237,10 @@ const Maintenances = () => {
                     </TableSortLabel>
                 </TableCell>
 
-                {/* 5. Estado */}
+                {/* 6. Estado */}
                 <TableCell>Estado</TableCell>
                 
-                {/* 6. Fecha Programada / Realización (Sortable) */}
+                {/* 7. Fecha Programada / Realización (Sortable) */}
                 <TableCell sortDirection={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
@@ -249,7 +258,7 @@ const Maintenances = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center"> 
+                  <TableCell colSpan={8} align="center"> {/* 7 datos + 1 acción = 8 */}
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
@@ -265,6 +274,12 @@ const Maintenances = () => {
                         {m.device?.etiqueta ? `(${m.device.etiqueta})` : 'Sin etiqueta'}
                       </Typography>
                     </TableCell>
+                    
+                    {/* 👇 NUEVO VALOR DE TIPO */}
+                    <TableCell>
+                       <Chip label={m.tipo_mantenimiento || 'N/A'} size="small" color={getTypeChipColor(m.tipo_mantenimiento)} />
+                    </TableCell>
+
                     <TableCell>{m.descripcion}</TableCell>
                     <TableCell>{m.device?.numero_serie || 'N/A'}</TableCell> 
                     <TableCell>{m.device?.usuario?.nombre || 'N/A'}</TableCell> 
@@ -306,7 +321,7 @@ const Maintenances = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={8} align="center">
                     No hay mantenimientos en esta categoría.
                   </TableCell>
                 </TableRow>

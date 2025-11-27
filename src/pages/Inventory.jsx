@@ -67,15 +67,14 @@ const Inventory = () => {
 
   const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'nombre_equipo', direction: 'ascending' });
 
-  // 1. MODIFICACIÓN CLAVE: fetchDevices ahora usa el estado 'activeFilter' y se actualiza cuando este cambia.
-  const fetchDevices = useCallback(async () => { // 👈 Ya no recibe argumento
+  // fetchDevices AHORA TOMA LOS VALORES DEL FILTRO/PÁGINA COMO ARGUMENTOS PARA EVITAR "STALE STATE"
+  const fetchDevices = async (filterToUse, pageToUse) => {
     setLoading(true);
     setError("");
     try {
-      // Usar el estado 'activeFilter' directamente
-      const filterParam = activeFilter ? `&filter=${activeFilter}` : ""; 
+      const filterParam = filterToUse ? `&filter=${filterToUse}` : ""; 
       
-      const res = await api.get(`/devices/get?page=${page + 1}&limit=${rowsPerPage}&search=${search}${filterParam}`);
+      const res = await api.get(`/devices/get?page=${pageToUse + 1}&limit=${rowsPerPage}&search=${search}${filterParam}`);
       setDevices(res.data.data);
       setTotalDevices(res.data.totalCount);
     } catch (err) {
@@ -84,22 +83,32 @@ const Inventory = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, search, activeFilter]); // 👈 CLAVE: activeFilter añadido a las dependencias para que fetchDevices se recree
+  };
 
-  // 2. Efecto 1: Leer el parámetro de la URL al cargar o cambiar searchParams
+  // 1. Efecto ÚNICO para leer la URL y disparar fetch cuando cambian las dependencias
   useEffect(() => {
     const filterFromUrl = searchParams.get('filter') || "";
-    // Solo actualizar si la URL es diferente al estado actual
-    if (filterFromUrl !== activeFilter) {
-      setActiveFilter(filterFromUrl);
-      setPage(0); // Forzar a la primera página si cambia el filtro
-    }
-  }, [searchParams, activeFilter]);
+    
+    let filterToUse = activeFilter;
+    let pageToUse = page;
 
-  // 3. Efecto 2: Ejecutar fetchDevices cuando cambian las dependencias
-  useEffect(() => {
-      fetchDevices(); // 👈 Ya no requiere argumento
-  }, [fetchDevices]); // 👈 Solo depende de la función, que cambiará si page, rowsPerPage, search o activeFilter cambian
+    // A. Si el filtro de la URL cambió (ej. clic en widget), forzar página a 0
+    if (filterFromUrl !== activeFilter) {
+      // 1. Actualizar el estado local (asíncrono)
+      setActiveFilter(filterFromUrl);
+      setPage(0);
+      
+      // 2. Usar los valores nuevos directamente para la llamada SÍNCRONA
+      filterToUse = filterFromUrl; 
+      pageToUse = 0;
+    }
+    
+    // B. Llama a fetch con los valores más recientes. 
+    // Esto se dispara en todos los cambios de dependencias (URL, page, rowsPerPage, search).
+    fetchDevices(filterToUse, pageToUse);
+
+  // Dependencias: Cualquier cambio en la URL, paginación o búsqueda dispara la lógica.
+  }, [searchParams, page, rowsPerPage, search]); 
   
   // Cuando se hace una búsqueda, limpiamos el filtro de URL.
   const handleSearchChange = (e) => {
@@ -118,7 +127,8 @@ const Inventory = () => {
       try {
         await api.delete(`/devices/delete/${d_id}`); 
         setMessage("Equipo eliminado permanentemente.");
-        fetchDevices(); // 👈 LLamada actualizada
+        // Después de eliminar, recargar con los parámetros actuales
+        fetchDevices(activeFilter, page); 
         refreshAlerts(); 
       } catch (err) {
         setError(err.response?.data?.error || err.response?.data?.message || "Error al eliminar el equipo.");
@@ -186,7 +196,7 @@ const Inventory = () => {
           <ImportButton 
             endpoint="/devices/import" 
             onSuccess={() => { 
-                fetchDevices(); // 👈 LLamada actualizada
+                fetchDevices(activeFilter, page); 
                 refreshAlerts(); 
             }} 
             label="Importar"
@@ -318,7 +328,7 @@ const Inventory = () => {
             <CreateDeviceForm
               onClose={handleCloseModal}
               onDeviceCreated={() => {
-                fetchDevices(); // 👈 LLamada actualizada
+                fetchDevices(activeFilter, page); 
                 refreshAlerts(); 
               }}
               setMessage={setMessage}

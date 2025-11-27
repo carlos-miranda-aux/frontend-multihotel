@@ -32,10 +32,10 @@ const EditMaintenance = () => {
     fecha_realizacion: "",
     estado: "pendiente",
     deviceId: "",
-    // 👈 CORRECCIÓN: Añadir nuevos campos al estado
     diagnostico: "",
     acciones_realizadas: "",
-    observaciones: ""
+    observaciones: "",
+    tipo_mantenimiento: "Preventivo", // 👈 NUEVO CAMPO
   });
   
   const [devices, setDevices] = useState([]);
@@ -60,10 +60,10 @@ const EditMaintenance = () => {
           fecha_realizacion: maintenanceData.fecha_realizacion ? new Date(maintenanceData.fecha_realizacion).toISOString().substring(0, 10) : "",
           estado: maintenanceData.estado || "pendiente",
           deviceId: maintenanceData.deviceId || "",
-          // 👈 CORRECCIÓN: Cargar los datos existentes
           diagnostico: maintenanceData.diagnostico || "",
           acciones_realizadas: maintenanceData.acciones_realizadas || "",
-          observaciones: maintenanceData.observaciones || ""
+          observaciones: maintenanceData.observaciones || "",
+          tipo_mantenimiento: maintenanceData.tipo_mantenimiento || "Preventivo", // 👈 CARGAR VALOR
         });
         
         setDevices(devicesRes.data);
@@ -79,8 +79,6 @@ const EditMaintenance = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-
     // 👈 CORRECCIÓN: Si marcan como "realizado", auto-rellenar la fecha
     if (name === "estado" && value === "realizado" && !formData.fecha_realizacion) {
       setFormData(prev => ({
@@ -103,6 +101,8 @@ const EditMaintenance = () => {
       deviceId: Number(formData.deviceId),
       fecha_programada: formData.fecha_programada ? new Date(formData.fecha_programada).toISOString() : null,
       fecha_realizacion: formData.fecha_realizacion ? new Date(formData.fecha_realizacion).toISOString() : null,
+      // 👈 Aseguramos que se envíe el tipo_mantenimiento
+      tipo_mantenimiento: formData.tipo_mantenimiento,
     };
 
     try {
@@ -147,6 +147,8 @@ const EditMaintenance = () => {
                   value={formData.deviceId}
                   onChange={handleChange}
                   label="Equipo (Device)"
+                  // Deshabilitar después de la creación para evitar errores de trazabilidad
+                  disabled 
                 >
                   <MenuItem value="">
                     <em>Selecciona un equipo</em>
@@ -157,9 +159,24 @@ const EditMaintenance = () => {
                     </MenuItem>
                   ))}
                 </Select>
+                <Typography variant="caption" color="textSecondary" sx={{ ml: 2 }}>
+                    El equipo asignado no puede ser modificado.
+                </Typography>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            
+            {/* 👇 CAMPO TIPO DE MANTENIMIENTO (SÓLO LECTURA) */}
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Tipo de Mantenimiento"
+                name="tipo_mantenimiento"
+                value={formData.tipo_mantenimiento}
+                fullWidth
+                InputProps={{ readOnly: true }} 
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={8}>
               <TextField
                 label="Descripción (Tarea Programada)"
                 name="descripcion"
@@ -213,7 +230,7 @@ const EditMaintenance = () => {
               />
             </Grid>
 
-            {/* --- 👇 CORRECCIÓN: CAMPOS CONDICIONALES PARA EL REPORTE --- */}
+            {/* --- CAMPOS CONDICIONALES PARA EL REPORTE --- */}
             <Fade in={formData.estado === 'realizado'} mountOnEnter unmountOnExit>
               <Grid item container xs={12} spacing={2} sx={{ mt: 2 }}>
                 <Grid item xs={12}>
@@ -260,7 +277,6 @@ const EditMaintenance = () => {
                 </Grid>
               </Grid>
             </Fade>
-            {/* --- 👆 FIN DE LA CORRECCIÓN --- */}
 
           </Grid>
           

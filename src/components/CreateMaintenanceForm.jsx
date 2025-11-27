@@ -21,6 +21,7 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
     fecha_programada: "",
     estado: "pendiente", // Valor por defecto
     deviceId: "",
+    tipo_mantenimiento: "Correctivo", // 👈 VALOR POR DEFECTO: Correctivo
   });
   
   const [devices, setDevices] = useState([]);
@@ -53,6 +54,7 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
       ...formData,
       deviceId: Number(formData.deviceId),
       fecha_programada: formData.fecha_programada ? new Date(formData.fecha_programada).toISOString() : null,
+      tipo_mantenimiento: formData.tipo_mantenimiento, // Se incluye
     };
 
     try {
@@ -97,17 +99,23 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12}>
-            <TextField
-              label="Descripción"
-              name="descripcion"
-              value={formData.descripcion}
-              onChange={handleChange}
-              fullWidth
-              multiline
-              rows={3}
-            />
+          
+          {/* 👇 NUEVO CAMPO: TIPO DE MANTENIMIENTO */}
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth required>
+                <InputLabel>Tipo de Mantenimiento</InputLabel>
+                <Select
+                  name="tipo_mantenimiento"
+                  value={formData.tipo_mantenimiento}
+                  onChange={handleChange}
+                  label="Tipo de Mantenimiento"
+                >
+                  <MenuItem value="Correctivo">Correctivo</MenuItem>
+                  <MenuItem value="Preventivo">Preventivo</MenuItem>
+                </Select>
+            </FormControl>
           </Grid>
+          
           <Grid item xs={12} sm={6}>
             <TextField
               label="Fecha Programada"
@@ -120,7 +128,21 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          
+          <Grid item xs={12}>
+            <TextField
+              label="Descripción"
+              name="descripcion"
+              value={formData.descripcion}
+              onChange={handleChange}
+              fullWidth
+              multiline
+              rows={3}
+              required // Hacemos la descripción requerida
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
             <FormControl fullWidth>
               <InputLabel>Estado</InputLabel>
               <Select
@@ -128,11 +150,15 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
                 value={formData.estado}
                 onChange={handleChange}
                 label="Estado"
+                disabled // Deshabilitar la edición de estado al crear
               >
                 <MenuItem value="pendiente">Pendiente</MenuItem>
                 <MenuItem value="realizado">Realizado</MenuItem>
                 <MenuItem value="cancelado">Cancelado</MenuItem>
               </Select>
+              <Typography variant="caption" color="textSecondary" sx={{ ml: 2 }}>
+                El estado inicial es siempre "Pendiente".
+              </Typography>
             </FormControl>
           </Grid>
         </Grid>

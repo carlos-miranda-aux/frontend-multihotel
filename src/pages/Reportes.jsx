@@ -4,44 +4,49 @@ import {
   Box,
   Typography,
   Paper,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  Grid, // Importar Grid
-  TextField, // Importar TextField
-  Button as MuiButton, // Importar Button con alias
-  Alert // Importar Alert
+  Grid,
+  TextField,
+  Alert,
+  useTheme,
+  Card,
+  CardActionArea,
+  CardContent,
+  Avatar,
+  Chip
 } from '@mui/material';
-import DownloadIcon from '@mui/icons-material/Download';
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import AccessTimeIcon from '@mui/icons-material/AccessTime'; // Nuevo icono para el filtro
 
-// Color del hotel: #A73698
+// Iconos específicos para cada reporte
+import InventoryIcon from '@mui/icons-material/Inventory';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import BuildIcon from '@mui/icons-material/Build';
+import GroupIcon from '@mui/icons-material/Group';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import DownloadIcon from '@mui/icons-material/Download';
+
+// Color del hotel (puedes moverlo a tus variables globales si prefieres)
 const HOTEL_COLOR = "#A73698";
 
 const Reportes = () => {
-  const apiBaseUrl = "http://localhost:3000/api"; 
+  const theme = useTheme();
+  const apiBaseUrl = "http://localhost:3000/api"; // Asegúrate de que coincida con tu backend
+  
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reportError, setReportError] = useState('');
 
-  // Función genérica para abrir el enlace de descarga (modificada para aceptar query params)
+  // Función de exportación (Lógica original conservada)
   const handleExport = (url, isFiltered = false) => {
     setReportError('');
 
     let finalUrl = url;
     
-    // Si se requiere filtro de fecha
     if (isFiltered) {
         if (!startDate || !endDate) {
-            setReportError("Por favor, selecciona las fechas de inicio y fin para este reporte.");
+            setReportError("⚠️ Para este reporte es obligatorio seleccionar un rango de fechas.");
             return;
         }
-        
-        // Adjuntar los parámetros de fecha a la URL
         finalUrl += `?startDate=${startDate}&endDate=${endDate}`;
     }
     
@@ -55,7 +60,6 @@ const Reportes = () => {
     })
     .then(res => {
         if (!res.ok) {
-            // Intentar leer el mensaje de error del backend si no es un blob
             return res.json().then(error => {
                 throw new Error(error.error || "Error desconocido al exportar.");
             }).catch(() => {
@@ -68,7 +72,7 @@ const Reportes = () => {
       const href = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = href;
-      // Extrae el nombre del archivo de la URL
+      
       let fileName = url.substring(url.lastIndexOf('/') + 1);
       if (isFiltered) {
           fileName = `analisis_correctivos_${startDate}_a_${endDate}.xlsx`;
@@ -83,120 +87,196 @@ const Reportes = () => {
       window.URL.revokeObjectURL(href);
     })
     .catch(err => {
-        console.error("Error al descargar el archivo:", err);
+        console.error("Error al descargar:", err);
         setReportError(err.message || "Error al descargar el archivo.");
     });
   };
 
-  // Definimos los reportes
+  // Configuración de los reportes con Iconos y Colores
   const reportList = [
     { 
       name: "Inventario Activo", 
-      description: "Lista completa de todos los equipos activos.", 
+      description: "Listado detallado de todos los equipos actualmente en operación.", 
       url: `${apiBaseUrl}/devices/export/all`,
+      icon: <InventoryIcon fontSize="large" />,
+      color: theme.palette.primary.main,
       isFiltered: false
     },
     { 
-      name: "Reporte de Bajas", 
-      description: "Lista de todos los equipos dados de baja.", 
+      name: "Bajas de Equipos", 
+      description: "Histórico de equipos dados de baja definitiva.", 
       url: `${apiBaseUrl}/devices/export/inactivos`,
+      icon: <DeleteSweepIcon fontSize="large" />,
+      color: theme.palette.error.main,
       isFiltered: false
     },
     { 
-      name: "Análisis: Garantía Expirada vs. Correctivos", 
-      description: "Equipos con garantía expirada y su historial de mantenimientos correctivos en el rango de fechas.", 
+      name: "Análisis de Garantías", 
+      description: "Equipos con garantía vencida y sus mantenimientos correctivos.", 
       url: `${apiBaseUrl}/devices/export/corrective-analysis`,
-      isFiltered: true // 👈 MARCAR COMO REQUERIDO FILTRO
+      icon: <AssessmentIcon fontSize="large" />,
+      color: theme.palette.warning.main,
+      isFiltered: true // Requiere fechas
     },
     { 
-      name: "Historial de Mantenimientos", 
-      description: "Exporta todos los mantenimientos (pendientes y realizados).", 
+      name: "Historial Mantenimientos", 
+      description: "Bitácora completa de servicios preventivos y correctivos.", 
       url: `${apiBaseUrl}/maintenances/export/all`,
+      icon: <BuildIcon fontSize="large" />,
+      color: theme.palette.info.main,
       isFiltered: false
     },
     { 
-      name: "Lista de Usuarios", 
-      description: "Exporta todos los usuarios de la organización (empleados).", 
+      name: "Directorio de Staff", 
+      description: "Empleados y Jefes de Área registrados.", 
       url: `${apiBaseUrl}/users/export/all`,
+      icon: <GroupIcon fontSize="large" />,
+      color: theme.palette.success.main,
       isFiltered: false
     },
     { 
       name: "Usuarios del Sistema", 
-      description: "Exporta los usuarios administradores y editores de SIMET.", 
+      description: "Administradores y editores con acceso a SIMET.", 
       url: `${apiBaseUrl}/auth/export/all`,
+      icon: <AdminPanelSettingsIcon fontSize="large" />,
+      color: theme.palette.secondary.main,
       isFiltered: false
     },
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        Módulo de Reportes
-      </Typography>
-      <Typography variant="subtitle1" color="textSecondary" sx={{ mb: 3 }}>
-        Selecciona un reporte para descargar en formato Excel.
-      </Typography>
+    <Box sx={{ p: 4, bgcolor: '#f4f6f8', minHeight: '100vh' }}>
       
-      {/* SECCIÓN DE FILTRO DE FECHAS */}
-      <Paper elevation={1} sx={{ p: 3, mb: 4, borderLeft: `4px solid ${HOTEL_COLOR}` }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <AccessTimeIcon sx={{ mr: 1, color: HOTEL_COLOR }} />
-            <Typography variant="h6" fontWeight="bold">Filtro por Rango de Fechas (Opcional)</Typography>
+      {/* Encabezado */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ color: '#2c3e50' }}>
+          Centro de Reportes
+        </Typography>
+        <Typography variant="subtitle1" color="textSecondary">
+          Descarga información clave en formato Excel para tu análisis.
+        </Typography>
+      </Box>
+
+      {/* Panel de Filtros */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          mb: 4, 
+          borderRadius: 3, 
+          border: '1px solid #e0e0e0',
+          background: 'linear-gradient(to right, #ffffff, #fcfcfc)'
+        }}
+      >
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: HOTEL_COLOR }}>
+            <AccessTimeIcon sx={{ mr: 1 }} />
+            <Typography variant="h6" fontWeight="bold">
+              Filtro por Fechas
+            </Typography>
           </Box>
-          <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            Selecciona un rango de fechas si vas a descargar el reporte de <b>Análisis de Garantías</b>.
+          </Typography>
+          
+          <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={4}>
                   <TextField 
-                      label="Fecha de Inicio"
+                      label="Fecha Inicio"
                       type="date"
                       fullWidth
+                      size="small"
                       InputLabelProps={{ shrink: true }}
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                   />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={6} md={4}>
                   <TextField 
-                      label="Fecha de Fin"
+                      label="Fecha Fin"
                       type="date"
                       fullWidth
+                      size="small"
                       InputLabelProps={{ shrink: true }}
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                   />
               </Grid>
           </Grid>
-          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-            Las fechas se aplicarán para filtrar los *mantenimientos correctivos* en el reporte de análisis.
-          </Typography>
       </Paper>
-      {/* FIN SECCIÓN DE FILTRO */}
 
-      {reportError && <Alert severity="error" sx={{ mb: 2 }}>{reportError}</Alert>}
+      {/* Mensajes de Error */}
+      {reportError && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setReportError('')}>
+          {reportError}
+        </Alert>
+      )}
 
-      <Paper elevation={3}>
-        <List>
-          {reportList.map((report, index) => (
-            <React.Fragment key={report.name}>
-              <ListItem>
-                <MuiButton
-                    onClick={() => handleExport(report.url, report.isFiltered)}
-                    fullWidth
-                    sx={{ justifyContent: 'flex-start', p: 1.5, textTransform: 'none' }}
-                >
-                  <ListItemIcon>
-                    <DownloadIcon sx={{ color: report.isFiltered ? theme.palette.warning.main : HOTEL_COLOR }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={<Typography variant="body1" fontWeight={report.isFiltered ? 'bold' : 'normal'}>{report.name}</Typography>}
-                    secondary={<Typography variant="body2" color="textSecondary">{report.description}</Typography>}
-                  />
-                </MuiButton>
-              </ListItem>
-              {index < reportList.length - 1 && <Divider />}
-            </React.Fragment>
-          ))}
-        </List>
-      </Paper>
+      {/* Grid de Reportes */}
+      <Grid container spacing={3}>
+        {reportList.map((report) => (
+          <Grid item xs={12} sm={6} md={4} key={report.name}>
+            <Card 
+              elevation={2}
+              sx={{ 
+                height: '100%', 
+                borderRadius: 3,
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 6
+                }
+              }}
+            >
+              <CardActionArea 
+                onClick={() => handleExport(report.url, report.isFiltered)}
+                sx={{ height: '100%', p: 2 }}
+              >
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                  
+                  {/* Icono con fondo circular */}
+                  <Avatar 
+                    sx={{ 
+                      bgcolor: report.color + '22', // Color con transparencia
+                      color: report.color,
+                      width: 64, 
+                      height: 64, 
+                      mb: 2 
+                    }}
+                  >
+                    {report.icon}
+                  </Avatar>
+
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    {report.name}
+                  </Typography>
+                  
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
+                    {report.description}
+                  </Typography>
+
+                  {/* Etiquetas informativas */}
+                  <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
+                    <Chip 
+                      label="Excel" 
+                      size="small" 
+                      icon={<DownloadIcon />} 
+                      sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} 
+                    />
+                    {report.isFiltered && (
+                      <Chip 
+                        label="Requiere Fechas" 
+                        size="small" 
+                        sx={{ bgcolor: '#fff3e0', color: '#ef6c00', fontWeight: 'bold' }} 
+                      />
+                    )}
+                  </Box>
+
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
     </Box>
   );
 };

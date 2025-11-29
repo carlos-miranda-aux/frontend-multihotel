@@ -43,7 +43,7 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 600,
+  width: 950, // 👈 VALOR CAMBIADO PARA HACER EL MODAL MÁS ANCHO
   bgcolor: 'background.paper',
   boxShadow: 24,
   p: 4,
@@ -373,3 +373,7 @@ const Maintenances = () => {
 };
 
 export default Maintenances;
+
+
+
+//

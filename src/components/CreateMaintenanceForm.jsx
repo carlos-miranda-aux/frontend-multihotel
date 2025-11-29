@@ -9,37 +9,47 @@ import {
   Select,
   MenuItem,
   Button,
-  Grid
+  Grid,
+  Divider, 
+  Autocomplete,
+  Alert 
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
+import "../pages/styles/ConfigButtons.css"; 
 
-const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setError }) => {
+const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setError, error }) => {
   const [formData, setFormData] = useState({
     descripcion: "",
     fecha_programada: "",
     estado: "pendiente", // Valor por defecto
-    deviceId: "",
-    tipo_mantenimiento: "Correctivo", // 👈 VALOR POR DEFECTO: Correctivo
+    tipo_mantenimiento: "Correctivo", // VALOR POR DEFECTO: Correctivo
   });
   
   const [devices, setDevices] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState(null); 
   const { refreshAlerts } = useContext(AlertContext);
 
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        // Pide la lista de dispositivos activos para el selector
+        
         const res = await api.get("/devices/get/all-names");
-        setDevices(res.data); 
+        
+        // Mapear los datos para que Autocomplete tenga una propiedad 'label' usable
+        const formattedDevices = res.data.map(d => ({
+            ...d,
+            // Combina Etiqueta y Nombre de Equipo para una búsqueda más amplia
+            label: `${d.etiqueta || d.nombre_equipo} - ${d.nombre_equipo || d.tipo?.nombre}` 
+        }));
+        
+        setDevices(formattedDevices); 
       } catch (err) {
         console.error("Error fetching devices:", err);
-        setError("Error al cargar la lista de equipos.");
       }
     };
     fetchDevices();
-  }, [setError]);
+  }, []); 
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -47,60 +57,83 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
 
   const handleCreateMaintenance = async (e) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
+    // Limpieza de mensajes antes de la validación
+    if (setMessage) setMessage(""); 
+    if (setError) setError(""); 
+
+    // Validación de campos obligatorios
+    if (!selectedDevice || !formData.descripcion || !formData.fecha_programada) {
+        if (setError) setError("Por favor, selecciona un equipo, una descripción y una fecha programada.");
+        return;
+    }
 
     const payload = {
       ...formData,
-      deviceId: Number(formData.deviceId),
+      deviceId: Number(selectedDevice.id), // Usamos el ID del objeto seleccionado
       fecha_programada: formData.fecha_programada ? new Date(formData.fecha_programada).toISOString() : null,
-      tipo_mantenimiento: formData.tipo_mantenimiento, // Se incluye
+      tipo_mantenimiento: formData.tipo_mantenimiento, 
     };
 
     try {
       await api.post("/maintenances/post", payload);
+      if (setMessage) setMessage("Mantenimiento programado exitosamente.");
       refreshAlerts();
       onMaintenanceCreated(); 
       onClose(); 
     } catch (err) {
-      setError(err.response?.data?.error || "Error al crear el mantenimiento.");
+      if (setError) setError(err.response?.data?.error || "Error al crear el mantenimiento.");
     }
   };
 
   return (
-    <Box>
+    <Box sx={{ p: 1, pt: 0 }}> 
       <Typography 
-        variant="h6" 
-        sx={{ mb: 2 }}
-        className="modal-title-color" // ✅ Aplicar clase al título
+        variant="h5" 
+        sx={{ mb: 2, fontWeight: 'bold' }}
+        className="modal-title-color"
       >
         Crear nuevo mantenimiento
       </Typography>
-      <Box component="form" onSubmit={handleCreateMaintenance} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      
+      <Divider sx={{ mb: 3 }} />
+
+      <Box component="form" onSubmit={handleCreateMaintenance} sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        
+        <Typography variant="subtitle1" className="modal-subtitle-color">
+            Información del Equipo
+        </Typography>
+        
+        {/* CORRECCIÓN: Autocomplete envuelto en Box para ocupar el 100% sin restricciones de Grid */}
+        <Box> 
+            <Autocomplete
+                options={devices}
+                getOptionLabel={(option) => option.label || ""}
+                value={selectedDevice}
+                onChange={(event, newValue) => {
+                    setSelectedDevice(newValue);
+                    if (error && setError) setError(""); 
+                }}
+                isOptionEqualToValue={(option, value) => option.id === value.id} 
+                renderInput={(params) => (
+                    <TextField 
+                        {...params} 
+                        label="Buscar Equipo" 
+                        fullWidth 
+                        required 
+                        error={!selectedDevice && !!error}
+                        helperText={!selectedDevice && !!error ? "Selecciona un equipo de la lista." : null}
+                    />
+                )}
+                noOptionsText="No hay equipos coincidentes"
+                fullWidth
+            />
+        </Box>
+
+        <Typography variant="subtitle1" className="modal-subtitle-color" sx={{ mb: -2, mt: 1 }}>
+            Detalles del Mantenimiento
+        </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <FormControl fullWidth required>
-              <InputLabel>Equipo (Device)</InputLabel>
-              <Select
-                name="deviceId"
-                value={formData.deviceId}
-                onChange={handleChange}
-                label="Equipo (Device)"
-              >
-                <MenuItem value="">
-                  <em>Selecciona un equipo</em>
-                </MenuItem>
-                {devices.map((device) => (
-                  <MenuItem key={device.id} value={device.id}>
-                    {/* Muestra etiqueta y nombre */}
-                    {device.etiqueta} - {device.nombre_equipo || device.tipo?.nombre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
           
-          {/* 👇 NUEVO CAMPO: TIPO DE MANTENIMIENTO */}
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth required>
                 <InputLabel>Tipo de Mantenimiento</InputLabel>
@@ -126,6 +159,8 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
               fullWidth
               required
               InputLabelProps={{ shrink: true }}
+              error={!formData.fecha_programada && !!error}
+              helperText={!formData.fecha_programada && !!error ? "La fecha es obligatoria." : null}
             />
           </Grid>
           
@@ -138,7 +173,9 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
               fullWidth
               multiline
               rows={3}
-              required // Hacemos la descripción requerida
+              required 
+              error={!formData.descripcion && !!error}
+              helperText={!formData.descripcion && !!error ? "La descripción es obligatoria." : null}
             />
           </Grid>
           
@@ -150,7 +187,7 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
                 value={formData.estado}
                 onChange={handleChange}
                 label="Estado"
-                disabled // Deshabilitar la edición de estado al crear
+                disabled 
               >
                 <MenuItem value="pendiente">Pendiente</MenuItem>
                 <MenuItem value="realizado">Realizado</MenuItem>
@@ -167,10 +204,15 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
           variant="contained" 
           color="primary" 
           sx={{ mt: 2 }}
-          className="primary-action-button" // ✅ Aplicar clase CSS
+          className="primary-action-button" 
         >
           Crear Mantenimiento
         </Button>
+        
+        {!!error && (
+            <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+        )}
+        
       </Box>
     </Box>
   );

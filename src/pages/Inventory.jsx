@@ -163,6 +163,8 @@ const Inventory = () => {
   const getFilterLabel = () => {
     if (activeFilter === 'no-panda') return 'Mostrando: Sin Panda (X)';
     if (activeFilter === 'warranty-risk') return 'Mostrando: Garantía en Riesgo (X)';
+    if (activeFilter === 'expired-warranty') return 'Mostrando: Garantías Expiradas (X)'; 
+    if (activeFilter === 'safe-warranty') return 'Mostrando: Garantías Activas (X)'; 
     return '';
   }
 

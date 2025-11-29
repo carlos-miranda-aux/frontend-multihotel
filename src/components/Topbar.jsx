@@ -121,7 +121,7 @@ const TopBar = ({ onMenuClick }) => {
       sx={{ '.MuiMenu-paper': { width: 360, maxWidth: '90%' } }}
     >
       <Typography variant="h6" sx={{ px: 2, pt: 1, pb: 1 }}>
-        Notificaciones Críticas ({totalAlertCount})
+        Notificaciones
       </Typography>
       <Divider />
       <List sx={{ maxHeight: 400, overflowY: 'auto' }}>

@@ -31,7 +31,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     etiqueta: "",
     nombre_equipo: "",
     descripcion: "",
-    comentarios: "", // 👈 NUEVO ESTADO
+    comentarios: "", 
     ip_equipo: "",
     usuarioId: "",
     perfiles_usuario: [], 
@@ -67,20 +67,25 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
   useEffect(() => {
     const fetchFormData = async () => {
       try {
+        // CORRECCIÓN APLICADA: Se agregó ?limit=0 a device-types y operating-systems
+        // para asegurar que el backend devuelva un Array [] y no un objeto paginado {data:[], totalCount}.
         const [usersRes, deviceTypesRes, operatingSystemsRes, areasRes] = 
           await Promise.all([
             api.get("/users/get/all"),
-            api.get("/device-types/get"),
-            api.get("/operating-systems/get"),
+            api.get("/device-types/get?limit=0"),      // <--- Corregido
+            api.get("/operating-systems/get?limit=0"), // <--- Corregido
             api.get("/areas/get?limit=0"), 
           ]);
-        setUsers(usersRes.data);
-        setDeviceTypes(deviceTypesRes.data);
-        setOperatingSystems(operatingSystemsRes.data);
-        setAreas(areasRes.data); 
+        
+        // Verificación de seguridad para evitar pantallas blancas si la API falla
+        setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+        setDeviceTypes(Array.isArray(deviceTypesRes.data) ? deviceTypesRes.data : []);
+        setOperatingSystems(Array.isArray(operatingSystemsRes.data) ? operatingSystemsRes.data : []);
+        setAreas(Array.isArray(areasRes.data) ? areasRes.data : []); 
+
       } catch (err) {
         console.error("Error fetching form data:", err);
-        setError("Error al cargar los datos del formulario.");
+        if (setError) setError("Error al cargar los datos del formulario.");
       }
     };
     fetchFormData();
@@ -123,11 +128,11 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
   const handleCreateDevice = async (e) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
+    if (setError) setError("");
+    if (setMessage) setMessage("");
 
     if (!validate()) {
-      setError("Por favor completa los campos obligatorios.");
+      if (setError) setError("Por favor completa los campos obligatorios.");
       return;
     }
 
@@ -171,12 +176,12 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     
     try {
       await api.post("/devices/post", payload);
-      setMessage("Equipo creado exitosamente.");
+      if (setMessage) setMessage("Equipo creado exitosamente.");
       refreshAlerts();
-      onDeviceCreated();
+      if (onDeviceCreated) onDeviceCreated();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || "Error al crear el equipo.");
+      if (setError) setError(err.response?.data?.error || "Error al crear el equipo.");
     }
   };
   
@@ -231,7 +236,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                 <TextField label="Rol / Puesto (Descripción)" name="descripcion" value={formData.descripcion} onChange={handleChange} fullWidth placeholder="Ej. Recepción Lobby" />
             </Stack>
             
-            {/* 👈 NUEVO CAMPO: COMENTARIOS */}
             <TextField 
                 label="Comentarios / Estado físico" 
                 name="comentarios" 

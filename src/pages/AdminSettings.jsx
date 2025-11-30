@@ -17,8 +17,7 @@ import api from "../api/axios";
 import CrudTable from "../components/CrudTable";
 import CreateSystemUserForm from "../components/CreateSystemUserForm";
 import CreateAreaForm from "../components/CreateAreaForm"; 
-import { useSortableData } from "../hooks/useSortableData";
-import "./styles/ConfigButtons.css"; // 👈 Importación de estilos
+import "./styles/ConfigButtons.css"; 
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -39,6 +38,9 @@ const AdminSettings = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0); 
 
+  // Estado de Ordenamiento (Servidor)
+  const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
+
   // Estados del Modal
   const [openModal, setOpenModal] = useState(false);
   const [modalType, setModalType] = useState(""); 
@@ -46,14 +48,6 @@ const AdminSettings = () => {
 
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-
-  const getSortKey = () => {
-    if (activeTable === "Gestión de Usuarios") return 'nombre';
-    if (activeTable === "Áreas") return 'nombre'; 
-    return 'id';
-  };
-  
-  const { sortedItems, requestSort, sortConfig } = useSortableData(dataList, { key: getSortKey(), direction: 'ascending' });
   
   const tables = [
     { name: "Departamentos", url: "/departments" },
@@ -66,35 +60,31 @@ const AdminSettings = () => {
 
   // --- FETCHERS ---
   const fetchData = useCallback(async () => {
+    // Si no hay tabla activa o es una tabla genérica (que usa CrudTable), no hacemos fetch aquí
+    if (!activeTable || (activeTable !== "Gestión de Usuarios" && activeTable !== "Áreas")) {
+        return;
+    }
+
     setLoading(true);
     setError("");
     try {
       let url = "";
-      let isPaginatedTable = false;
+      // Parametros de orden
+      const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
 
       if (activeTable === "Gestión de Usuarios") {
-        url = `/auth/get?page=${page + 1}&limit=${rowsPerPage}`;
-        isPaginatedTable = true;
+        url = `/auth/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`;
       } else if (activeTable === "Áreas") {
-        url = `/areas/get?page=${page + 1}&limit=${rowsPerPage}`; 
-        isPaginatedTable = true;
-      } else {
-        const tableData = tables.find(t => t.name === activeTable);
-        if (tableData) {
-            setLoading(false);
-            return;
-        } else {
-            setLoading(false);
-            return;
-        }
+        url = `/areas/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`; 
       }
 
       const response = await api.get(url);
 
-      if (isPaginatedTable && response.data.data) {
+      if (response.data.data) {
           setDataList(response.data.data);
           setTotalCount(response.data.totalCount);
       } else {
+          // Fallback por si la API cambia formato
           setDataList(response.data);
           setTotalCount(response.data.length);
       }
@@ -105,15 +95,18 @@ const AdminSettings = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTable, page, rowsPerPage]); 
+  }, [activeTable, page, rowsPerPage, sortConfig]); // Agregamos sortConfig a dependencias
 
   useEffect(() => {
-    if (activeTable === "Gestión de Usuarios" || activeTable === "Áreas") {
-      fetchData();
-    }
-  }, [activeTable, fetchData]);
+    fetchData();
+  }, [fetchData]);
 
   // --- HANDLERS ---
+  const handleRequestSort = (key) => {
+    const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
+    setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("¿Estás seguro de eliminar este registro?")) return;
     
@@ -124,11 +117,7 @@ const AdminSettings = () => {
     try {
         await api.delete(url);
         setMessage("Registro eliminado correctamente.");
-        if (dataList.length === 1 && page > 0) {
-             setPage(page - 1);
-        } else {
-             fetchData();
-        }
+        fetchData();
     } catch (err) {
       setError(err.response?.data?.error || "Error al eliminar.");
     }
@@ -169,7 +158,12 @@ const AdminSettings = () => {
     setDataList([]); 
     setMessage(""); 
     setError(""); 
+    // Reiniciar ordenamiento al cambiar de tabla
+    setSortConfig({ key: 'nombre', direction: 'asc' });
   }
+
+  // Estilo para encabezado
+  const headerStyle = { fontWeight: 'bold', color: '#333' };
 
   const renderActiveTable = () => {
     if (!activeTable) return <Typography sx={{ mt: 4, textAlign: 'center', color: 'text.secondary' }}>Selecciona una opción.</Typography>;
@@ -191,17 +185,29 @@ const AdminSettings = () => {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow>
-                    <TableCell><TableSortLabel active={sortConfig?.key === 'nombre'} direction={sortConfig?.direction} onClick={() => requestSort('nombre')}>Nombre</TableSortLabel></TableCell>
-                    <TableCell>Usuario</TableCell>
-                    <TableCell>Correo</TableCell>
-                    <TableCell>Rol</TableCell>
-                    <TableCell>Acciones</TableCell>
+                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'nombre' ? sortConfig.direction : false}>
+                        <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.key === 'nombre' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('nombre')}>
+                            Nombre
+                        </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'username' ? sortConfig.direction : false}>
+                        <TableSortLabel active={sortConfig.key === 'username'} direction={sortConfig.key === 'username' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('username')}>
+                            Usuario
+                        </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={headerStyle}>Correo</TableCell>
+                    <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'rol' ? sortConfig.direction : false}>
+                        <TableSortLabel active={sortConfig.key === 'rol'} direction={sortConfig.key === 'rol' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('rol')}>
+                            Rol
+                        </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={headerStyle}>Acciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? <TableRow><TableCell colSpan={5} align="center"><CircularProgress /></TableCell></TableRow> :
-                    sortedItems.map((u) => (
+                    dataList.map((u) => ( // 👈 Usamos dataList directo (ya viene ordenado del server)
                       <TableRow key={u.id}>
                         <TableCell>{u.nombre}</TableCell>
                         <TableCell>{u.username}</TableCell>
@@ -231,7 +237,7 @@ const AdminSettings = () => {
       );
     }
 
-    // 2. TABLA DE ÁREAS
+    // 2. TABLA DE ÁREAS (La que reportaste con problemas)
     if (activeTable === "Áreas") {
       return (
         <Box>
@@ -248,15 +254,23 @@ const AdminSettings = () => {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow>
-                    <TableCell><TableSortLabel active={sortConfig?.key === 'nombre'} direction={sortConfig?.direction} onClick={() => requestSort('nombre')}>Nombre Área</TableSortLabel></TableCell>
-                    <TableCell><TableSortLabel active={sortConfig?.key === 'departamento.nombre'} direction={sortConfig?.direction} onClick={() => requestSort('departamento.nombre')}>Departamento</TableSortLabel></TableCell>
-                    <TableCell>Acciones</TableCell>
+                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'nombre' ? sortConfig.direction : false}>
+                        <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.key === 'nombre' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('nombre')}>
+                            Nombre Área
+                        </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'departamento.nombre' ? sortConfig.direction : false}>
+                        <TableSortLabel active={sortConfig.key === 'departamento.nombre'} direction={sortConfig.key === 'departamento.nombre' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('departamento.nombre')}>
+                            Departamento
+                        </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={headerStyle}>Acciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? <TableRow><TableCell colSpan={3} align="center"><CircularProgress /></TableCell></TableRow> :
-                    sortedItems.map((area) => (
+                    dataList.map((area) => ( // 👈 Usamos dataList directo
                       <TableRow key={area.id}>
                         <TableCell>{area.nombre}</TableCell>
                         <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
@@ -286,6 +300,7 @@ const AdminSettings = () => {
     }
 
     // 3. TABLAS CRUD GENÉRICAS
+    // Estas usan el componente CrudTable que ya tiene su propia lógica de ordenamiento servidor interna
     const tableData = tables.find(t => t.name === activeTable);
     return <CrudTable title={tableData.name} apiUrl={tableData.url} />;
   };
@@ -302,7 +317,6 @@ const AdminSettings = () => {
             variant={activeTable === table.name ? "contained" : "outlined"}
             onClick={() => handleTableChange(table.name)} 
             startIcon={table.icon || <ListIcon />}
-            // 👇 AQUÍ APLICAMOS LA NUEVA LÓGICA DE CLASES
             className={activeTable === table.name ? "primary-action-button" : "selector-button-outlined"}
           >
             {table.name}

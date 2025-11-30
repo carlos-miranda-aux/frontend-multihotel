@@ -4,7 +4,7 @@ import {
   Box, Typography, TextField, Button, Grid, Fade, 
   MenuItem, CircularProgress, Chip, Checkbox, 
   ListItemText, FormControlLabel, Switch, 
-  Alert, Avatar, Stack, Divider
+  Alert, ListSubheader, Avatar, Stack, Divider
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -84,10 +84,11 @@ const EditDevice = () => {
           deviceStatusesRes, operatingSystemsRes, areasRes
         ] = await Promise.all([
           api.get(`/devices/get/${id}`),
-          api.get("/users/get/all"),
-          api.get("/device-types/get"),
-          api.get("/device-status/get"),
-          api.get("/operating-systems/get"),
+          // 👇 AGREGADO ?limit=0 a todas las llamadas de catálogos
+          api.get("/users/get?limit=0"), 
+          api.get("/device-types/get?limit=0"),
+          api.get("/device-status/get?limit=0"),
+          api.get("/operating-systems/get?limit=0"),
           api.get("/areas/get?limit=0"),
         ]);
 
@@ -98,7 +99,10 @@ const EditDevice = () => {
             catch (e) { return ""; }
         };
 
-        const bajaStatus = deviceStatusesRes.data.find(s => s.nombre.toLowerCase() === 'baja');
+        // Si deviceStatusesRes es array lo usamos, si no (por error) usamos vacío
+        const statusList = Array.isArray(deviceStatusesRes.data) ? deviceStatusesRes.data : [];
+        const bajaStatus = statusList.find(s => s.nombre.toLowerCase() === 'baja');
+        
         if (bajaStatus) setBajaStatusId(bajaStatus.id);
         if (bajaStatus && deviceData.estadoId === bajaStatus.id) setIsPermanentlyBaja(true);
 
@@ -119,11 +123,12 @@ const EditDevice = () => {
           sistemaOperativoId: deviceData.sistemaOperativoId || "",
         });
 
-        setUsers(usersRes.data);
-        setDeviceTypes(deviceTypesRes.data);
-        setDeviceStatuses(deviceStatusesRes.data);
-        setOperatingSystems(operatingSystemsRes.data);
-        setAreas(areasRes.data);
+        // Aseguramos que guardamos arrays (por si el backend fallara en limit=0)
+        setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+        setDeviceTypes(Array.isArray(deviceTypesRes.data) ? deviceTypesRes.data : []);
+        setDeviceStatuses(statusList);
+        setOperatingSystems(Array.isArray(operatingSystemsRes.data) ? operatingSystemsRes.data : []);
+        setAreas(Array.isArray(areasRes.data) ? areasRes.data : []);
 
       } catch (err) {
         console.error("Error cargando dispositivo:", err);
@@ -173,14 +178,12 @@ const EditDevice = () => {
 
     const payload = { ...formData };
     
-    // Limpieza de campos (Prisma Fix)
     const fieldsToRemove = [
         'id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 
         'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento'
     ];
     fieldsToRemove.forEach(field => delete payload[field]);
 
-    // Normalización
     const foreignKeys = ['areaId', 'usuarioId', 'tipoId', 'estadoId', 'sistemaOperativoId'];
     foreignKeys.forEach(key => { payload[key] = payload[key] ? Number(payload[key]) : null; });
 
@@ -272,26 +275,26 @@ const EditDevice = () => {
           <Grid item xs={12} lg={8}>
             <Stack spacing={3}>
               
-              {/* CARD 1: IDENTIDAD DEL EQUIPO (Rediseñado con Stack + TextField Select) */}
+              {/* CARD 1: IDENTIDAD DEL EQUIPO */}
               <SectionCard title="Identidad del Equipo" icon={<ComputerIcon />}>
                 <Stack spacing={3}>
                     {/* Fila 1: Nombre y Etiqueta */}
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
-                            <TextField label="Nombre del Equipo" name="nombre_equipo" fullWidth value={formData.nombre_equipo} onChange={handleChange} required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo} />
+                            <TextField label="Nombre del Equipo *" name="nombre_equipo" fullWidth value={formData.nombre_equipo} onChange={handleChange} required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField label="Etiqueta" name="etiqueta" fullWidth value={formData.etiqueta} onChange={handleChange} />
+                            <TextField label="Etiqueta / ID" name="etiqueta" fullWidth value={formData.etiqueta} onChange={handleChange} />
                         </Grid>
                     </Grid>
 
                     {/* Fila 2: Marca, Modelo, Tipo */}
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={4}>
-                            <TextField label="Marca" name="marca" fullWidth value={formData.marca} onChange={handleChange} required error={!!errors.marca} />
+                            <TextField label="Marca *" name="marca" fullWidth value={formData.marca} onChange={handleChange} required error={!!errors.marca} />
                         </Grid>
                         <Grid item xs={12} sm={4}>
-                            <TextField label="Modelo" name="modelo" fullWidth value={formData.modelo} onChange={handleChange} required error={!!errors.modelo} />
+                            <TextField label="Modelo *" name="modelo" fullWidth value={formData.modelo} onChange={handleChange} required error={!!errors.modelo} />
                         </Grid>
                         <Grid item xs={12} sm={4}>
                             <TextField
@@ -315,17 +318,16 @@ const EditDevice = () => {
                     {/* Fila 3: Serie y Descripción */}
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
-                            <TextField label="Número de Serie" name="numero_serie" fullWidth value={formData.numero_serie} onChange={handleChange} required error={!!errors.numero_serie} />
+                            <TextField label="Número de Serie *" name="numero_serie" fullWidth value={formData.numero_serie} onChange={handleChange} required error={!!errors.numero_serie} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                             {/* Espacio reservado o campo extra si fuera necesario */}
-                             <TextField label="Descripción" name="descripcion" fullWidth value={formData.descripcion} onChange={handleChange} placeholder="Descripción" />
+                             <TextField label="Notas Breves" name="descripcion" fullWidth value={formData.descripcion} onChange={handleChange} placeholder="Ej. Pantalla con rayón" />
                         </Grid>
                     </Grid>
                 </Stack>
               </SectionCard>
 
-              {/* CARD 2: RED Y SOFTWARE (Consistente) */}
+              {/* CARD 2: RED Y SOFTWARE */}
               <SectionCard title="Red y Software" icon={<WifiIcon />}>
                 <Stack spacing={3}>
                   {/* Fila 1: IP y SO */}
@@ -352,7 +354,7 @@ const EditDevice = () => {
                         <TextField label="Tipo Licencia" name="office_tipo_licencia" size="small" fullWidth value={formData.office_tipo_licencia} onChange={handleChange} />
                       </Grid>
                       <Grid item xs={12} sm={4}>
-                        <TextField label="Clave " name="office_key" size="small" fullWidth value={formData.office_key} onChange={handleChange} />
+                        <TextField label="Clave/Serial" name="office_key" size="small" fullWidth value={formData.office_key} onChange={handleChange} />
                       </Grid>
                     </Grid>
                   </Box>
@@ -362,14 +364,14 @@ const EditDevice = () => {
                     <Divider sx={{ mb: 2 }} />
                     <FormControlLabel
                       control={<Switch checked={formData.es_panda} onChange={handleSwitchChange} name="es_panda" color="success" />}
-                      label={<Box><Typography variant="body1">Panda Instalado</Typography><Typography variant="caption" color="text.secondary">Activa si cuenta con protección endpoint</Typography></Box>}
+                      label={<Box><Typography variant="body1">Panda Antivirus Instalado</Typography><Typography variant="caption" color="text.secondary">Activa si cuenta con protección endpoint</Typography></Box>}
                       sx={{ width: '100%', ml: 0 }}
                     />
                   </Box>
                 </Stack>
               </SectionCard>
 
-              {/* CARD 3: GARANTÍA (Rediseñado con Stack) */}
+              {/* CARD 3: GARANTÍA */}
               <SectionCard title="Garantía y Ciclo de Vida" icon={<VerifiedUserIcon />} color={isWarrantyApplied ? "primary.main" : "text.disabled"}>
                 <Stack spacing={3}>
                    <FormControlLabel
@@ -377,7 +379,6 @@ const EditDevice = () => {
                         label="Aplicar información de garantía"
                    />
                    
-                   {/* Fechas de Garantía */}
                    <Grid container spacing={2}>
                       <Grid item xs={12} sm={6}>
                           <TextField label="Inicio Garantía" type="date" name="garantia_inicio" fullWidth value={formData.garantia_inicio} onChange={handleChange} InputLabelProps={{ shrink: true }} />
@@ -387,14 +388,13 @@ const EditDevice = () => {
                       </Grid>
                    </Grid>
 
-                   {/* Campos Condicionales con Fondo Suave */}
                    {isWarrantyApplied && (
                      <Fade in={isWarrantyApplied}>
                          <Box sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 2, border: '1px dashed #bdbdbd' }}>
                             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>Detalles del Proveedor</Typography>
                             <Grid container spacing={2}>
                                 <Grid item xs={12} sm={6}>
-                                    <TextField label="N° Reporte" name="garantia_numero_reporte" size="small" fullWidth value={formData.garantia_numero_reporte} onChange={handleChange} />
+                                    <TextField label="N° Reporte Prov." name="garantia_numero_reporte" size="small" fullWidth value={formData.garantia_numero_reporte} onChange={handleChange} />
                                 </Grid>
                                 <Grid item xs={12} sm={6}>
                                     <TextField label="N° Producto" name="garantia_numero_producto" size="small" fullWidth value={formData.garantia_numero_producto} onChange={handleChange} />
@@ -409,12 +409,11 @@ const EditDevice = () => {
                    
                    <Divider />
                    
-                   {/* Próxima Revisión */}
                    <Box>
                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                            <CalendarMonthIcon fontSize="small"/> Planificación
                        </Typography>
-                       <TextField label="Próxima Revisión" type="date" name="fecha_proxima_revision" fullWidth value={formData.fecha_proxima_revision} onChange={handleChange} InputLabelProps={{ shrink: true }} helperText="Fecha sugerida para mantenimiento preventivo" />
+                       <TextField label="Sugerir Próxima Revisión" type="date" name="fecha_proxima_revision" fullWidth value={formData.fecha_proxima_revision} onChange={handleChange} InputLabelProps={{ shrink: true }} helperText="Fecha sugerida para mantenimiento preventivo" />
                    </Box>
                 </Stack>
               </SectionCard>
@@ -422,11 +421,11 @@ const EditDevice = () => {
             </Stack>
           </Grid>
 
-          {/* === COLUMNA DERECHA (ASIGNACIÓN y ESTADO) === */}
+          {/* === COLUMNA DERECHA === */}
           <Grid item xs={12} lg={4}>
             <Stack spacing={3} sx={{ position: 'sticky', top: 100 }}>
               
-              {/* CARD 4: ASIGNACIÓN (Selectores actualizados a TextField Select) */}
+              {/* CARD 4: ASIGNACIÓN */}
               <SectionCard title="Responsable Actual" icon={<PersonIcon />}>
                 <Stack spacing={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 2 }}>
@@ -478,7 +477,7 @@ const EditDevice = () => {
 
                     <TextField
                         select
-                        label="Sesiones extra"
+                        label="Perfiles (Sesiones)"
                         name="perfiles_usuario"
                         fullWidth
                         value={formData.perfiles_usuario}
@@ -503,7 +502,7 @@ const EditDevice = () => {
                 </Stack>
               </SectionCard>
 
-              {/* CARD 5: ESTADO (Selector actualizado) */}
+              {/* CARD 5: ESTADO */}
               <SectionCard title="Estado del Activo" icon={<SettingsIcon />}>
                  <TextField
                     select
@@ -518,15 +517,14 @@ const EditDevice = () => {
                     {deviceStatuses.map((s) => (<MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>))}
                  </TextField>
 
-                 {/* Formulario de Baja Condicional */}
                  <Fade in={formData.estadoId === bajaStatusId} mountOnEnter unmountOnExit>
                     <Box sx={{ mt: 3, p: 2, bgcolor: '#fff4e5', borderRadius: 2, border: '1px solid #ffcc80' }}>
                         <Typography variant="subtitle2" color="warning.dark" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                            <DeleteForeverIcon fontSize="small" sx={{ mr: 1 }}/> Información de Baja
+                            <DeleteForeverIcon fontSize="small" sx={{ mr: 1 }}/> Zona de Baja
                         </Typography>
                         <Stack spacing={2}>
-                            <TextField label="Motivo" name="motivo_baja" size="small" fullWidth value={formData.motivo_baja} onChange={handleChange} />
-                            <TextField label="Observaciones" name="observaciones_baja" size="small" fullWidth multiline rows={3} value={formData.observaciones_baja} onChange={handleChange} />
+                            <TextField label="Motivo de Baja" name="motivo_baja" size="small" fullWidth value={formData.motivo_baja} onChange={handleChange} />
+                            <TextField label="Observaciones Finales" name="observaciones_baja" size="small" fullWidth multiline rows={3} value={formData.observaciones_baja} onChange={handleChange} />
                         </Stack>
                     </Box>
                  </Fade>

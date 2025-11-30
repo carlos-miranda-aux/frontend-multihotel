@@ -1,25 +1,9 @@
 // src/pages/Inventory.jsx
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Button,
-  Typography,
-  Alert,
-  Modal,
-  Fade,
-  Backdrop,
-  TablePagination,
-  CircularProgress,
-  TableSortLabel,
-  TextField
+  Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Button,
+  Typography, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress, TableSortLabel,
+  TextField, Chip
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete"; 
@@ -30,7 +14,6 @@ import CreateDeviceForm from "../components/CreateDeviceForm";
 import ImportButton from "../components/ImportButton"; 
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
-import { useSortableData } from "../hooks/useSortableData";
 import "../pages/styles/ConfigButtons.css";
 
 const modalStyle = {
@@ -57,24 +40,25 @@ const Inventory = () => {
   const [totalDevices, setTotalDevices] = useState(0);
   const [search, setSearch] = useState(""); 
 
-  // ESTADOS para manejar el filtro de la URL
   const [activeFilter, setActiveFilter] = useState(""); 
   const [searchParams, setSearchParams] = useSearchParams(); 
+
+  // 👇 Estados de ordenamiento en el servidor
+  const [sortConfig, setSortConfig] = useState({ key: 'nombre_equipo', direction: 'asc' });
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
   const { user } = useContext(AuthContext);
 
-  const { sortedItems: sortedDevices, requestSort, sortConfig } = useSortableData(devices, { key: 'nombre_equipo', direction: 'ascending' });
-
-  // fetchDevices AHORA TOMA LOS VALORES DEL FILTRO/PÁGINA COMO ARGUMENTOS PARA EVITAR "STALE STATE"
-  const fetchDevices = async (filterToUse, pageToUse) => {
+  const fetchDevices = useCallback(async (filterToUse, pageToUse, sortKey, sortDir) => {
     setLoading(true);
     setError("");
     try {
       const filterParam = filterToUse ? `&filter=${filterToUse}` : ""; 
+      // 👇 Enviamos parámetros de ordenamiento
+      const sortParam = `&sortBy=${sortKey}&order=${sortDir}`;
       
-      const res = await api.get(`/devices/get?page=${pageToUse + 1}&limit=${rowsPerPage}&search=${search}${filterParam}`);
+      const res = await api.get(`/devices/get?page=${pageToUse + 1}&limit=${rowsPerPage}&search=${search}${filterParam}${sortParam}`);
       setDevices(res.data.data);
       setTotalDevices(res.data.totalCount);
     } catch (err) {
@@ -83,52 +67,45 @@ const Inventory = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [rowsPerPage, search]);
 
-  // 1. Efecto ÚNICO para leer la URL y disparar fetch cuando cambian las dependencias
   useEffect(() => {
     const filterFromUrl = searchParams.get('filter') || "";
-    
     let filterToUse = activeFilter;
     let pageToUse = page;
 
-    // A. Si el filtro de la URL cambió (ej. clic en widget), forzar página a 0
     if (filterFromUrl !== activeFilter) {
-      // 1. Actualizar el estado local (asíncrono)
       setActiveFilter(filterFromUrl);
       setPage(0);
-      
-      // 2. Usar los valores nuevos directamente para la llamada SÍNCRONA
       filterToUse = filterFromUrl; 
       pageToUse = 0;
     }
-    
-    // B. Llama a fetch con los valores más recientes. 
-    // Esto se dispara en todos los cambios de dependencias (URL, page, rowsPerPage, search).
-    fetchDevices(filterToUse, pageToUse);
-
-  // Dependencias: Cualquier cambio en la URL, paginación o búsqueda dispara la lógica.
-  }, [searchParams, page, rowsPerPage, search]); 
+    // Pasamos el estado actual de ordenamiento
+    fetchDevices(filterToUse, pageToUse, sortConfig.key, sortConfig.direction);
+  }, [searchParams, page, rowsPerPage, search, sortConfig, fetchDevices]); // sortConfig es dependencia 
   
-  // Cuando se hace una búsqueda, limpiamos el filtro de URL.
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
     setPage(0);
-    // LIMPIAR FILTRO DE URL AL BUSCAR y resetear estado
     setSearchParams({});
-    setActiveFilter(""); // Resetear también el estado para consistencia
+    setActiveFilter(""); 
+  };
+
+  // 👇 Nueva función para manejar el clic en encabezados
+  const handleRequestSort = (key) => {
+    const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
+    setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
+    // El useEffect se encargará de hacer el fetch
   };
 
   const handleDelete = async (d_id) => {
     setMessage("");
     setError("");
-
-    if (window.confirm("¡ADVERTENCIA! ¿Estás seguro de que quieres ELIMINAR este equipo? Esta acción es PERMANENTE y solo se recomienda en equipos sin historial de mantenimiento.")) {
+    if (window.confirm("¡ADVERTENCIA! ¿Estás seguro de que quieres ELIMINAR este equipo? Esta acción es PERMANENTE.")) {
       try {
         await api.delete(`/devices/delete/${d_id}`); 
         setMessage("Equipo eliminado permanentemente.");
-        // Después de eliminar, recargar con los parámetros actuales
-        fetchDevices(activeFilter, page); 
+        fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); 
         refreshAlerts(); 
       } catch (err) {
         setError(err.response?.data?.error || err.response?.data?.message || "Error al eliminar el equipo.");
@@ -136,28 +113,20 @@ const Inventory = () => {
     }
   };
 
-  const handleEdit = (id) => {
-    navigate(`/inventory/edit/${id}`);
-  };
-
+  const handleEdit = (id) => navigate(`/inventory/edit/${id}`);
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
+  const handleChangePage = (event, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
   
-  // NUEVO HANDLER PARA LIMPIAR EL FILTRO ACTIVO
   const handleClearFilter = () => {
     setSearch("");
     setPage(0);
     setActiveFilter("");
-    setSearchParams({}); // Limpiar el parámetro 'filter' de la URL
+    setSearchParams({}); 
   }
 
   const getFilterLabel = () => {
@@ -168,12 +137,12 @@ const Inventory = () => {
     return '';
   }
 
+  const headerStyle = { fontWeight: 'bold', color: '#333' };
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
-          Inventario de Equipos
-        </Typography>
+        <Typography variant="h4">Inventario de Equipos</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             label="Buscar equipo..."
@@ -182,34 +151,13 @@ const Inventory = () => {
             value={search}
             onChange={handleSearchChange}
           />
-          
-          {/* MOSTRAR BOTÓN PARA LIMPIAR FILTRO ACTIVO */}
           {activeFilter && (
-            <Button 
-                variant="outlined"
-                color="error"
-                onClick={handleClearFilter}
-                sx={{ ml: 1 }}
-            >
+            <Button variant="outlined" color="error" onClick={handleClearFilter} sx={{ ml: 1 }}>
                 {getFilterLabel()}
             </Button>
           )}
-
-          <ImportButton 
-            endpoint="/devices/import" 
-            onSuccess={() => { 
-                fetchDevices(activeFilter, page); 
-                refreshAlerts(); 
-            }} 
-            label="Importar"
-          />
-
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleOpenModal}
-            className="primary-action-button"
-          >
+          <ImportButton endpoint="/devices/import" onSuccess={() => { fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); refreshAlerts(); }} label="Importar" />
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal} className="primary-action-button">
             Crear Equipo
           </Button>
         </Box>
@@ -222,55 +170,54 @@ const Inventory = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell sortDirection={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : false}>
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}> 
+                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'nombre_equipo' ? sortConfig.direction : false}>
                   <TableSortLabel
-                    active={sortConfig?.key === 'nombre_equipo'}
-                    direction={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('nombre_equipo')}
+                    active={sortConfig.key === 'nombre_equipo'}
+                    direction={sortConfig.key === 'nombre_equipo' ? sortConfig.direction : 'asc'}
+                    onClick={() => handleRequestSort('nombre_equipo')}
                   >
                     Nombre Equipo
                   </TableSortLabel>
                 </TableCell>
-                
-                <TableCell>Descripción</TableCell>
-
-                <TableCell sortDirection={sortConfig?.key === 'usuario.nombre' ? sortConfig.direction : false}>
+                <TableCell sx={headerStyle}>Descripción</TableCell>
+                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'usuario.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
-                    active={sortConfig?.key === 'usuario.nombre'}
-                    direction={sortConfig?.key === 'usuario.nombre' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('usuario.nombre')}
+                    active={sortConfig.key === 'usuario.nombre'}
+                    direction={sortConfig.key === 'usuario.nombre' ? sortConfig.direction : 'asc'}
+                    onClick={() => handleRequestSort('usuario.nombre')}
                   >
                     Usuario Asignado
                   </TableSortLabel>
                 </TableCell>
-                
-                <TableCell>IP</TableCell>
-                
-                <TableCell>N° Serie</TableCell>
-
-                <TableCell sortDirection={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : false}>
+                <TableCell sx={headerStyle}>IP</TableCell>
+                <TableCell sx={headerStyle}>N° Serie</TableCell>
+                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'tipo.nombre' ? sortConfig.direction : false}>
                   <TableSortLabel
-                    active={sortConfig?.key === 'tipo.nombre'}
-                    direction={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('tipo.nombre')}
+                    active={sortConfig.key === 'tipo.nombre'}
+                    direction={sortConfig.key === 'tipo.nombre' ? sortConfig.direction : 'asc'}
+                    onClick={() => handleRequestSort('tipo.nombre')}
                   >
                     Tipo
                   </TableSortLabel>
                 </TableCell>
-                
-                <TableCell>Acciones</TableCell>
+                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'sistema_operativo.nombre' ? sortConfig.direction : false}>
+                  <TableSortLabel
+                    active={sortConfig.key === 'sistema_operativo.nombre'}
+                    direction={sortConfig.key === 'sistema_operativo.nombre' ? sortConfig.direction : 'asc'}
+                    onClick={() => handleRequestSort('sistema_operativo.nombre')}
+                  >
+                    Sistema Operativo
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={headerStyle}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
-                sortedDevices.map((device) => (
+                devices.map((device) => (
                   <TableRow key={device.id}>
                     <TableCell>{device.nombre_equipo}</TableCell>
                     <TableCell>{device.descripcion || 'N/A'}</TableCell>
@@ -279,22 +226,18 @@ const Inventory = () => {
                     <TableCell>{device.numero_serie}</TableCell>
                     <TableCell>{device.tipo?.nombre || 'N/A'}</TableCell>
                     <TableCell>
-                      <IconButton
-                        color="primary"
-                        onClick={() => handleEdit(device.id)}
-                        title="Editar equipo"
-                        className="action-icon-color"
-                      >
-                        <EditIcon />
-                      </IconButton>
+                        {device.sistema_operativo ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body2">{device.sistema_operativo.nombre}</Typography>
+                            </Box>
+                        ) : (
+                            <Typography variant="caption" color="text.disabled">Sin SO</Typography>
+                        )}
+                    </TableCell>
+                    <TableCell>
+                      <IconButton color="primary" onClick={() => handleEdit(device.id)} className="action-icon-color"><EditIcon /></IconButton>
                       {user?.rol === "ADMIN" && (
-                        <IconButton
-                            color="error"
-                            onClick={() => handleDelete(device.id)}
-                            title="Eliminar permanentemente"
-                        >
-                            <DeleteIcon />
-                        </IconButton>
+                        <IconButton color="error" onClick={() => handleDelete(device.id)}><DeleteIcon /></IconButton>
                       )}
                     </TableCell>
                   </TableRow>
@@ -303,7 +246,6 @@ const Inventory = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
@@ -321,18 +263,13 @@ const Inventory = () => {
         onClose={handleCloseModal}
         closeAfterTransition
         BackdropComponent={Backdrop}
-        BackdropProps={{
-          timeout: 500,
-        }}
+        BackdropProps={{ timeout: 500 }}
       >
         <Fade in={openModal}>
           <Box sx={modalStyle}>
             <CreateDeviceForm
               onClose={handleCloseModal}
-              onDeviceCreated={() => {
-                fetchDevices(activeFilter, page); 
-                refreshAlerts(); 
-              }}
+              onDeviceCreated={() => { fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); refreshAlerts(); }}
               setMessage={setMessage}
               setError={setError}
             />

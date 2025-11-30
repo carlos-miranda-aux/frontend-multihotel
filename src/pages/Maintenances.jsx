@@ -1,53 +1,24 @@
 // src/pages/Maintenances.jsx
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
-  Box,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Button,
-  Typography,
-  Alert,
-  Modal,
-  Fade,
-  Backdrop,
-  Chip,
-  Tabs,
-  Tab,
-  TablePagination,
-  CircularProgress,
-  TableSortLabel,
-  TextField 
+  Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Button,
+  Typography, Alert, Modal, Fade, Backdrop, Chip, Tabs, Tab, TablePagination, CircularProgress,
+  TableSortLabel, TextField 
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import DownloadIcon from '@mui/icons-material/Download';
-// 👇 Rutas corregidas con extensiones explícitas
 import api from "../api/axios.js";
 import { useNavigate } from "react-router-dom";
 import CreateMaintenanceForm from "../components/CreateMaintenanceForm.jsx";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { AlertContext } from "../context/AlertContext.jsx";
-import { useSortableData } from "../hooks/useSortableData.js";
-// ❌ ELIMINAR: import "../pages/styles/Maintenances.css"; 
-import "../pages/styles/ConfigButtons.css"; // 👈 USAR CLASES DE BOTONES/ICONOS
+import "../pages/styles/ConfigButtons.css"; 
 
 const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 950, // 👈 VALOR CAMBIADO PARA HACER EL MODAL MÁS ANCHO
-  bgcolor: 'background.paper',
-  boxShadow: 24,
-  p: 4,
-  borderRadius: 2
+  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+  width: 950, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
 const Maintenances = () => {
@@ -63,19 +34,20 @@ const Maintenances = () => {
   const [totalMaintenances, setTotalMaintenances] = useState(0);
   const [search, setSearch] = useState(""); 
 
+  // 👇 Estado de Ordenamiento
+  const [sortConfig, setSortConfig] = useState({ key: 'fecha_programada', direction: 'desc' });
+
   const { user } = useContext(AuthContext);
   const { refreshAlerts } = useContext(AlertContext);
   const navigate = useNavigate();
-
-  // Ordenamiento inicial por 'fecha_programada' para consistencia con la vista 'pendiente'
-  const { sortedItems: sortedMaintenances, requestSort, sortConfig } = useSortableData(maintenances, { key: 'fecha_programada', direction: 'descending' });
 
   const fetchMaintenances = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      // 👈 Enviar search
-      const res = await api.get(`/maintenances/get?page=${page + 1}&limit=${rowsPerPage}&status=${activeTab}&search=${search}`);
+      // 👇 Enviar parámetros de ordenamiento al backend
+      const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
+      const res = await api.get(`/maintenances/get?page=${page + 1}&limit=${rowsPerPage}&status=${activeTab}&search=${search}${sortParam}`);
       setMaintenances(res.data.data);
       setTotalMaintenances(res.data.totalCount);
     } catch (err) {
@@ -84,7 +56,7 @@ const Maintenances = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, activeTab, search]); 
+  }, [page, rowsPerPage, activeTab, search, sortConfig]); 
 
   useEffect(() => {
     fetchMaintenances();
@@ -95,34 +67,32 @@ const Maintenances = () => {
     setPage(0);
   };
 
+  // 👇 Manejador de clic en encabezados
+  const handleRequestSort = (key) => {
+    const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
+    setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
+  };
+
   const handleDeleteMaintenance = async (m_id) => {
     setMessage("");
     setError("");
-    // Reemplaza window.confirm con un modal de confirmación si estás en un entorno iframe o si prefieres un diseño más limpio
-    if (window.confirm("¿Estás seguro de que quieres eliminar este registro de mantenimiento? Esta acción solo es posible para mantenimientos PENDIENTES.")) {
+    if (window.confirm("¿Estás seguro de que quieres eliminar este registro?")) {
       try {
         await api.delete(`/maintenances/delete/${m_id}`);
-        setMessage("Registro de mantenimiento eliminado.");
+        setMessage("Registro eliminado.");
         fetchMaintenances(); 
         refreshAlerts(); 
       } catch (err) {
-        setError(err.response?.data?.message || err.response?.data?.error || "Error al eliminar el registro.");
+        setError(err.response?.data?.message || "Error al eliminar.");
       }
     }
   };
 
-  const handleEditMaintenance = (m_id) => {
-    navigate(`/maintenances/edit/${m_id}`);
-  };
+  const handleEditMaintenance = (m_id) => navigate(`/maintenances/edit/${m_id}`);
 
   const handleExport = async (id) => {
-    setMessage("");
-    setError("");
     try {
-      const response = await api.get(
-        `/maintenances/export/individual/${id}`,
-        { responseType: 'blob' }
-      );
+      const response = await api.get(`/maintenances/export/individual/${id}`, { responseType: 'blob' });
       const href = window.URL.createObjectURL(response.data);
       const link = document.createElement('a');
       link.href = href;
@@ -132,32 +102,16 @@ const Maintenances = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(href);
     } catch (err) {
-      console.error("Error al descargar el archivo:", err);
       setError("Error al descargar el reporte.");
     }
   };
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
-  
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-    setPage(0);
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
-  };
-  
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const handleTabChange = (event, newValue) => { setActiveTab(newValue); setPage(0); };
+  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : "N/A";
+  const handleChangePage = (event, newPage) => setPage(newPage);
+  const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
   
   const getTypeChipColor = (type) => {
     if (type === 'Correctivo') return 'error';
@@ -165,27 +119,15 @@ const Maintenances = () => {
     return 'default';
   }
 
+  const headerStyle = { fontWeight: 'bold', color: '#333' };
+
   return (
     <Box sx={{ p: 3, width: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
-          Gestión de Mantenimientos
-        </Typography>
+        <Typography variant="h4">Gestión de Mantenimientos</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          {/* 👈 Barra de búsqueda */}
-          <TextField
-            label="Buscar..."
-            variant="outlined"
-            size="small"
-            value={search}
-            onChange={handleSearchChange}
-          />
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleOpenModal}
-            className="primary-action-button" // 👈 Clase unificada
-          >
+          <TextField label="Buscar..." variant="outlined" size="small" value={search} onChange={handleSearchChange} />
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal} className="primary-action-button">
             Nuevo Mantenimiento
           </Button>
         </Box>
@@ -205,165 +147,93 @@ const Maintenances = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
-                {/* 1. Nombre del Equipo (Sortable - using device.nombre_equipo) */}
-                <TableCell sortDirection={sortConfig?.key === 'device.nombre_equipo' ? sortConfig.direction : false}>
-                  <TableSortLabel
-                    active={sortConfig?.key === 'device.nombre_equipo'}
-                    direction={sortConfig?.key === 'device.nombre_equipo' ? sortConfig.direction : 'asc'}
-                    onClick={() => requestSort('device.nombre_equipo')}
-                  >
+              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                {/* Columnas Ordenables */}
+                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'device.nombre_equipo' ? sortConfig.direction : false}>
+                  <TableSortLabel active={sortConfig.key === 'device.nombre_equipo'} direction={sortConfig.key === 'device.nombre_equipo' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('device.nombre_equipo')}>
                     Equipo
                   </TableSortLabel>
                 </TableCell>
                 
-                {/* 2. Tipo de Mantenimiento */}
-                <TableCell>Tipo</TableCell> {/* 👈 NUEVA COLUMNA */}
+                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'tipo_mantenimiento' ? sortConfig.direction : false}>
+                  <TableSortLabel active={sortConfig.key === 'tipo_mantenimiento'} direction={sortConfig.key === 'tipo_mantenimiento' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('tipo_mantenimiento')}>
+                    Tipo
+                  </TableSortLabel>
+                </TableCell>
 
-                {/* 3. Descripción */}
-                <TableCell>Descripción</TableCell>
-
-                {/* 4. Serie */}
-                <TableCell>Serie</TableCell> 
+                <TableCell sx={headerStyle}>Descripción</TableCell>
+                <TableCell sx={headerStyle}>Serie</TableCell> 
                 
-                {/* 5. Usuario Asignado (Sortable) */}
-                <TableCell sortDirection={sortConfig?.key === 'device.usuario.nombre' ? sortConfig.direction : false}>
-                    <TableSortLabel
-                        active={sortConfig?.key === 'device.usuario.nombre'}
-                        direction={sortConfig?.key === 'device.usuario.nombre' ? sortConfig.direction : 'asc'}
-                        onClick={() => requestSort('device.usuario.nombre')}
-                    >
+                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'device.usuario.nombre' ? sortConfig.direction : false}>
+                    <TableSortLabel active={sortConfig.key === 'device.usuario.nombre'} direction={sortConfig.key === 'device.usuario.nombre' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('device.usuario.nombre')}>
                         Usuario
                     </TableSortLabel>
                 </TableCell>
 
-                {/* 6. Estado */}
-                <TableCell>Estado</TableCell>
+                <TableCell sx={headerStyle}>Estado</TableCell>
                 
-                {/* 7. Fecha Programada / Realización (Sortable) */}
-                <TableCell sortDirection={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : false}>
+                <TableCell sx={headerStyle} sortDirection={sortConfig.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : false}>
                   <TableSortLabel
-                    active={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
-                    direction={sortConfig?.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : 'desc'}
-                    onClick={() => requestSort(activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
+                    active={sortConfig.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
+                    direction={sortConfig.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : 'desc'}
+                    onClick={() => handleRequestSort(activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
                   >
                     {activeTab === 'pendiente' ? 'Fecha Programada' : 'Fecha Realización'}
                   </TableSortLabel>
                 </TableCell>
-                
-                {/* Acciones */}
-                <TableCell>Acciones</TableCell>
+                <TableCell sx={headerStyle}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center"> {/* 7 datos + 1 acción = 8 */}
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : sortedMaintenances.length > 0 ? (
-                sortedMaintenances.map((m) => (
+                <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
+              ) : maintenances.length > 0 ? (
+                maintenances.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell>
-                      {/* Mostrar Nombre del equipo y etiqueta como subtítulo */}
-                      <Typography variant="body2" fontWeight="bold">
-                        {m.device?.nombre_equipo || 'N/A'}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        {m.device?.etiqueta ? `(${m.device.etiqueta})` : 'Sin etiqueta'}
-                      </Typography>
+                      <Typography variant="body2" fontWeight="bold">{m.device?.nombre_equipo || 'N/A'}</Typography>
+                      <Typography variant="caption" color="textSecondary">{m.device?.etiqueta ? `(${m.device.etiqueta})` : ''}</Typography>
                     </TableCell>
-                    
-                    {/* 👇 NUEVO VALOR DE TIPO */}
-                    <TableCell>
-                       <Chip label={m.tipo_mantenimiento || 'N/A'} size="small" color={getTypeChipColor(m.tipo_mantenimiento)} />
-                    </TableCell>
-
+                    <TableCell><Chip label={m.tipo_mantenimiento || 'N/A'} size="small" color={getTypeChipColor(m.tipo_mantenimiento)} /></TableCell>
                     <TableCell>{m.descripcion}</TableCell>
                     <TableCell>{m.device?.numero_serie || 'N/A'}</TableCell> 
                     <TableCell>{m.device?.usuario?.nombre || 'N/A'}</TableCell> 
                     <TableCell>
-                      <Chip label={m.estado} size="small"
-                        color={m.estado === 'pendiente' ? 'warning' : m.estado === 'realizado' ? 'success' : 'default'}
-                      />
+                      <Chip label={m.estado} size="small" color={m.estado === 'pendiente' ? 'warning' : m.estado === 'realizado' ? 'success' : 'default'} />
                     </TableCell>
+                    <TableCell>{formatDate(activeTab === 'pendiente' ? m.fecha_programada : m.fecha_realizacion)}</TableCell>
                     <TableCell>
-                      {formatDate(activeTab === 'pendiente' ? m.fecha_programada : m.fecha_realizacion)}
-                    </TableCell>
-                    <TableCell>
-                      {/* Mostrar botón de Exportar SOLO en Historial */}
                       {activeTab === 'historial' && (
-                        <IconButton edge="end" color="secondary" onClick={() => handleExport(m.id)} title="Exportar formato">
-                          <DownloadIcon fontSize="small" />
-                        </IconButton>
+                        <IconButton edge="end" color="secondary" onClick={() => handleExport(m.id)}><DownloadIcon fontSize="small" /></IconButton>
                       )}
-                      
-                      {/* Botón de Editar siempre visible (dependiendo del rol) */}
-                      <IconButton 
-                        edge="end" 
-                        color="primary" 
-                        onClick={() => handleEditMaintenance(m.id)} 
-                        title="Editar"
-                        className="action-icon-color" // 👈 Clase unificada
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      
-                      {/* Ocultar el botón si el estado no es 'pendiente' */}
+                      <IconButton edge="end" color="primary" onClick={() => handleEditMaintenance(m.id)} className="action-icon-color"><EditIcon fontSize="small" /></IconButton>
                       {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && m.estado === 'pendiente' && (
-                        <IconButton edge="end" color="error" onClick={() => handleDeleteMaintenance(m.id)} title="Eliminar">
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                        <IconButton edge="end" color="error" onClick={() => handleDeleteMaintenance(m.id)}><DeleteIcon fontSize="small" /></IconButton>
                       )}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell colSpan={8} align="center">
-                    No hay mantenimientos en esta categoría.
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={8} align="center">No hay mantenimientos.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </TableContainer>
-
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={totalMaintenances}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25]} component="div" count={totalMaintenances}
+          rowsPerPage={rowsPerPage} page={page}
+          onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
           labelRowsPerPage="Filas por página:"
         />
       </Paper>
 
-      <Modal
-        open={openModal}
-        onClose={handleCloseModal}
-        closeAfterTransition
-        BackdropComponent={Backdrop}
-        BackdropProps={{ timeout: 500 }}
-      >
+      <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openModal}>
           <Box sx={modalStyle}>
             <CreateMaintenanceForm
               onClose={handleCloseModal}
-              onMaintenanceCreated={() => {
-                setMessage("");
-                setError("");
-                setMessage("Mantenimiento programado exitosamente.");
-                setActiveTab('pendiente'); 
-                setPage(0); 
-                fetchMaintenances();
-                refreshAlerts();
-              }}
-              setMessage={setMessage}
-              setError={setError}
+              onMaintenanceCreated={() => { setMessage("Mantenimiento creado."); setActiveTab('pendiente'); setPage(0); fetchMaintenances(); refreshAlerts(); }}
+              setMessage={setMessage} setError={setError}
             />
           </Box>
         </Fade>
@@ -373,7 +243,3 @@ const Maintenances = () => {
 };
 
 export default Maintenances;
-
-
-
-//

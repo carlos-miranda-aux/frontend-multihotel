@@ -31,6 +31,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     etiqueta: "",
     nombre_equipo: "",
     descripcion: "",
+    comentarios: "", // 👈 NUEVO ESTADO
     ip_equipo: "",
     usuarioId: "",
     perfiles_usuario: [], 
@@ -227,8 +228,21 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <TextField label="Nombre del equipo" name="nombre_equipo" value={formData.nombre_equipo} onChange={handleChange} fullWidth required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo} />
-                <TextField label="Descripción" name="descripcion" value={formData.descripcion} onChange={handleChange} fullWidth />
+                <TextField label="Rol / Puesto (Descripción)" name="descripcion" value={formData.descripcion} onChange={handleChange} fullWidth placeholder="Ej. Recepción Lobby" />
             </Stack>
+            
+            {/* 👈 NUEVO CAMPO: COMENTARIOS */}
+            <TextField 
+                label="Comentarios / Estado físico" 
+                name="comentarios" 
+                value={formData.comentarios} 
+                onChange={handleChange} 
+                fullWidth 
+                multiline
+                rows={2}
+                placeholder="Ej. Pantalla con rayón, equipo prestado, etc."
+            />
+
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <TextField label="IP del equipo" name="ip_equipo" value={formData.ip_equipo} onChange={handleChange} fullWidth />
                 <TextField label="Marca" name="marca" value={formData.marca} onChange={handleChange} fullWidth required error={!!errors.marca} helperText={errors.marca} />

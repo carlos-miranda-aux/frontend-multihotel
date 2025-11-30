@@ -49,7 +49,8 @@ const EditDevice = () => {
   // --- Estados ---
   const [formData, setFormData] = useState({
     nombre_equipo: "", modelo: "", numero_serie: "", ip_equipo: "", etiqueta: "",
-    descripcion: "", usuarioId: "", perfiles_usuario: [], tipoId: "", estadoId: "",
+    descripcion: "", comentarios: "", // 👈 NUEVO ESTADO
+    usuarioId: "", perfiles_usuario: [], tipoId: "", estadoId: "",
     sistemaOperativoId: "", marca: "", licencia_so: "", office_version: "",
     office_tipo_licencia: "", office_serial: "", office_key: "", es_panda: false,
     garantia_numero_producto: "", garantia_numero_reporte: "", garantia_notes: "",
@@ -121,6 +122,7 @@ const EditDevice = () => {
           tipoId: deviceData.tipoId || "",
           estadoId: deviceData.estadoId || "",
           sistemaOperativoId: deviceData.sistemaOperativoId || "",
+          comentarios: deviceData.comentarios || "", // 👈 Cargar comentarios
         });
 
         // Aseguramos que guardamos arrays (por si el backend fallara en limit=0)
@@ -281,20 +283,20 @@ const EditDevice = () => {
                     {/* Fila 1: Nombre y Etiqueta */}
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
-                            <TextField label="Nombre del Equipo *" name="nombre_equipo" fullWidth value={formData.nombre_equipo} onChange={handleChange} required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo} />
+                            <TextField label="Nombre del Equipo" name="nombre_equipo" fullWidth value={formData.nombre_equipo} onChange={handleChange} required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField label="Etiqueta / ID" name="etiqueta" fullWidth value={formData.etiqueta} onChange={handleChange} />
+                            <TextField label="Etiqueta" name="etiqueta" fullWidth value={formData.etiqueta} onChange={handleChange} />
                         </Grid>
                     </Grid>
 
                     {/* Fila 2: Marca, Modelo, Tipo */}
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={4}>
-                            <TextField label="Marca *" name="marca" fullWidth value={formData.marca} onChange={handleChange} required error={!!errors.marca} />
+                            <TextField label="Marca" name="marca" fullWidth value={formData.marca} onChange={handleChange} required error={!!errors.marca} />
                         </Grid>
                         <Grid item xs={12} sm={4}>
-                            <TextField label="Modelo *" name="modelo" fullWidth value={formData.modelo} onChange={handleChange} required error={!!errors.modelo} />
+                            <TextField label="Modelo" name="modelo" fullWidth value={formData.modelo} onChange={handleChange} required error={!!errors.modelo} />
                         </Grid>
                         <Grid item xs={12} sm={4}>
                             <TextField
@@ -318,12 +320,25 @@ const EditDevice = () => {
                     {/* Fila 3: Serie y Descripción */}
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
-                            <TextField label="Número de Serie *" name="numero_serie" fullWidth value={formData.numero_serie} onChange={handleChange} required error={!!errors.numero_serie} />
+                            <TextField label="Número de Serie" name="numero_serie" fullWidth value={formData.numero_serie} onChange={handleChange} required error={!!errors.numero_serie} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                             <TextField label="Notas Breves" name="descripcion" fullWidth value={formData.descripcion} onChange={handleChange} placeholder="Ej. Pantalla con rayón" />
+                             <TextField label="Descripción" name="descripcion" fullWidth value={formData.descripcion} onChange={handleChange} placeholder="Descripción" />
                         </Grid>
                     </Grid>
+                    
+                    {/* 👈 NUEVO CAMPO: COMENTARIOS */}
+                    <TextField 
+                        label="Comentarios" 
+                        name="comentarios" 
+                        fullWidth 
+                        multiline 
+                        rows={2} 
+                        value={formData.comentarios} 
+                        onChange={handleChange} 
+                        placeholder="Añade un comentario"
+                    />
+
                 </Stack>
               </SectionCard>
 
@@ -354,7 +369,7 @@ const EditDevice = () => {
                         <TextField label="Tipo Licencia" name="office_tipo_licencia" size="small" fullWidth value={formData.office_tipo_licencia} onChange={handleChange} />
                       </Grid>
                       <Grid item xs={12} sm={4}>
-                        <TextField label="Clave/Serial" name="office_key" size="small" fullWidth value={formData.office_key} onChange={handleChange} />
+                        <TextField label="Serial" name="office_key" size="small" fullWidth value={formData.office_key} onChange={handleChange} />
                       </Grid>
                     </Grid>
                   </Box>
@@ -503,12 +518,12 @@ const EditDevice = () => {
               </SectionCard>
 
               {/* CARD 5: ESTADO */}
-              <SectionCard title="Estado del Activo" icon={<SettingsIcon />}>
+              <SectionCard title="Estado del Equipo" icon={<SettingsIcon />}>
                  <TextField
                     select
                     label="Estado Actual *"
                     name="estadoId"
-                    fullWidth
+                    fullWidth 
                     value={formData.estadoId || ""}
                     onChange={handleChange}
                     disabled={isPermanentlyBaja}
@@ -520,7 +535,7 @@ const EditDevice = () => {
                  <Fade in={formData.estadoId === bajaStatusId} mountOnEnter unmountOnExit>
                     <Box sx={{ mt: 3, p: 2, bgcolor: '#fff4e5', borderRadius: 2, border: '1px solid #ffcc80' }}>
                         <Typography variant="subtitle2" color="warning.dark" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                            <DeleteForeverIcon fontSize="small" sx={{ mr: 1 }}/> Zona de Baja
+                            <DeleteForeverIcon fontSize="small" sx={{ mr: 1 }}/> Información de Baja
                         </Typography>
                         <Stack spacing={2}>
                             <TextField label="Motivo de Baja" name="motivo_baja" size="small" fullWidth value={formData.motivo_baja} onChange={handleChange} />

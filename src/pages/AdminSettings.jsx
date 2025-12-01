@@ -1,13 +1,16 @@
 // src/pages/AdminSettings.jsx
 import React, { useState } from "react";
 import { Box, Typography, Button, Stack, Divider } from "@mui/material";
+
+// Iconos para el menú de selección
 import ListIcon from '@mui/icons-material/List';
 import PeopleIcon from '@mui/icons-material/People';
 import DomainIcon from '@mui/icons-material/Domain'; 
 
-import CrudTable from "../components/CrudTable";
-import UsersSystemTable from "../components/admin/UsersSystemTable";
-import AreasTable from "../components/admin/AreasTable";
+// Subcomponentes refactorizados
+import CrudTable from "../components/CrudTable.jsx";
+import UsersSystemTable from "../components/admin/UserSystemTable.jsx";
+import AreasTable from "../components/admin/AreasTable.jsx";
 
 const AdminSettings = () => {
   const [activeTable, setActiveTable] = useState(null);
@@ -34,11 +37,11 @@ const AdminSettings = () => {
         );
     }
 
-    // Tablas Específicas
+    // Renderizamos el componente específico según la selección
     if (activeTable === "Gestión de Usuarios") return <UsersSystemTable />;
     if (activeTable === "Áreas") return <AreasTable />;
 
-    // Tablas Genéricas (CRUD simple)
+    // Para tablas sencillas, usamos el genérico
     const tableData = tables.find(t => t.name === activeTable);
     return <CrudTable title={tableData.name} apiUrl={tableData.url} />;
   };
@@ -52,6 +55,7 @@ const AdminSettings = () => {
         Tablas del Sistema:
       </Typography>
 
+      {/* Menú de Selección */}
       <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
         {tables.map((table) => (
           <Button
@@ -69,6 +73,7 @@ const AdminSettings = () => {
 
       <Divider sx={{ my: 4 }} />
 
+      {/* Área de Contenido */}
       <Box sx={{ minHeight: 400 }}>
         {renderActiveTable()}
       </Box>

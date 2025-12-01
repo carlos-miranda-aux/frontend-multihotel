@@ -1,14 +1,15 @@
 // src/components/CreateCrownUserForm.jsx
 import React, { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form"; // 👈 Hook Form
+import { useForm, Controller } from "react-hook-form"; 
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Button,
-  FormControlLabel, Switch, ListSubheader
+  FormControlLabel, Switch, ListSubheader, FormHelperText
 } from "@mui/material";
 import api from "../api/axios";
 
 const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
-  const { control, handleSubmit } = useForm({
+  // Desestructuramos 'formState: { errors }' para poder pintar los campos de rojo
+  const { control, handleSubmit, formState: { errors } } = useForm({
     defaultValues: { nombre: "", correo: "", areaId: "", usuario_login: "", isManager: false }
   });
   
@@ -30,9 +31,12 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
     if (setError) setError("");
     if (setMessage) setMessage("");
     
+    // Corregido: Mapeo manual para evitar enviar 'isManager'
     const payload = {
-      ...data,
-      areaId: data.areaId || null,
+      nombre: data.nombre,
+      correo: data.correo,
+      usuario_login: data.usuario_login,
+      areaId: data.areaId ? Number(data.areaId) : null,
       es_jefe_de_area: data.isManager
     };
 
@@ -69,18 +73,36 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
 
       <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <Controller
-            name="nombre" control={control} rules={{ required: true }}
-            render={({ field }) => <TextField {...field} label="Nombre" fullWidth required />}
+            name="nombre" control={control} rules={{ required: "El nombre es obligatorio" }}
+            render={({ field }) => (
+                <TextField 
+                    {...field} 
+                    label="Nombre" 
+                    fullWidth 
+                    required 
+                    error={!!errors.nombre} // 👈 Visual error
+                    helperText={errors.nombre?.message} 
+                />
+            )}
         />
         <Controller
             name="correo" control={control}
-            render={({ field }) => <TextField {...field} label="Correo" type="email" fullWidth />}
+            render={({ field }) => (
+                <TextField 
+                    {...field} 
+                    label="Correo" 
+                    type="email" 
+                    fullWidth 
+                    error={!!errors.correo}
+                    helperText={errors.correo?.message}
+                />
+            )}
         />
         
-        <FormControl fullWidth required>
+        <FormControl fullWidth required error={!!errors.areaId}>
           <InputLabel>Área</InputLabel>
           <Controller
-            name="areaId" control={control} rules={{ required: true }}
+            name="areaId" control={control} rules={{ required: "El área es obligatoria" }}
             render={({ field }) => (
                 <Select {...field} label="Área">
                     <MenuItem value=""><em>Ninguna</em></MenuItem>
@@ -88,11 +110,12 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
                 </Select>
             )}
           />
+          {errors.areaId && <FormHelperText>{errors.areaId.message}</FormHelperText>}
         </FormControl>
         
         <Controller
             name="usuario_login" control={control}
-            render={({ field }) => <TextField {...field} label="Usuario de Login" fullWidth />}
+            render={({ field }) => <TextField {...field} label="Usuario de Login" fullWidth error={!!errors.usuario_login} helperText={errors.usuario_login?.message} />}
         />
 
         <Controller

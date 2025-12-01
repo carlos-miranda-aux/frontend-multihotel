@@ -1,6 +1,6 @@
 // src/components/CreateDeviceForm.jsx
 import React, { useEffect, useState, useContext } from "react";
-import { useForm, Controller } from "react-hook-form"; // 👈 IMPORTACIÓN CLAVE
+import { useForm, Controller } from "react-hook-form";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
   Button, Divider, Stack, ListSubheader, OutlinedInput, Chip, Checkbox, ListItemText,
@@ -16,19 +16,17 @@ const MenuProps = {
 };
 
 const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) => {
-  // 👇 CONFIGURACIÓN DE REACT HOOK FORM
-  const { control, handleSubmit, watch, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, setError: setFormError, formState: { errors } } = useForm({
     defaultValues: {
       etiqueta: "", nombre_equipo: "", descripcion: "", comentarios: "", ip_equipo: "",
       usuarioId: "", perfiles_usuario: [], tipoId: "", marca: "", modelo: "", numero_serie: "",
       sistemaOperativoId: "", licencia_so: "", office_version: "", office_tipo_licencia: "",
       office_serial: "", office_key: "", es_panda: false, garantia_numero_producto: "",
       garantia_numero_reporte: "", garantia_notes: "", garantia_inicio: "", garantia_fin: "",
-      areaId: "", fecha_proxima_revision: "", isWarrantyApplied: false // Campo auxiliar para el switch
+      areaId: "", fecha_proxima_revision: "", isWarrantyApplied: false 
     }
   });
 
-  // Observamos el switch de garantía para mostrar/ocultar campos
   const isWarrantyApplied = watch("isWarrantyApplied");
 
   const [users, setUsers] = useState([]);
@@ -37,7 +35,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
   const [areas, setAreas] = useState([]); 
   const { refreshAlerts } = useContext(AlertContext);
 
-  // Carga de catálogos (se mantiene igual)
   useEffect(() => {
     const fetchFormData = async () => {
       try {
@@ -76,7 +73,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     return options;
   };
 
-  // 👇 FUNCIÓN DE ENVÍO SIMPLIFICADA (React Hook Form ya validó antes de llegar aquí)
   const onSubmit = async (data) => {
     if (setError) setError("");
     if (setMessage) setMessage("");
@@ -84,10 +80,10 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     const payload = { ...data };
     
     // Limpieza de datos
-    if (payload.areaId) payload.areaId = Number(payload.areaId);
-    if (payload.usuarioId) payload.usuarioId = Number(payload.usuarioId);
+    if (payload.areaId) payload.areaId = Number(payload.areaId); else payload.areaId = null;
+    if (payload.usuarioId) payload.usuarioId = Number(payload.usuarioId); else payload.usuarioId = null;
     if (payload.tipoId) payload.tipoId = Number(payload.tipoId);
-    if (payload.sistemaOperativoId) payload.sistemaOperativoId = Number(payload.sistemaOperativoId);
+    if (payload.sistemaOperativoId) payload.sistemaOperativoId = Number(payload.sistemaOperativoId); else payload.sistemaOperativoId = null;
     
     if (Array.isArray(payload.perfiles_usuario)) {
         payload.perfiles_usuario = payload.perfiles_usuario.length > 0 ? payload.perfiles_usuario.join(", ") : null;
@@ -97,9 +93,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         payload.garantia_numero_reporte = null;
         payload.garantia_notes = null;
     }
-    delete payload.isWarrantyApplied; // No enviar este campo auxiliar al backend
+    
+    delete payload.isWarrantyApplied; 
 
-    // Convertir fechas vacías a null
     ['garantia_inicio', 'garantia_fin', 'fecha_proxima_revision'].forEach(key => {
         if (!payload[key]) payload[key] = null;
         else payload[key] = new Date(payload[key]).toISOString();
@@ -112,7 +108,23 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       if (onDeviceCreated) onDeviceCreated();
       onClose();
     } catch (err) {
-      if (setError) setError(err.response?.data?.error || "Error al crear el equipo.");
+      console.log("❌ DETALLES DEL ERROR:", err.response?.data); // MIRA LA CONSOLA AQUÍ
+      
+      const serverData = err.response?.data;
+
+      if (serverData?.details && Array.isArray(serverData.details)) {
+          // Mostrar lista de errores
+          const errorList = serverData.details.map(d => `• ${d.message}`).join("\n");
+          if (setError) setError(`Corrige los siguientes errores:\n${errorList}`);
+
+          // Marcar campos en rojo
+          serverData.details.forEach(({ field, message }) => {
+              setFormError(field, { type: 'server', message });
+          });
+      } else {
+          // Error genérico
+          if (setError) setError(serverData?.error || "Error al crear el equipo.");
+      }
     }
   };
 
@@ -130,13 +142,27 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Controller
                     name="etiqueta" control={control}
-                    render={({ field }) => <TextField {...field} label="Etiqueta" fullWidth />}
+                    render={({ field }) => (
+                        <TextField 
+                            {...field} 
+                            label="Etiqueta" 
+                            fullWidth 
+                            error={!!errors.etiqueta} 
+                            helperText={errors.etiqueta?.message}
+                        />
+                    )}
                 />
                 <Controller
                     name="numero_serie" control={control}
                     rules={{ required: "El número de serie es obligatorio" }}
                     render={({ field }) => (
-                        <TextField {...field} label="Número de Serie" fullWidth required error={!!errors.numero_serie} helperText={errors.numero_serie?.message} />
+                        <TextField 
+                            {...field} 
+                            label="Número de Serie" 
+                            fullWidth required 
+                            error={!!errors.numero_serie} 
+                            helperText={errors.numero_serie?.message} 
+                        />
                     )}
                 />
             </Stack>
@@ -145,30 +171,66 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                     name="nombre_equipo" control={control}
                     rules={{ required: "El nombre es obligatorio" }}
                     render={({ field }) => (
-                        <TextField {...field} label="Nombre del equipo" fullWidth required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo?.message} />
+                        <TextField 
+                            {...field} 
+                            label="Nombre del equipo" 
+                            fullWidth required 
+                            error={!!errors.nombre_equipo} 
+                            helperText={errors.nombre_equipo?.message} 
+                        />
                     )}
                 />
                 <Controller
                     name="descripcion" control={control}
-                    render={({ field }) => <TextField {...field} label="Rol / Puesto (Descripción)" fullWidth />}
+                    render={({ field }) => (
+                        <TextField 
+                            {...field} 
+                            label="Rol / Puesto (Descripción)" 
+                            fullWidth 
+                            error={!!errors.descripcion} 
+                            helperText={errors.descripcion?.message} 
+                        />
+                    )}
                 />
             </Stack>
             
             <Controller
                 name="comentarios" control={control}
-                render={({ field }) => <TextField {...field} label="Comentarios / Estado físico" fullWidth multiline rows={2} />}
+                render={({ field }) => (
+                    <TextField 
+                        {...field} 
+                        label="Comentarios / Estado físico" 
+                        fullWidth multiline rows={2} 
+                        error={!!errors.comentarios} 
+                        helperText={errors.comentarios?.message} 
+                    />
+                )}
             />
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Controller
                     name="ip_equipo" control={control}
-                    render={({ field }) => <TextField {...field} label="IP del equipo" fullWidth />}
+                    render={({ field }) => (
+                        <TextField 
+                            {...field} 
+                            label="Dirección IP" 
+                            fullWidth 
+                            error={!!errors.ip_equipo} 
+                            helperText={errors.ip_equipo?.message || 'Ej: 10.20.80.2 o "DHCP"'} 
+                        />
+                    )}
                 />
                 <Controller
                     name="marca" control={control}
                     rules={{ required: "La marca es obligatoria" }}
                     render={({ field }) => (
-                        <TextField {...field} label="Marca" fullWidth required error={!!errors.marca} helperText={errors.marca?.message} />
+                        <TextField 
+                            {...field} 
+                            label="Marca" 
+                            fullWidth required 
+                            error={!!errors.marca} 
+                            helperText={errors.marca?.message} 
+                        />
                     )}
                 />
             </Stack>
@@ -178,7 +240,13 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                         name="modelo" control={control}
                         rules={{ required: "El modelo es obligatorio" }}
                         render={({ field }) => (
-                            <TextField {...field} label="Modelo" fullWidth required error={!!errors.modelo} helperText={errors.modelo?.message} />
+                            <TextField 
+                                {...field} 
+                                label="Modelo" 
+                                fullWidth required 
+                                error={!!errors.modelo} 
+                                helperText={errors.modelo?.message} 
+                            />
                         )}
                     />
                  </Box>
@@ -191,7 +259,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         <Stack spacing={2}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Box sx={{ width: '100%' }}>
-                    <FormControl fullWidth>
+                    <FormControl fullWidth error={!!errors.areaId}>
                         <InputLabel>Área</InputLabel>
                         <Controller
                             name="areaId" control={control}
@@ -202,10 +270,11 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                                 </Select>
                             )}
                         />
+                        {errors.areaId && <FormHelperText>{errors.areaId.message}</FormHelperText>}
                     </FormControl>
                 </Box>
                 <Box sx={{ width: '100%' }}>
-                    <FormControl fullWidth>
+                    <FormControl fullWidth error={!!errors.usuarioId}>
                         <InputLabel>Responsable</InputLabel>
                         <Controller
                             name="usuarioId" control={control}
@@ -216,6 +285,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                                 </Select>
                             )}
                         />
+                        {errors.usuarioId && <FormHelperText>{errors.usuarioId.message}</FormHelperText>}
                     </FormControl>
                 </Box>
             </Stack>
@@ -274,7 +344,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         <Stack spacing={2}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Box sx={{ width: '100%' }}>
-                    <FormControl fullWidth>
+                    <FormControl fullWidth error={!!errors.sistemaOperativoId}>
                         <InputLabel>Sistema Operativo</InputLabel>
                         <Controller
                             name="sistemaOperativoId" control={control}
@@ -285,17 +355,33 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                                 </Select>
                             )}
                         />
+                        {errors.sistemaOperativoId && <FormHelperText>{errors.sistemaOperativoId.message}</FormHelperText>}
                     </FormControl>
                 </Box>
-                <Controller name="licencia_so" control={control} render={({ field }) => <TextField {...field} label="Licencia de SO" fullWidth />} />
+                <Controller 
+                    name="licencia_so" control={control} 
+                    render={({ field }) => <TextField {...field} label="Licencia de SO" fullWidth error={!!errors.licencia_so} helperText={errors.licencia_so?.message} />} 
+                />
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Controller name="office_version" control={control} render={({ field }) => <TextField {...field} label="Versión de Office" fullWidth />} />
-                <Controller name="office_tipo_licencia" control={control} render={({ field }) => <TextField {...field} label="Tipo de Licencia de Office" fullWidth />} />
+                <Controller 
+                    name="office_version" control={control} 
+                    render={({ field }) => <TextField {...field} label="Versión de Office" fullWidth error={!!errors.office_version} helperText={errors.office_version?.message} />} 
+                />
+                <Controller 
+                    name="office_tipo_licencia" control={control} 
+                    render={({ field }) => <TextField {...field} label="Tipo de Licencia de Office" fullWidth error={!!errors.office_tipo_licencia} helperText={errors.office_tipo_licencia?.message} />} 
+                />
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Controller name="office_serial" control={control} render={({ field }) => <TextField {...field} label="Serial de Office" fullWidth />} />
-                <Controller name="office_key" control={control} render={({ field }) => <TextField {...field} label="Clave de Office" fullWidth />} />
+                <Controller 
+                    name="office_serial" control={control} 
+                    render={({ field }) => <TextField {...field} label="Serial de Office" fullWidth error={!!errors.office_serial} helperText={errors.office_serial?.message} />} 
+                />
+                <Controller 
+                    name="office_key" control={control} 
+                    render={({ field }) => <TextField {...field} label="Clave de Office" fullWidth error={!!errors.office_key} helperText={errors.office_key?.message} />} 
+                />
             </Stack>
             <Controller
                 name="es_panda" control={control}
@@ -315,9 +401,18 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         <Divider sx={{ mb: 2 }} />
         <Stack spacing={2}>
              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Controller name="garantia_numero_producto" control={control} render={({ field }) => <TextField {...field} label="Número de producto" fullWidth />} />
-                <Controller name="garantia_inicio" control={control} render={({ field }) => <TextField {...field} label="Inicio de Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} />
-                <Controller name="garantia_fin" control={control} render={({ field }) => <TextField {...field} label="Fin de Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} />
+                <Controller 
+                    name="garantia_numero_producto" control={control} 
+                    render={({ field }) => <TextField {...field} label="Número de producto" fullWidth error={!!errors.garantia_numero_producto} helperText={errors.garantia_numero_producto?.message} />} 
+                />
+                <Controller 
+                    name="garantia_inicio" control={control} 
+                    render={({ field }) => <TextField {...field} label="Inicio de Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} error={!!errors.garantia_inicio} helperText={errors.garantia_inicio?.message} />} 
+                />
+                <Controller 
+                    name="garantia_fin" control={control} 
+                    render={({ field }) => <TextField {...field} label="Fin de Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} error={!!errors.garantia_fin} helperText={errors.garantia_fin?.message} />} 
+                />
             </Stack>
             
             <Controller
@@ -334,12 +429,21 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             <Divider />
              <Fade in={isWarrantyApplied} mountOnEnter unmountOnExit>
                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ p: 1 }}>
-                    <Controller name="garantia_numero_reporte" control={control} render={({ field }) => <TextField {...field} label="N° Reporte" fullWidth helperText="Registro." />} />
-                    <Controller name="garantia_notes" control={control} render={({ field }) => <TextField {...field} label="Notas" fullWidth multiline rows={2} helperText="Detalles." />} />
+                    <Controller 
+                        name="garantia_numero_reporte" control={control} 
+                        render={({ field }) => <TextField {...field} label="N° Reporte" fullWidth helperText={errors.garantia_numero_reporte?.message || "Registro."} error={!!errors.garantia_numero_reporte} />} 
+                    />
+                    <Controller 
+                        name="garantia_notes" control={control} 
+                        render={({ field }) => <TextField {...field} label="Notas" fullWidth multiline rows={2} helperText={errors.garantia_notes?.message || "Detalles."} error={!!errors.garantia_notes} />} 
+                    />
                  </Stack>
              </Fade>
              <Box sx={{ width: { xs: '100%', sm: '50%' } }}>
-                <Controller name="fecha_proxima_revision" control={control} render={({ field }) => <TextField {...field} label="Próxima Revisión Sugerida" type="date" fullWidth InputLabelProps={{ shrink: true }} />} />
+                <Controller 
+                    name="fecha_proxima_revision" control={control} 
+                    render={({ field }) => <TextField {...field} label="Próxima Revisión Sugerida" type="date" fullWidth InputLabelProps={{ shrink: true }} error={!!errors.fecha_proxima_revision} helperText={errors.fecha_proxima_revision?.message} />} 
+                />
              </Box>
         </Stack>
 

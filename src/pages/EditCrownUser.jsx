@@ -1,11 +1,12 @@
 // src/pages/EditCrownUser.jsx
 import React, { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form"; // 👈 Hook Form
+import { useForm, Controller } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Typography, TextField, Button, Grid,
   CircularProgress, Alert, MenuItem, ListSubheader,
-  Stack, FormControlLabel, Switch, Divider, Chip, Avatar, FormControl, InputLabel
+  Stack, FormControlLabel, Switch, Divider, Chip, Avatar, FormControl, InputLabel,
+  Select // 👈 AGREGADO: Faltaba importar Select
 } from "@mui/material";
 
 import SaveIcon from '@mui/icons-material/Save';

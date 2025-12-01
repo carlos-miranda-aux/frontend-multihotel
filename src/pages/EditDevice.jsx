@@ -1,10 +1,11 @@
 // src/pages/EditDevice.jsx
 import React, { useState, useEffect, useContext } from "react";
-import { useForm, Controller } from "react-hook-form"; // 👈 IMPORTACIÓN
+import { useForm, Controller } from "react-hook-form";
 import {
   Box, Typography, TextField, Button, Grid, Fade, MenuItem, CircularProgress, 
   Chip, Checkbox, ListItemText, FormControlLabel, Switch, Alert, Avatar, Stack, Divider, 
-  FormControl, InputLabel, FormHelperText, useTheme, alpha
+  FormControl, InputLabel, FormHelperText, useTheme, alpha,
+  ListSubheader, Select // 👈 AGREGADO: Select y ListSubheader
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -125,7 +126,7 @@ const EditDevice = () => {
       }
     };
     fetchDeviceData();
-  }, [id, reset]); // reset es dependencia
+  }, [id, reset]);
 
   const onSubmit = async (data) => {
     setError("");
@@ -177,6 +178,21 @@ const EditDevice = () => {
     }
   };
 
+  const renderAreaOptions = () => {
+    const options = [];
+    let lastDept = null;
+    const sortedAreas = [...areas].sort((a, b) => (a.departamento?.nombre || "").localeCompare(b.departamento?.nombre || ""));
+
+    sortedAreas.forEach(area => {
+      if (area.departamento?.nombre && area.departamento.nombre !== lastDept) {
+        options.push(<ListSubheader key={`header-${area.departamentoId}`}>{area.departamento.nombre}</ListSubheader>);
+        lastDept = area.departamento.nombre;
+      }
+      options.push(<MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>{area.nombre}</MenuItem>);
+    });
+    return options;
+  };
+
   // Helpers visuales
   const getStatusName = () => {
       const status = deviceStatuses.find(s => s.id === watchEstadoId);
@@ -201,7 +217,7 @@ const EditDevice = () => {
             variant="contained" 
             color="primary"
             startIcon={<SaveIcon />} 
-            onClick={handleSubmit(onSubmit)} // 👈 React Hook Form Submit
+            onClick={handleSubmit(onSubmit)} 
           >
             Guardar
           </Button>
@@ -383,7 +399,7 @@ const EditDevice = () => {
                             render={({ field }) => (
                                 <Select {...field} label="Área">
                                     <MenuItem value=""><em>Ninguna</em></MenuItem>
-                                    {areas.map(area => <MenuItem key={area.id} value={area.id}>{area.nombre}</MenuItem>)}
+                                    {renderAreaOptions()}
                                 </Select>
                             )}
                         />

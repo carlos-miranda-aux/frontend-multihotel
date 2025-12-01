@@ -10,7 +10,6 @@ import Maintenances from "./pages/Maintenances.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./Layouts/MainLayout.jsx";
 import EditDevice from "./pages/EditDevice.jsx";
-import EditDisposal from "./pages/EditDisposal.jsx";
 import EditMaintenance from "./pages/EditMaintenance.jsx";
 import EditUsers from "./pages/EditUser.jsx";
 import EditCrownUser from "./pages/EditCrownUser.jsx";

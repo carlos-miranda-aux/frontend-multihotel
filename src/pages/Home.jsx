@@ -5,7 +5,6 @@ import {
   ListItemText, Divider, Button, useTheme
 } from "@mui/material";
 
-// Iconos
 import DevicesIcon from "@mui/icons-material/Devices";
 import BuildIcon from "@mui/icons-material/Build";
 import EventBusyIcon from '@mui/icons-material/EventBusy';
@@ -21,7 +20,6 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios"; 
 import { AlertContext } from "../context/AlertContext";
 
-// Gráficos
 import { 
   PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid 
@@ -53,7 +51,7 @@ const WidgetCard = ({ title, value, icon, color, onClick, subtitle }) => {
 const Home = () => {
   const { 
     loading: alertLoading, 
-    dashboardStats, // <--- DATOS PRE-CALCULADOS
+    dashboardStats, 
     pendingMaintenancesList, 
     totalPendingMaintenancesCount 
   } = useContext(AlertContext);
@@ -64,7 +62,6 @@ const Home = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
-  // Colores
   const COLORS = { Vigentes: theme.palette.success.main, Riesgo: theme.palette.warning.main, Expiradas: theme.palette.error.dark };
   const COLORS_PANDA = { ConPanda: theme.palette.success.main, SinPanda: theme.palette.error.main };
 
@@ -72,7 +69,6 @@ const Home = () => {
     const now = new Date();
     setCurrentMonthName(now.toLocaleString('es-MX', { month: 'long' }));
     
-    // Obtenemos solo el conteo de usuarios (rápido)
     const fetchUsers = async () => {
         try {
             const res = await api.get("/users/get?page=1&limit=1");
@@ -86,10 +82,8 @@ const Home = () => {
     return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
   }
 
-  // Desestructuración segura de los datos del backend
   const { kpis, warrantyStats } = dashboardStats || {};
   
-  // Datos para Gráfico de Barras (Garantías)
   const warrantyBarData = [{
     name: 'Total Equipos',
     Vigentes: warrantyStats?.safe || 0,
@@ -97,7 +91,6 @@ const Home = () => {
     Expiradas: warrantyStats?.expired || 0
   }];
 
-  // Datos para Gráfico de Pastel (Panda)
   const pandaData = [
     { name: 'Con Panda', value: kpis?.devicesWithPanda || 0 },
     { name: 'Sin Panda', value: kpis?.devicesWithoutPanda || 0 }
@@ -111,7 +104,6 @@ const Home = () => {
       <Typography variant="h4" fontWeight="bold" gutterBottom color="primary">Panel de Control</Typography>
       <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>Resumen administrativo del inventario.</Typography>
       
-      {/* TARJETAS KPI */}
       <Grid container spacing={3} sx={{ mb: 3 }}> 
         <Grid item xs={12} sm={6} md={3}> 
           <WidgetCard title="Equipos Activos" value={kpis?.totalActiveDevices || 0} icon={<DevicesIcon />} color={theme.palette.primary.main} onClick={() => navigate("/inventory")} />
@@ -127,10 +119,7 @@ const Home = () => {
         </Grid>
       </Grid>
       
-      {/* SECCIÓN INFERIOR */}
       <Grid container spacing={3}>
-        
-        {/* LISTA: Tareas Críticas */}
         <Grid item xs={12} md={4}> 
           <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={2}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -153,12 +142,11 @@ const Home = () => {
                 ))}
               </List>
             ) : (
-              <Box sx={{ p: 4, textAlign: 'center' }}><Typography color="text.secondary">¡Todo al día! No hay tareas críticas.</Typography></Box>
+              <Box sx={{ p: 4, textAlign: 'center' }}><Typography color="text.secondary">¡Todo al día!</Typography></Box>
             )}
           </Paper>
         </Grid>
         
-        {/* GRÁFICO 1: ESTATUS DE PANDA */}
         <Grid item xs={12} sm={6} md={2}> 
           <Paper sx={{ p: 3, height: '100%', minHeight: 350, border: 1, borderColor: pandaColor }} elevation={2}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: pandaColor }}>
@@ -185,7 +173,6 @@ const Home = () => {
           </Paper>
         </Grid>
         
-        {/* GRÁFICO 2: Estado General de Garantía */}
         <Grid item xs={12} sm={6} md={6}> 
           <Paper sx={{ p: 3, height: '100%', minHeight: 350, border: 1, borderColor: warrantyBorderColor }} elevation={2}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: 'text.primary' }}>

@@ -4,13 +4,11 @@ import api from "../api/axios";
 
 export const AlertContext = createContext();
 
-// Helper para verificar días hábiles (Lunes a Viernes)
 const isBusinessDay = (date) => {
     const day = date.getDay();
     return day !== 0 && day !== 6;
 }
 
-// Calcula la fecha límite de 5 días hábiles a futuro
 const getFiveBusinessDaysFromNow = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); 
@@ -23,17 +21,15 @@ const getFiveBusinessDaysFromNow = () => {
             businessDaysCount++;
         }
     }
-    // Final del 5to día hábil
     targetDate.setHours(23, 59, 59, 999); 
     return targetDate;
 }
 
-// Lógica de carga optimizada
 const _fetchAlertLogic = async () => {
     try {
-        // 1. Petición paralela: Estadísticas (Backend) y Mantenimientos Pendientes
+        // 1. Petición optimizada al backend
         const [statsRes, maintenancesRes] = await Promise.all([
-            api.get("/devices/get/dashboard-stats"), // <--- NUEVO ENDPOINT OPTIMIZADO
+            api.get("/devices/get/dashboard-stats"), 
             api.get("/maintenances/get?status=pendiente&limit=1000") 
         ]);
 
@@ -41,8 +37,6 @@ const _fetchAlertLogic = async () => {
         const allPendingMaintenances = maintenancesRes.data.data || [];
         const totalPendingCount = maintenancesRes.data.totalCount || 0;
         
-        // 2. Filtrado de Mantenimientos (Próximos 5 días hábiles)
-        // Esto se mantiene en frontend porque la lógica de días hábiles es compleja para SQL simple
         const today = new Date();
         today.setHours(0, 0, 0, 0); 
         const fiveBusinessDaysFromNow = getFiveBusinessDaysFromNow();
@@ -56,22 +50,13 @@ const _fetchAlertLogic = async () => {
             return isDue && isBusinessDay(scheduledDate);
         });
 
-        // Ordenar por fecha más próxima
         criticalMaintenances.sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada));
 
-        // 3. Estructura del estado final
         return {
-            // Datos que vienen listos del backend
             dashboardStats: statsData, 
-            
-            // Datos procesados aquí
             pendingMaintenancesList: criticalMaintenances,
             totalPendingMaintenancesCount: totalPendingCount,
-            
-            // Conteo para la campanita (Mantos críticos + Alertas de garantía del backend)
             totalAlertCount: criticalMaintenances.length + (statsData.warrantyAlertsList?.length || 0),
-            
-            // Lista de garantías para el menú de notificaciones
             warrantyAlertsList: statsData.warrantyAlertsList || []
         };
     } catch (error) {
@@ -83,7 +68,6 @@ const _fetchAlertLogic = async () => {
 export const AlertProvider = ({ children }) => {
   const [loading, setLoading] = useState(true); 
   
-  // Estado inicial con estructura segura para evitar "undefined" al renderizar
   const [alertState, setAlertState] = useState({
       dashboardStats: {
           kpis: { 
@@ -134,7 +118,7 @@ export const AlertProvider = ({ children }) => {
     <AlertContext.Provider
       value={{
         loading,
-        ...alertState, // Esparce dashboardStats, pendingMaintenancesList, etc.
+        ...alertState,
         refreshAlerts, 
       }}
     >

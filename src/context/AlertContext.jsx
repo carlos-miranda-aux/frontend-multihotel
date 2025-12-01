@@ -4,17 +4,16 @@ import api from "../api/axios";
 
 export const AlertContext = createContext();
 
-// Helper function to check if a day is a weekend
+// Helper para verificar días hábiles (Lunes a Viernes)
 const isBusinessDay = (date) => {
     const day = date.getDay();
-    return day !== 0 && day !== 6; // 0 = Sunday, 6 = Saturday
+    return day !== 0 && day !== 6;
 }
 
-// Helper function to calculate 5 business days from now
+// Calcula la fecha límite de 5 días hábiles a futuro
 const getFiveBusinessDaysFromNow = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); 
-
     let businessDaysCount = 0;
     let targetDate = new Date(today);
     
@@ -24,90 +23,93 @@ const getFiveBusinessDaysFromNow = () => {
             businessDaysCount++;
         }
     }
-    // Retornamos la fecha límite (al final del 5to día hábil a partir de hoy)
+    // Final del 5to día hábil
     targetDate.setHours(23, 59, 59, 999); 
     return targetDate;
 }
 
-// Lógica base de fetching, ahora retorna el objeto de estado completo para un solo setter
+// Lógica de carga optimizada
 const _fetchAlertLogic = async () => {
-    const [devicesRes, maintenancesRes, pandaStatusRes] = await Promise.all([
-        api.get("/devices/get?page=1&limit=1000"), 
-        api.get("/maintenances/get?status=pendiente&limit=1000"), 
-        api.get("/devices/get/panda-status") 
-    ]);
+    try {
+        // 1. Petición paralela: Estadísticas (Backend) y Mantenimientos Pendientes
+        const [statsRes, maintenancesRes] = await Promise.all([
+            api.get("/devices/get/dashboard-stats"), // <--- NUEVO ENDPOINT OPTIMIZADO
+            api.get("/maintenances/get?status=pendiente&limit=1000") 
+        ]);
 
-    const devicesData = devicesRes.data.data || [];
-    const allPendingMaintenances = maintenancesRes.data.data || []; 
-    const totalPendingCount = maintenancesRes.data.totalCount || 0; 
-    
-    // 1. Lógica de Mantenimientos (FILTRADO POR 5 DÍAS HÁBILES)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); 
-    const fiveBusinessDaysFromNow = getFiveBusinessDaysFromNow();
-    
-    const criticalMaintenances = allPendingMaintenances.filter(m => {
-        if (!m.fecha_programada) return false;
+        const statsData = statsRes.data || {};
+        const allPendingMaintenances = maintenancesRes.data.data || [];
+        const totalPendingCount = maintenancesRes.data.totalCount || 0;
         
-        const scheduledDate = new Date(m.fecha_programada);
-        const isDue = scheduledDate.getTime() >= today.getTime() && scheduledDate.getTime() <= fiveBusinessDaysFromNow.getTime();
+        // 2. Filtrado de Mantenimientos (Próximos 5 días hábiles)
+        // Esto se mantiene en frontend porque la lógica de días hábiles es compleja para SQL simple
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); 
+        const fiveBusinessDaysFromNow = getFiveBusinessDaysFromNow();
         
-        return isDue && isBusinessDay(scheduledDate);
-    });
+        const criticalMaintenances = allPendingMaintenances.filter(m => {
+            if (!m.fecha_programada) return false;
+            
+            const scheduledDate = new Date(m.fecha_programada);
+            const isDue = scheduledDate.getTime() >= today.getTime() && scheduledDate.getTime() <= fiveBusinessDaysFromNow.getTime();
+            
+            return isDue && isBusinessDay(scheduledDate);
+        });
 
-    criticalMaintenances.sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada));
+        // Ordenar por fecha más próxima
+        criticalMaintenances.sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada));
 
-    // 2. Lógica de Garantías (Por Vencer - 90 días)
-    const ninetyDaysFromNow = new Date();
-    ninetyDaysFromNow.setDate(today.getDate() + 90);
-    ninetyDaysFromNow.setHours(0, 0, 0, 0);
-
-    const expiringList = [];
-
-    devicesData.forEach((d) => {
-      if (d.garantia_fin) {
-        const expirationDate = new Date(d.garantia_fin);
-        if (expirationDate >= today && expirationDate <= ninetyDaysFromNow) {
-          expiringList.push(d);
-        }
-      }
-    });
-    
-    // 3. Crear y retornar el NUEVO objeto de estado combinado
-    return {
-        devices: devicesData,
-        pandaStatus: pandaStatusRes.data,
-        totalPendingMaintenancesCount: totalPendingCount,
-        pendingMaintenancesList: criticalMaintenances, // Lista filtrada (5 días)
-        warrantyAlertsList: expiringList,
-        totalAlertCount: criticalMaintenances.length + expiringList.length, // Conteo de campana
-    };
+        // 3. Estructura del estado final
+        return {
+            // Datos que vienen listos del backend
+            dashboardStats: statsData, 
+            
+            // Datos procesados aquí
+            pendingMaintenancesList: criticalMaintenances,
+            totalPendingMaintenancesCount: totalPendingCount,
+            
+            // Conteo para la campanita (Mantos críticos + Alertas de garantía del backend)
+            totalAlertCount: criticalMaintenances.length + (statsData.warrantyAlertsList?.length || 0),
+            
+            // Lista de garantías para el menú de notificaciones
+            warrantyAlertsList: statsData.warrantyAlertsList || []
+        };
+    } catch (error) {
+        console.error("Error en lógica de alertas:", error);
+        return null;
+    }
 };
-
 
 export const AlertProvider = ({ children }) => {
   const [loading, setLoading] = useState(true); 
-  // ESTADO ÚNICO que contiene todos los datos derivados
+  
+  // Estado inicial con estructura segura para evitar "undefined" al renderizar
   const [alertState, setAlertState] = useState({
-      devices: [],
+      dashboardStats: {
+          kpis: { 
+              totalActiveDevices: 0, 
+              devicesWithPanda: 0, 
+              devicesWithoutPanda: 0, 
+              monthlyDisposals: 0 
+          },
+          warrantyStats: { 
+              expired: 0, 
+              risk: 0, 
+              safe: 0 
+          },
+          warrantyAlertsList: []
+      },
       warrantyAlertsList: [],
       pendingMaintenancesList: [],
       totalPendingMaintenancesCount: 0,
       totalAlertCount: 0,
-      pandaStatus: {
-          totalActiveDevices: 0,
-          devicesWithPanda: 0,
-          devicesWithoutPanda: 0,
-          expiredWarrantiesCount: 0 
-      }
   });
 
-  // Función para la carga inicial (maneja el estado de 'loading' de la página)
   const fetchInitialData = useCallback(async () => {
     try {
       setLoading(true); 
       const newState = await _fetchAlertLogic();
-      setAlertState(newState); // <--- UN SOLO SETTER: SOLUCIÓN AL FLICKER
+      if (newState) setAlertState(newState);
     } catch (error) {
       console.error("Error cargando datos de alertas:", error);
     } finally {
@@ -115,11 +117,10 @@ export const AlertProvider = ({ children }) => {
     }
   }, []);
   
-  // Función para el refresco manual (NO toca el estado 'loading')
   const refreshAlerts = useCallback(async () => {
       try {
           const newState = await _fetchAlertLogic();
-          setAlertState(newState); // <--- UN SOLO SETTER: SOLUCIÓN AL FLICKER
+          if (newState) setAlertState(newState);
       } catch (error) {
           console.error("Error refrescando alertas:", error);
       }
@@ -133,8 +134,7 @@ export const AlertProvider = ({ children }) => {
     <AlertContext.Provider
       value={{
         loading,
-        // Exponiendo las propiedades del estado ÚNICO
-        ...alertState,
+        ...alertState, // Esparce dashboardStats, pendingMaintenancesList, etc.
         refreshAlerts, 
       }}
     >

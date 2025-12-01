@@ -1,122 +1,111 @@
 // src/components/CreateCrownUserForm.jsx
 import React, { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form"; // 👈 Hook Form
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Button,
   FormControlLabel, Switch, ListSubheader
 } from "@mui/material";
 import api from "../api/axios";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTACIÓN DE ESTILOS
 
 const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
-  const [formData, setFormData] = useState({
-    nombre: "",
-    correo: "",
-    areaId: "", // 👈 Cambiado de departamentoId a areaId
-    usuario_login: "",
+  const { control, handleSubmit } = useForm({
+    defaultValues: { nombre: "", correo: "", areaId: "", usuario_login: "", isManager: false }
   });
-  const [isManager, setIsManager] = useState(false);
-  const [areas, setAreas] = useState([]); // Ahora cargamos áreas
+  
+  const [areas, setAreas] = useState([]);
   
   useEffect(() => {
     const fetchAreas = async () => {
       try {
-        // Usamos limit=0 para obtener la lista completa para el selector
         const res = await api.get("/areas/get?limit=0"); 
         setAreas(res.data || []);
       } catch (err) {
-        console.error("Error fetching areas:", err);
-        setError("Error al cargar las áreas.");
+        if (setError) setError("Error al cargar las áreas.");
       }
     };
     fetchAreas();
   }, [setError]);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
+  const onSubmit = async (data) => {
+    if (setError) setError("");
+    if (setMessage) setMessage("");
     
     const payload = {
-      ...formData,
-      areaId: formData.areaId || null,
-      es_jefe_de_area: isManager
+      ...data,
+      areaId: data.areaId || null,
+      es_jefe_de_area: data.isManager
     };
 
     try {
       await api.post("/users/post", payload);
-      setMessage("Usuario de Crown creado exitosamente.");
+      if (setMessage) setMessage("Usuario de Crown creado exitosamente.");
       onUserCreated();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || "Error al crear el usuario.");
+      if (setError) setError(err.response?.data?.error || "Error al crear el usuario.");
     }
   };
 
-  // Agrupar áreas por departamento para el Select
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
+    const sortedAreas = [...areas].sort((a, b) => (a.departamento?.nombre || "").localeCompare(b.departamento?.nombre || ""));
 
-    areas.forEach(area => {
+    sortedAreas.forEach(area => {
       if (area.departamento?.nombre !== lastDept) {
-        options.push(<ListSubheader key={`header-${area.departamentoId}`}>{area.departamento?.nombre}</ListSubheader>);
+        options.push(<ListSubheader key={`header-${area.departamentoId}`} sx={{ fontWeight: 'bold', color: 'primary.main' }}>{area.departamento?.nombre}</ListSubheader>);
         lastDept = area.departamento?.nombre;
       }
-      options.push(
-        <MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>
-          {area.nombre}
-        </MenuItem>
-      );
+      options.push(<MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>{area.nombre}</MenuItem>);
     });
     return options;
   };
 
   return (
     <Box>
-      <Typography 
-        variant="h6" 
-        sx={{ mb: 2 }}
-        className="modal-title-color" // ✅ Aplicar clase al título
-      >
+      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }} color="text.primary">
         Crear nuevo usuario
       </Typography>
-      <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <TextField label="Nombre" name="nombre" value={formData.nombre} onChange={handleChange} fullWidth required />
-        <TextField label="Correo" name="correo" type="email" value={formData.correo} onChange={handleChange} fullWidth />
+
+      <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Controller
+            name="nombre" control={control} rules={{ required: true }}
+            render={({ field }) => <TextField {...field} label="Nombre" fullWidth required />}
+        />
+        <Controller
+            name="correo" control={control}
+            render={({ field }) => <TextField {...field} label="Correo" type="email" fullWidth />}
+        />
         
-        {/* SELECCIONAR ÁREA */}
         <FormControl fullWidth required>
           <InputLabel>Área</InputLabel>
-          <Select
-            name="areaId"
-            value={formData.areaId}
-            onChange={handleChange}
-            label="Área"
-          >
-            <MenuItem value=""><em>Ninguna</em></MenuItem>
-            {renderAreaOptions()}
-          </Select>
+          <Controller
+            name="areaId" control={control} rules={{ required: true }}
+            render={({ field }) => (
+                <Select {...field} label="Área">
+                    <MenuItem value=""><em>Ninguna</em></MenuItem>
+                    {renderAreaOptions()}
+                </Select>
+            )}
+          />
         </FormControl>
         
-        <TextField label="Usuario de Login" name="usuario_login" value={formData.usuario_login} onChange={handleChange} fullWidth />
-
-        <FormControlLabel
-          control={<Switch checked={isManager} onChange={(e) => setIsManager(e.target.checked)} />}
-          label="Es Jefe de Área"
+        <Controller
+            name="usuario_login" control={control}
+            render={({ field }) => <TextField {...field} label="Usuario de Login" fullWidth />}
         />
 
-        <Button 
-          type="submit" 
-          variant="contained" 
-          color="primary"
-          className="primary-action-button" // ✅ Aplicar clase CSS
-        >
-          Crear usuario
-        </Button>
+        <Controller
+            name="isManager" control={control}
+            render={({ field: { onChange, value } }) => (
+                <FormControlLabel
+                    control={<Switch checked={value} onChange={onChange} color="primary" />}
+                    label="Es Jefe de Área"
+                />
+            )}
+        />
+
+        <Button type="submit" variant="contained" color="primary">Crear usuario</Button>
       </Box>
     </Box>
   );

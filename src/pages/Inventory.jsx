@@ -3,7 +3,7 @@ import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Button,
   Typography, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress, TableSortLabel,
-  TextField, Chip
+  TextField
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete"; 
@@ -14,18 +14,12 @@ import CreateDeviceForm from "../components/CreateDeviceForm";
 import ImportButton from "../components/ImportButton"; 
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
-import "../pages/styles/ConfigButtons.css";
+
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 800,
-  bgcolor: 'background.paper',
-  boxShadow: 24,
-  p: 4,
-  borderRadius: 2
+  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+  width: 800, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
 const Inventory = () => {
@@ -43,7 +37,6 @@ const Inventory = () => {
   const [activeFilter, setActiveFilter] = useState(""); 
   const [searchParams, setSearchParams] = useSearchParams(); 
 
-  // 👇 Estados de ordenamiento en el servidor
   const [sortConfig, setSortConfig] = useState({ key: 'nombre_equipo', direction: 'asc' });
 
   const navigate = useNavigate();
@@ -55,7 +48,6 @@ const Inventory = () => {
     setError("");
     try {
       const filterParam = filterToUse ? `&filter=${filterToUse}` : ""; 
-      // 👇 Enviamos parámetros de ordenamiento
       const sortParam = `&sortBy=${sortKey}&order=${sortDir}`;
       
       const res = await api.get(`/devices/get?page=${pageToUse + 1}&limit=${rowsPerPage}&search=${search}${filterParam}${sortParam}`);
@@ -80,9 +72,8 @@ const Inventory = () => {
       filterToUse = filterFromUrl; 
       pageToUse = 0;
     }
-    // Pasamos el estado actual de ordenamiento
     fetchDevices(filterToUse, pageToUse, sortConfig.key, sortConfig.direction);
-  }, [searchParams, page, rowsPerPage, search, sortConfig, fetchDevices]); // sortConfig es dependencia 
+  }, [searchParams, page, rowsPerPage, search, sortConfig, fetchDevices]); 
   
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -91,24 +82,22 @@ const Inventory = () => {
     setActiveFilter(""); 
   };
 
-  // 👇 Nueva función para manejar el clic en encabezados
   const handleRequestSort = (key) => {
     const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
     setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
-    // El useEffect se encargará de hacer el fetch
   };
 
   const handleDelete = async (d_id) => {
     setMessage("");
     setError("");
-    if (window.confirm("¡ADVERTENCIA! ¿Estás seguro de que quieres ELIMINAR este equipo? Esta acción es PERMANENTE.")) {
+    if (window.confirm("¡ADVERTENCIA! ¿Estás seguro de que quieres ELIMINAR este equipo?")) {
       try {
         await api.delete(`/devices/delete/${d_id}`); 
         setMessage("Equipo eliminado permanentemente.");
         fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); 
         refreshAlerts(); 
       } catch (err) {
-        setError(err.response?.data?.error || err.response?.data?.message || "Error al eliminar el equipo.");
+        setError(err.response?.data?.error || "Error al eliminar el equipo.");
       }
     }
   };
@@ -137,12 +126,12 @@ const Inventory = () => {
     return '';
   }
 
-  const headerStyle = { fontWeight: 'bold', color: '#333' };
+  const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Inventario de Equipos</Typography>
+        <Typography variant="h4" color="primary" fontWeight="bold">Inventario de Equipos</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             label="Buscar equipo..."
@@ -157,7 +146,13 @@ const Inventory = () => {
             </Button>
           )}
           <ImportButton endpoint="/devices/import" onSuccess={() => { fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); refreshAlerts(); }} label="Importar" />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal} className="primary-action-button">
+          
+          <Button 
+            variant="contained" 
+            color="primary"
+            startIcon={<AddIcon />} 
+            onClick={handleOpenModal}
+          >
             Crear Equipo
           </Button>
         </Box>
@@ -170,43 +165,27 @@ const Inventory = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}> 
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'nombre_equipo' ? sortConfig.direction : false}>
-                  <TableSortLabel
-                    active={sortConfig.key === 'nombre_equipo'}
-                    direction={sortConfig.key === 'nombre_equipo' ? sortConfig.direction : 'asc'}
-                    onClick={() => handleRequestSort('nombre_equipo')}
-                  >
+              <TableRow sx={{ backgroundColor: 'background.default' }}> 
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel active={sortConfig.key === 'nombre_equipo'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre_equipo')}>
                     Nombre Equipo
                   </TableSortLabel>
                 </TableCell>
                 <TableCell sx={headerStyle}>Descripción</TableCell>
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'usuario.nombre' ? sortConfig.direction : false}>
-                  <TableSortLabel
-                    active={sortConfig.key === 'usuario.nombre'}
-                    direction={sortConfig.key === 'usuario.nombre' ? sortConfig.direction : 'asc'}
-                    onClick={() => handleRequestSort('usuario.nombre')}
-                  >
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel active={sortConfig.key === 'usuario.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('usuario.nombre')}>
                     Usuario Asignado
                   </TableSortLabel>
                 </TableCell>
                 <TableCell sx={headerStyle}>IP</TableCell>
                 <TableCell sx={headerStyle}>N° Serie</TableCell>
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'tipo.nombre' ? sortConfig.direction : false}>
-                  <TableSortLabel
-                    active={sortConfig.key === 'tipo.nombre'}
-                    direction={sortConfig.key === 'tipo.nombre' ? sortConfig.direction : 'asc'}
-                    onClick={() => handleRequestSort('tipo.nombre')}
-                  >
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel active={sortConfig.key === 'tipo.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('tipo.nombre')}>
                     Tipo
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'sistema_operativo.nombre' ? sortConfig.direction : false}>
-                  <TableSortLabel
-                    active={sortConfig.key === 'sistema_operativo.nombre'}
-                    direction={sortConfig.key === 'sistema_operativo.nombre' ? sortConfig.direction : 'asc'}
-                    onClick={() => handleRequestSort('sistema_operativo.nombre')}
-                  >
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel active={sortConfig.key === 'sistema_operativo.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('sistema_operativo.nombre')}>
                     Sistema Operativo
                   </TableSortLabel>
                 </TableCell>
@@ -235,9 +214,13 @@ const Inventory = () => {
                         )}
                     </TableCell>
                     <TableCell>
-                      <IconButton color="primary" onClick={() => handleEdit(device.id)} className="action-icon-color"><EditIcon /></IconButton>
+                      <IconButton color="primary" onClick={() => handleEdit(device.id)}>
+                        <EditIcon />
+                      </IconButton>
                       {user?.rol === "ADMIN" && (
-                        <IconButton color="error" onClick={() => handleDelete(device.id)}><DeleteIcon /></IconButton>
+                        <IconButton color="error" onClick={() => handleDelete(device.id)}>
+                          <DeleteIcon />
+                        </IconButton>
                       )}
                     </TableCell>
                   </TableRow>
@@ -258,13 +241,7 @@ const Inventory = () => {
         />
       </Paper>
 
-      <Modal
-        open={openModal}
-        onClose={handleCloseModal}
-        closeAfterTransition
-        BackdropComponent={Backdrop}
-        BackdropProps={{ timeout: 500 }}
-      >
+      <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openModal}>
           <Box sx={modalStyle}>
             <CreateDeviceForm

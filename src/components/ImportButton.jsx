@@ -1,3 +1,4 @@
+// src/components/ImportButton.jsx
 import React, { useRef, useState } from "react";
 import { Button, CircularProgress, Alert, Snackbar } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
@@ -36,7 +37,6 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel" }) => {
       setToast({ open: true, msg: "Error al importar el archivo.", severity: "error" });
     } finally {
       setLoading(false);
-      // Limpiar input para permitir subir el mismo archivo de nuevo si falló
       e.target.value = null; 
     }
   };
@@ -45,14 +45,15 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel" }) => {
     <>
       <input
         type="file"
-        accept=".xlsx, .xls" // Forzamos Excel
+        accept=".xlsx, .xls"
         hidden
         ref={fileInputRef}
         onChange={handleFileChange}
       />
       <Button
         variant="outlined"
-        startIcon={loading ? <CircularProgress size={20} /> : <UploadFileIcon />}
+        color="primary" // ✅ Aplicamos el tema
+        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadFileIcon />}
         onClick={() => fileInputRef.current.click()}
         disabled={loading}
         sx={{ ml: 2 }}

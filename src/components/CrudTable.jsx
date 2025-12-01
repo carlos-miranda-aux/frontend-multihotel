@@ -9,8 +9,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
-import "../components/styles/CrudTable.css";
-import "../pages/styles/ConfigButtons.css";
+
+// ❌ ELIMINADO: import "../components/styles/CrudTable.css";
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const CrudTable = ({ title, apiUrl }) => {
   const [data, setData] = useState([]);
@@ -26,7 +27,6 @@ const CrudTable = ({ title, apiUrl }) => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   
-  // 👇 Estado de ordenamiento
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
   useEffect(() => {
@@ -36,7 +36,6 @@ const CrudTable = ({ title, apiUrl }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 👇 Enviamos orden
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
       const response = await api.get(`${apiUrl}/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`);
       setData(response.data.data || response.data);
@@ -54,14 +53,13 @@ const CrudTable = ({ title, apiUrl }) => {
     setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
   };
 
-  // ... (handleCreate, handleEdit, handleDelete, modal handlers son iguales) ...
-  const handleCreate = async () => { /* ... código igual ... */ 
+  const handleCreate = async () => {
     try { await api.post(`${apiUrl}/post`, { nombre: itemName }); setMessage("Creado."); setPage(0); fetchData(); setItemName(""); setOpenModal(false); } catch(e) { setError("Error."); }
   };
-  const handleEdit = async () => { /* ... código igual ... */
+  const handleEdit = async () => {
     try { await api.put(`${apiUrl}/put/${currentId}`, { nombre: itemName }); setMessage("Actualizado."); fetchData(); setItemName(""); setOpenModal(false); setIsEdit(false); } catch(e) { setError("Error."); }
   };
-  const handleDelete = async (id) => { /* ... código igual ... */
+  const handleDelete = async (id) => {
     if(window.confirm("¿Eliminar?")) { try { await api.delete(`${apiUrl}/delete/${id}`); setMessage("Eliminado."); fetchData(); } catch(e) { setError("Error."); } }
   };
   const openEditModal = (item) => { setItemName(item.nombre); setCurrentId(item.id); setIsEdit(true); setOpenModal(true); };
@@ -70,13 +68,21 @@ const CrudTable = ({ title, apiUrl }) => {
   const handleChangePage = (e, n) => setPage(n);
   const handleChangeRowsPerPage = (e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); };
 
-  const headerStyle = { fontWeight: 'bold', color: '#333' };
+  const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">{title}</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal} className="crud-add-button">Añadir</Button>
+        <Typography variant="h5" color="primary" fontWeight="bold">{title}</Typography>
+        
+        <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<AddIcon />} 
+            onClick={handleOpenModal}
+        >
+            Añadir
+        </Button>
       </Box>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
@@ -86,8 +92,8 @@ const CrudTable = ({ title, apiUrl }) => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'nombre' ? sortConfig.direction : false}>
+              <TableRow sx={{ backgroundColor: 'background.default' }}>
+                <TableCell sx={headerStyle}>
                   <TableSortLabel
                     active={sortConfig.key === 'nombre'}
                     direction={sortConfig.key === 'nombre' ? sortConfig.direction : 'asc'}
@@ -107,8 +113,12 @@ const CrudTable = ({ title, apiUrl }) => {
                   <TableRow key={item.id}>
                     <TableCell>{item.nombre}</TableCell>
                     <TableCell>
-                      <IconButton color="primary" onClick={() => openEditModal(item)} className="crud-edit-icon"><EditIcon /></IconButton>
-                      <IconButton color="error" onClick={() => handleDelete(item.id)}><DeleteIcon /></IconButton>
+                      <IconButton color="primary" onClick={() => openEditModal(item)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDelete(item.id)}>
+                        <DeleteIcon />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))
@@ -120,16 +130,15 @@ const CrudTable = ({ title, apiUrl }) => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount}
           rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Filas por página:"
         />
       </Paper>
 
       <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openModal}>
           <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2 }}>
-            <Typography variant="h6" mb={2} className="modal-title-color">{isEdit ? "Editar" : "Añadir"}</Typography>
+            <Typography variant="h6" mb={2} color="text.primary">{isEdit ? "Editar" : "Añadir"}</Typography>
             <TextField fullWidth label="Nombre" value={itemName} onChange={(e) => setItemName(e.target.value)} sx={{ mb: 2 }} />
-            <Button variant="contained" fullWidth onClick={isEdit ? handleEdit : handleCreate} className="crud-add-button">{isEdit ? "Guardar" : "Añadir"}</Button>
+            <Button variant="contained" fullWidth onClick={isEdit ? handleEdit : handleCreate} color="primary">{isEdit ? "Guardar" : "Añadir"}</Button>
           </Box>
         </Fade>
       </Modal>

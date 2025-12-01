@@ -1,21 +1,10 @@
 // src/pages/Reportes.jsx
 import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  TextField,
-  Alert,
-  useTheme,
-  Card,
-  CardActionArea,
-  CardContent,
-  Avatar,
-  Chip
+  Box, Typography, Paper, Grid, TextField, Alert, useTheme, Card,
+  CardActionArea, CardContent, Avatar, Chip
 } from '@mui/material';
 
-// Iconos específicos para cada reporte
 import InventoryIcon from '@mui/icons-material/Inventory';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -25,21 +14,17 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DownloadIcon from '@mui/icons-material/Download';
 
-// Color del hotel (puedes moverlo a tus variables globales si prefieres)
-const HOTEL_COLOR = "#A73698";
-
 const Reportes = () => {
   const theme = useTheme();
-  const apiBaseUrl = "http://localhost:3000/api"; // Asegúrate de que coincida con tu backend
+  // Puedes usar import.meta.env.VITE_API_URL si lo tienes configurado, o dejarlo así por ahora
+  const apiBaseUrl = "http://localhost:3000/api"; 
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reportError, setReportError] = useState('');
 
-  // Función de exportación (Lógica original conservada)
   const handleExport = (url, isFiltered = false) => {
     setReportError('');
-
     let finalUrl = url;
     
     if (isFiltered) {
@@ -54,17 +39,11 @@ const Reportes = () => {
 
     fetch(finalUrl, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+      headers: { 'Authorization': `Bearer ${token}` }
     })
     .then(res => {
         if (!res.ok) {
-            return res.json().then(error => {
-                throw new Error(error.error || "Error desconocido al exportar.");
-            }).catch(() => {
-                throw new Error(`Error ${res.status}: Fallo en la red o servidor.`);
-            });
+            return res.json().then(error => { throw new Error(error.error || "Error desconocido."); }).catch(() => { throw new Error(`Error ${res.status}`); });
         }
         return res.blob();
     })
@@ -72,27 +51,16 @@ const Reportes = () => {
       const href = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = href;
-      
-      let fileName = url.substring(url.lastIndexOf('/') + 1);
-      if (isFiltered) {
-          fileName = `analisis_correctivos_${startDate}_a_${endDate}.xlsx`;
-      } else {
-          fileName += ".xlsx";
-      }
-      
+      let fileName = url.substring(url.lastIndexOf('/') + 1) + (isFiltered ? `_${startDate}_${endDate}` : "") + ".xlsx";
       link.setAttribute('download', fileName); 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(href);
     })
-    .catch(err => {
-        console.error("Error al descargar:", err);
-        setReportError(err.message || "Error al descargar el archivo.");
-    });
+    .catch(err => setReportError(err.message || "Error al descargar."));
   };
 
-  // Configuración de los reportes con Iconos y Colores
   const reportList = [
     { 
       name: "Inventario Activo", 
@@ -116,7 +84,7 @@ const Reportes = () => {
       url: `${apiBaseUrl}/devices/export/corrective-analysis`,
       icon: <AssessmentIcon fontSize="large" />,
       color: theme.palette.warning.main,
-      isFiltered: true // Requiere fechas
+      isFiltered: true 
     },
     { 
       name: "Historial Mantenimientos", 
@@ -145,14 +113,13 @@ const Reportes = () => {
   ];
 
   return (
-    <Box sx={{ p: 4, bgcolor: '#f4f6f8', minHeight: '100vh' }}>
+    <Box sx={{ p: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
       
-      {/* Encabezado */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ color: '#2c3e50' }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom color="text.primary">
           Centro de Reportes
         </Typography>
-        <Typography variant="subtitle1" color="textSecondary">
+        <Typography variant="subtitle1" color="text.secondary">
           Descarga información clave en formato Excel para tu análisis.
         </Typography>
       </Box>
@@ -161,116 +128,61 @@ const Reportes = () => {
       <Paper 
         elevation={0} 
         sx={{ 
-          p: 3, 
-          mb: 4, 
-          borderRadius: 3, 
-          border: '1px solid #e0e0e0',
-          background: 'linear-gradient(to right, #ffffff, #fcfcfc)'
+          p: 3, mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider',
+          bgcolor: 'background.paper'
         }}
       >
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: HOTEL_COLOR }}>
+          {/* Usamos el color primario del tema */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'primary.main' }}>
             <AccessTimeIcon sx={{ mr: 1 }} />
-            <Typography variant="h6" fontWeight="bold">
-              Filtro por Fechas
-            </Typography>
+            <Typography variant="h6" fontWeight="bold">Filtro por Fechas</Typography>
           </Box>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Selecciona un rango de fechas si vas a descargar el reporte de <b>Análisis de Garantías</b>.
           </Typography>
           
           <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={4}>
                   <TextField 
-                      label="Fecha Inicio"
-                      type="date"
-                      fullWidth
-                      size="small"
+                      label="Fecha Inicio" type="date" fullWidth size="small"
                       InputLabelProps={{ shrink: true }}
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      value={startDate} onChange={(e) => setStartDate(e.target.value)}
                   />
               </Grid>
               <Grid item xs={12} sm={6} md={4}>
                   <TextField 
-                      label="Fecha Fin"
-                      type="date"
-                      fullWidth
-                      size="small"
+                      label="Fecha Fin" type="date" fullWidth size="small"
                       InputLabelProps={{ shrink: true }}
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      value={endDate} onChange={(e) => setEndDate(e.target.value)}
                   />
               </Grid>
           </Grid>
       </Paper>
 
-      {/* Mensajes de Error */}
-      {reportError && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setReportError('')}>
-          {reportError}
-        </Alert>
-      )}
+      {reportError && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setReportError('')}>{reportError}</Alert>}
 
-      {/* Grid de Reportes */}
       <Grid container spacing={3}>
         {reportList.map((report) => (
           <Grid item xs={12} sm={6} md={4} key={report.name}>
             <Card 
               elevation={2}
               sx={{ 
-                height: '100%', 
-                borderRadius: 3,
+                height: '100%', borderRadius: 3,
                 transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6
-                }
+                '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 }
               }}
             >
-              <CardActionArea 
-                onClick={() => handleExport(report.url, report.isFiltered)}
-                sx={{ height: '100%', p: 2 }}
-              >
+              <CardActionArea onClick={() => handleExport(report.url, report.isFiltered)} sx={{ height: '100%', p: 2 }}>
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  
-                  {/* Icono con fondo circular */}
-                  <Avatar 
-                    sx={{ 
-                      bgcolor: report.color + '22', // Color con transparencia
-                      color: report.color,
-                      width: 64, 
-                      height: 64, 
-                      mb: 2 
-                    }}
-                  >
+                  <Avatar sx={{ bgcolor: report.color + '22', color: report.color, width: 64, height: 64, mb: 2 }}>
                     {report.icon}
                   </Avatar>
-
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    {report.name}
-                  </Typography>
-                  
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
-                    {report.description}
-                  </Typography>
-
-                  {/* Etiquetas informativas */}
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>{report.name}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>{report.description}</Typography>
                   <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
-                    <Chip 
-                      label="Excel" 
-                      size="small" 
-                      icon={<DownloadIcon />} 
-                      sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} 
-                    />
-                    {report.isFiltered && (
-                      <Chip 
-                        label="Requiere Fechas" 
-                        size="small" 
-                        sx={{ bgcolor: '#fff3e0', color: '#ef6c00', fontWeight: 'bold' }} 
-                      />
-                    )}
+                    <Chip label="Excel" size="small" icon={<DownloadIcon />} sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} />
+                    {report.isFiltered && <Chip label="Requiere Fechas" size="small" sx={{ bgcolor: '#fff3e0', color: '#ef6c00', fontWeight: 'bold' }} />}
                   </Box>
-
                 </CardContent>
               </CardActionArea>
             </Card>

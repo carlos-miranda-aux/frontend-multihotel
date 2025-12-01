@@ -13,19 +13,18 @@ import {
   List,
   ListItemText,
   ListItemIcon,
-  ListItemButton,
   Avatar,
-  Button
+  useTheme,
+  alpha
 } from "@mui/material";
-// Import ALL icons used
+
 import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import WarningIcon from "@mui/icons-material/Warning";
 import BuildIcon from "@mui/icons-material/Build";
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
-import EventBusyIcon from '@mui/icons-material/EventBusy';
-import AccessTimeIcon from '@mui/icons-material/AccessTime'; 
+
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
 import { useNavigate } from "react-router-dom";
@@ -44,25 +43,17 @@ const TopBar = ({ onMenuClick }) => {
   const [profileAnchorEl, setProfileAnchorEl] = useState(null);
   const [alertsAnchorEl, setAlertsAnchorEl] = useState(null);
   const navigate = useNavigate();
+  const theme = useTheme();
 
-  // ... (handlers de perfil y navegación)
   const handleProfileClick = (event) => setProfileAnchorEl(event.currentTarget);
   const handleProfileClose = () => setProfileAnchorEl(null);
   
   const handleAlertsClick = (event) => {
-      event.preventDefault(); // Detener la acción por defecto
-      
-      // 1. Abrir inmediatamente el menú (inicia el renderizado de MUI)
+      event.preventDefault();
       setAlertsAnchorEl(event.currentTarget);
-      
-      // 2. CORRECCIÓN CLAVE: Llamar a refreshAlerts después de un pequeño delay.
-      // Esto permite que el componente de Home estabilice su estado ANTES de que los nuevos datos lleguen.
-      setTimeout(() => {
-          refreshAlerts(); 
-      }, 100); // 100ms es suficiente para resolver el flicker
+      setTimeout(() => refreshAlerts(), 100);
   };
   const handleAlertsClose = () => setAlertsAnchorEl(null);
-
 
   const handleLogout = () => {
     logout();
@@ -76,51 +67,38 @@ const TopBar = ({ onMenuClick }) => {
   
   const handleLogoClick = () => navigate("/home");
 
-  // Helper para formatear fechas
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Combina las dos listas de alertas para mostrar en el menú desplegable
   const combinedAlerts = [
-    // Mantenimientos Críticos (5 Días Hábiles)
     ...pendingMaintenancesList.map(m => ({
         id: `m-${m.id}`,
         type: 'Mantenimiento Crítico',
-        primary: m.device?.nombre_equipo || m.device?.etiqueta || 'Equipo Desconocido',
-        secondary: `Fecha: ${formatDate(m.fecha_programada)} - ${m.descripcion?.substring(0, 25) || ''}...`,
-        // USANDO COLOR HARDCODEADO (Warning/Orange)
-        icon: <BuildIcon sx={{ color: '#ff9800' }} />, 
+        primary: m.device?.nombre_equipo || 'Equipo Desconocido',
+        secondary: `Fecha: ${formatDate(m.fecha_programada)}`,
+        icon: <BuildIcon color="warning" />, // Usa color del tema
         path: `/maintenances/edit/${m.id}`
     })),
-    // Garantías por Vencer (90 días)
     ...warrantyAlertsList.map(d => ({
         id: `w-${d.id}`,
         type: 'Garantía por Vencer',
-        primary: d.nombre_equipo || d.etiqueta || 'N/A',
+        primary: d.nombre_equipo || 'N/A',
         secondary: `Vence: ${formatDate(d.garantia_fin)}`,
-        // USANDO COLOR HARDCODEADO (Error/Red)
-        icon: <WarningIcon sx={{ color: '#f44336' }} />, 
+        icon: <WarningIcon color="error" />, // Usa color del tema
         path: `/inventory/edit/${d.id}`
     }))
   ];
-
-  // Ordenar por tipo (mantenimiento primero, luego garantía)
-  combinedAlerts.sort((a, b) => {
-      if (a.type === 'Mantenimiento Crítico' && b.type !== 'Mantenimiento Crítico') return -1;
-      if (a.type !== 'Mantenimiento Crítico' && b.type === 'Mantenimiento Crítico') return 1;
-      return 0;
-  });
 
   const renderAlertMenu = (
     <Menu
       anchorEl={alertsAnchorEl}
       open={Boolean(alertsAnchorEl)}
       onClose={handleAlertsClose}
-      sx={{ '.MuiMenu-paper': { width: 360, maxWidth: '90%' } }}
+      slotProps={{ paper: { sx: { width: 360, maxWidth: '90%', mt: 1 } } }}
     >
-      <Typography variant="h6" sx={{ px: 2, pt: 1, pb: 1 }}>
+      <Typography variant="h6" sx={{ px: 2, pt: 1, pb: 1, fontWeight: 'bold' }}>
         Notificaciones
       </Typography>
       <Divider />
@@ -128,34 +106,17 @@ const TopBar = ({ onMenuClick }) => {
         {loading ? (
             <MenuItem disabled>Cargando alertas...</MenuItem>
         ) : combinedAlerts.length === 0 ? (
-          <ListItemText primary="No hay alertas críticas" secondary="¡Todo en orden!" sx={{ px: 2, py: 1 }}/>
+          <ListItemText primary="No hay alertas críticas" secondary="¡Todo en orden!" sx={{ px: 2, py: 1, textAlign: 'center', color: 'text.secondary' }}/>
         ) : (
-          <>
-            {combinedAlerts.map(alert => ( 
-              <MenuItem key={alert.id} onClick={() => { 
-                navigate(alert.path); 
-                handleAlertsClose(); 
-              }}>
+          combinedAlerts.map(alert => ( 
+              <MenuItem key={alert.id} onClick={() => { navigate(alert.path); handleAlertsClose(); }}>
                 <ListItemIcon>{alert.icon}</ListItemIcon>
                 <ListItemText 
                   primary={<Typography variant="subtitle2" fontWeight="bold">{alert.type}</Typography>}
-                  secondary={
-                    <React.Fragment>
-                        <Typography 
-                            component="span"
-                            variant="body2"
-                            color="text.primary"
-                        >
-                            {alert.primary}
-                        </Typography>
-                        <br/>
-                        {alert.secondary}
-                    </React.Fragment>
-                  }
+                  secondary={`${alert.primary} - ${alert.secondary}`}
                 />
               </MenuItem>
-            ))}
-          </>
+            ))
         )}
       </List>
     </Menu>
@@ -163,78 +124,82 @@ const TopBar = ({ onMenuClick }) => {
 
   return (
     <AppBar
-      position="static"
+      position="static" // O 'fixed' si prefieres que se quede arriba al hacer scroll
+      elevation={0}
       sx={{
-        backgroundColor: "#fff",
-        color: "#222",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        backgroundColor: 'background.paper',
+        color: 'text.primary',
+        borderBottom: '1px solid',
+        borderColor: 'divider'
       }}
     >
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-        {/* Izquierda: Logo + Menu lateral */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        {/* Izquierda */}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <IconButton edge="start" color="inherit" onClick={onMenuClick}>
             <MenuIcon />
           </IconButton>
           <Box
-            sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+            sx={{ display: "flex", alignItems: "center", cursor: "pointer", ml: 1 }}
             onClick={handleLogoClick}
           >
-            <img src={Logo} alt="SIMET Logo" style={{ height: "40px" }} />
+            <img src={Logo} alt="Logo" style={{ height: "32px", width: "auto" }} />
           </Box>
         </Box>
 
-        {/* Derecha: Alertas + Perfil (MODIFICADO) */}
+        {/* Derecha */}
         {user && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            
-            {/* Icono de alertas (Actualizado) */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <IconButton color="inherit" onClick={handleAlertsClick}>
               <Badge badgeContent={totalAlertCount} color="error">
                 <NotificationsIcon />
               </Badge>  
             </IconButton>
 
-            {/* Perfil (MODIFICADO: Muestra Nombre y Avatar con Imagen) */}
+            {/* Perfil */}
             <Box
-              sx={{ display: "flex", alignItems: "center", cursor: "pointer", gap: 1 }}
+              sx={{ 
+                display: "flex", alignItems: "center", cursor: "pointer", gap: 1,
+                p: 0.5, pr: 1.5, borderRadius: 20,
+                transition: 'background-color 0.2s',
+                '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.08) }
+              }}
               onClick={handleProfileClick}
             >
               <Avatar 
-                  sx={{ bgcolor: "#9D3194" }}
+                  sx={{ 
+                    bgcolor: 'primary.main', 
+                    width: 32, height: 32, 
+                    fontSize: '0.9rem' 
+                  }}
                   src={user.avatarUrl} 
               >
                   {user.initials}
               </Avatar>
-              <Box>
-                {/* Muestra el nombre completo, o username si el nombre no existe */}
-                {user.nombre || user.username}
-              </Box>
+              <Typography variant="body2" fontWeight="500" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                {user.nombre?.split(' ')[0] || user.username}
+              </Typography>
             </Box>
 
-            {/* Menú desplegable de Perfil (Sin cambios) */}
             <Menu
               anchorEl={profileAnchorEl}
               open={Boolean(profileAnchorEl)}
               onClose={handleProfileClose}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
               <MenuItem onClick={handleSettings}>
-                 <ListItemIcon>
-                    <SettingsIcon fontSize="small" />
-                 </ListItemIcon>
-                 Configuraciones
+                 <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
+                 Configuración
               </MenuItem>
-              <MenuItem onClick={handleLogout}>
-                 <ListItemIcon>
-                    <LogoutIcon fontSize="small" />
-                 </ListItemIcon>
+              <Divider />
+              <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+                 <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>
                  Cerrar sesión
               </MenuItem>
             </Menu>
 
-            {/* Menú desplegable de Alertas */}
             {renderAlertMenu}
-
           </Box>
         )}
       </Toolbar>

@@ -1,19 +1,12 @@
+// src/pages/Login.jsx
 import { useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
-import {
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Link,
-  Paper,
-  Alert,
-} from "@mui/material";
+import { Box, TextField, Button, Typography, Paper, Alert } from "@mui/material";
 
-import Logo from "../assets/Logo.png"; // Logo del Sistema
-import HotelLogo from "../assets/cpcc.png"; // 👈 NUEVO: Importamos el logo del hotel
+import Logo from "../assets/Logo.png";
+import HotelLogo from "../assets/cpcc.png";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -27,10 +20,7 @@ const Login = () => {
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
@@ -50,11 +40,7 @@ const Login = () => {
     } catch (err) {
       console.error("Error completo:", err);
       if (err.response && err.response.data) {
-        setError(
-          err.response.data.message ||
-            err.response.data.error ||
-            "Usuario o contraseña incorrectos."
-        );
+        setError(err.response.data.message || err.response.data.error || "Usuario o contraseña incorrectos.");
       } else if (err.request) {
         setError("No se pudo conectar con el servidor. Intenta más tarde.");
       } else {
@@ -67,50 +53,26 @@ const Login = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        backgroundColor: "#F8F9FA",
+        bgcolor: "background.default",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        fontFamily: "Poppins, sans-serif",
       }}
     >
-      <Paper
-        elevation={4}
-        sx={{
-          padding: 4,
-          borderRadius: 2,
-          maxWidth: 450,
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        {/* 1. Logo del HOTEL (Jerarquía Principal) */}
-        <Box sx={{ mb: 0.5 , display: "flex", justifyContent: "center" }}>
-          <img 
-            src={HotelLogo} 
-            alt="Crown Paradise Club" 
-            style={{ maxWidth: "150%", height: "auto" }} 
-          />
+      <Paper elevation={4} sx={{ p: 4, borderRadius: 2, maxWidth: 450, width: "100%", textAlign: "center" }}>
+        <Box sx={{ mb: 0.5, display: "flex", justifyContent: "center" }}>
+          <img src={HotelLogo} alt="Crown Paradise Club" style={{ maxWidth: "150%", height: "auto" }} />
         </Box>
 
-        {/* 2. Logo del SISTEMA (Marca del software) */}
         <Box sx={{ mb: 0.5 }}>
-          <img 
-            src={Logo} 
-            alt="SIMET Logo" 
-            style={{ width: "80px", height: "auto", opacity: 0.9 }} 
-          />
+          <img src={Logo} alt="SIMET Logo" style={{ width: "80px", height: "auto", opacity: 0.9 }} />
         </Box>
 
-        <Typography variant="subtitle1" sx={{ mb: 3, color: "#555" }}>
+        <Typography variant="subtitle1" sx={{ mb: 3, color: "text.secondary" }}>
           Inicia sesión en tu cuenta
         </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <TextField
@@ -118,7 +80,6 @@ const Login = () => {
             name="identifier"
             value={formData.identifier}
             onChange={handleChange}
-            variant="outlined"
             fullWidth
             required
           />
@@ -128,18 +89,15 @@ const Login = () => {
             name="password"
             value={formData.password}
             onChange={handleChange}
-            variant="outlined"
             fullWidth
             required
           />
           <Button
             type="submit"
             variant="contained"
-            sx={{
-              backgroundColor: "#9D3194",
-              ":hover": { backgroundColor: "#7a2473" },
-              mt: 1,
-            }}
+            color="primary"
+            size="large"
+            sx={{ mt: 1 }}
           >
             Ingresar
           </Button>

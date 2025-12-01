@@ -21,10 +21,11 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const UserManager = () => {
   const [users, setUsers] = useState([]);
@@ -47,7 +48,7 @@ const UserManager = () => {
   const fetchUsers = async () => {
     try {
       const response = await api.get("/auth/get");
-      setUsers(response.data);
+      setUsers(response.data.data || response.data); // Soporte para formato paginado o array directo
     } catch (err) {
       console.error("Error fetching users:", err);
       setError("Error al cargar la lista de usuarios.");
@@ -65,9 +66,8 @@ const UserManager = () => {
     try {
       await api.post("/auth/create-user", formData);
       setMessage("Usuario creado exitosamente.");
-      fetchUsers(); // Recargar la lista de usuarios
+      fetchUsers();
       setFormData({
-        // Limpiar formulario
         nombre: "",
         username: "",
         email: "",
@@ -100,7 +100,7 @@ const UserManager = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }} color="primary">
         Gestión de Usuarios del Sistema
       </Typography>
 
@@ -109,7 +109,7 @@ const UserManager = () => {
 
       {/* Formulario de creación de usuario */}
       <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }} color="text.primary">
           Crear nuevo usuario
         </Typography>
         <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -160,25 +160,33 @@ const UserManager = () => {
               <MenuItem value="ADMIN">ADMIN</MenuItem>
             </Select>
           </FormControl>
-          <Button type="submit" variant="contained" color="primary">
+          
+          {/* ✅ BOTÓN REFACTORIZADO */}
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary"
+            sx={{ alignSelf: 'flex-start', px: 4 }}
+          >
             Crear usuario
           </Button>
         </Box>
       </Paper>
 
       {/* Tabla de usuarios */}
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        Lista de Usuarios del Sistema
+      <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold' }} color="text.secondary">
+        Lista de Usuarios Registrados
       </Typography>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
-            <TableRow>
-              <TableCell>Nombre</TableCell>
-              <TableCell>Usuario</TableCell>
-              <TableCell>Correo</TableCell>
-              <TableCell>Rol</TableCell>
-              <TableCell>Acciones</TableCell>
+            {/* ✅ FONDO DEL TEMA */}
+            <TableRow sx={{ backgroundColor: 'background.default' }}>
+              <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Usuario</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Correo</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Rol</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -189,6 +197,7 @@ const UserManager = () => {
                 <TableCell>{u.email}</TableCell>
                 <TableCell>{u.rol}</TableCell>
                 <TableCell>
+                  {/* ✅ ICONOS REFACTORIZADOS */}
                   <IconButton
                     color="primary"
                     onClick={() => handleEdit(u.id)}
@@ -206,6 +215,11 @@ const UserManager = () => {
                 </TableCell>
               </TableRow>
             ))}
+            {users.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={5} align="center">No hay usuarios encontrados.</TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>

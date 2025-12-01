@@ -14,7 +14,8 @@ import { useNavigate } from "react-router-dom";
 import CreateMaintenanceForm from "../components/CreateMaintenanceForm.jsx";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { AlertContext } from "../context/AlertContext.jsx";
-import "../pages/styles/ConfigButtons.css"; 
+
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css"; 
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -34,7 +35,6 @@ const Maintenances = () => {
   const [totalMaintenances, setTotalMaintenances] = useState(0);
   const [search, setSearch] = useState(""); 
 
-  // 👇 Estado de Ordenamiento
   const [sortConfig, setSortConfig] = useState({ key: 'fecha_programada', direction: 'desc' });
 
   const { user } = useContext(AuthContext);
@@ -45,7 +45,6 @@ const Maintenances = () => {
     setLoading(true);
     setError("");
     try {
-      // 👇 Enviar parámetros de ordenamiento al backend
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
       const res = await api.get(`/maintenances/get?page=${page + 1}&limit=${rowsPerPage}&status=${activeTab}&search=${search}${sortParam}`);
       setMaintenances(res.data.data);
@@ -67,7 +66,6 @@ const Maintenances = () => {
     setPage(0);
   };
 
-  // 👇 Manejador de clic en encabezados
   const handleRequestSort = (key) => {
     const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
     setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
@@ -119,15 +117,23 @@ const Maintenances = () => {
     return 'default';
   }
 
-  const headerStyle = { fontWeight: 'bold', color: '#333' };
+  // ✅ Estilo header con tema
+  const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Gestión de Mantenimientos</Typography>
+        <Typography variant="h4" fontWeight="bold" color="primary">Gestión de Mantenimientos</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField label="Buscar..." variant="outlined" size="small" value={search} onChange={handleSearchChange} />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal} className="primary-action-button">
+          
+          {/* ✅ BOTÓN REFACTORIZADO */}
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<AddIcon />} 
+            onClick={handleOpenModal}
+          >
             Nuevo Mantenimiento
           </Button>
         </Box>
@@ -137,7 +143,12 @@ const Maintenances = () => {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={activeTab} onChange={handleTabChange}>
+        <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+        >
           <Tab label="Programados" value="pendiente" />
           <Tab label="Historial" value="historial" />
         </Tabs>
@@ -147,16 +158,16 @@ const Maintenances = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                {/* Columnas Ordenables */}
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'device.nombre_equipo' ? sortConfig.direction : false}>
-                  <TableSortLabel active={sortConfig.key === 'device.nombre_equipo'} direction={sortConfig.key === 'device.nombre_equipo' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('device.nombre_equipo')}>
+              {/* ✅ Fondo del tema */}
+              <TableRow sx={{ backgroundColor: 'background.default' }}>
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel active={sortConfig.key === 'device.nombre_equipo'} direction={sortConfig.direction} onClick={() => handleRequestSort('device.nombre_equipo')}>
                     Equipo
                   </TableSortLabel>
                 </TableCell>
                 
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'tipo_mantenimiento' ? sortConfig.direction : false}>
-                  <TableSortLabel active={sortConfig.key === 'tipo_mantenimiento'} direction={sortConfig.key === 'tipo_mantenimiento' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('tipo_mantenimiento')}>
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel active={sortConfig.key === 'tipo_mantenimiento'} direction={sortConfig.direction} onClick={() => handleRequestSort('tipo_mantenimiento')}>
                     Tipo
                   </TableSortLabel>
                 </TableCell>
@@ -164,18 +175,18 @@ const Maintenances = () => {
                 <TableCell sx={headerStyle}>Descripción</TableCell>
                 <TableCell sx={headerStyle}>Serie</TableCell> 
                 
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'device.usuario.nombre' ? sortConfig.direction : false}>
-                    <TableSortLabel active={sortConfig.key === 'device.usuario.nombre'} direction={sortConfig.key === 'device.usuario.nombre' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('device.usuario.nombre')}>
+                <TableCell sx={headerStyle}>
+                    <TableSortLabel active={sortConfig.key === 'device.usuario.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('device.usuario.nombre')}>
                         Usuario
                     </TableSortLabel>
                 </TableCell>
 
                 <TableCell sx={headerStyle}>Estado</TableCell>
                 
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : false}>
+                <TableCell sx={headerStyle}>
                   <TableSortLabel
                     active={sortConfig.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
-                    direction={sortConfig.key === (activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion') ? sortConfig.direction : 'desc'}
+                    direction={sortConfig.direction}
                     onClick={() => handleRequestSort(activeTab === 'pendiente' ? 'fecha_programada' : 'fecha_realizacion')}
                   >
                     {activeTab === 'pendiente' ? 'Fecha Programada' : 'Fecha Realización'}
@@ -204,9 +215,13 @@ const Maintenances = () => {
                     <TableCell>{formatDate(activeTab === 'pendiente' ? m.fecha_programada : m.fecha_realizacion)}</TableCell>
                     <TableCell>
                       {activeTab === 'historial' && (
+                        /* ✅ Botón de descarga con color secondary */
                         <IconButton edge="end" color="secondary" onClick={() => handleExport(m.id)}><DownloadIcon fontSize="small" /></IconButton>
                       )}
-                      <IconButton edge="end" color="primary" onClick={() => handleEditMaintenance(m.id)} className="action-icon-color"><EditIcon fontSize="small" /></IconButton>
+                      {/* ✅ Icono Edit con color primary */}
+                      <IconButton edge="end" color="primary" onClick={() => handleEditMaintenance(m.id)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
                       {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && m.estado === 'pendiente' && (
                         <IconButton edge="end" color="error" onClick={() => handleDeleteMaintenance(m.id)}><DeleteIcon fontSize="small" /></IconButton>
                       )}

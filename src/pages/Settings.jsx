@@ -6,26 +6,22 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
-// Iconos
 import SaveIcon from '@mui/icons-material/Save';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 
-// Importaciones propias
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import PageHeader from "../components/common/PageHeader";
-import "../pages/styles/ConfigButtons.css";
+
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const Settings = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    password: "",
-    newPassword: "",
-    confirmPassword: ""
+    password: "", newPassword: "", confirmPassword: ""
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -36,40 +32,33 @@ const Settings = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
+    setError(""); setMessage("");
 
     if (!formData.password || !formData.newPassword) {
         setError("Por favor ingresa tu contraseña actual y la nueva.");
         return;
     }
-
     if (formData.newPassword.length < 6) {
         setError("La nueva contraseña debe tener al menos 6 caracteres.");
         return;
     }
-
-    // Validación de confirmación (opcional, visual)
     if (formData.confirmPassword && formData.newPassword !== formData.confirmPassword) {
         setError("Las nuevas contraseñas no coinciden.");
         return;
     }
 
     try {
-      await api.put(`/auth/put/${user.id}/password`, {
-        password: formData.newPassword,
-      });
+      await api.put(`/auth/put/${user.id}/password`, { password: formData.newPassword });
       setMessage("Tu contraseña ha sido actualizada exitosamente.");
       setFormData({ password: "", newPassword: "", confirmPassword: "" });
     } catch (err) {
-      setError(err.response?.data?.error || "Error al cambiar la contraseña. Verifica tu contraseña actual.");
+      setError(err.response?.data?.error || "Error al cambiar la contraseña.");
     }
   };
 
   return (
-    <Box sx={{ pb: 4, bgcolor: '#f4f6f8', minHeight: '100vh' }}>
+    <Box sx={{ pb: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
       
-      {/* 1. ENCABEZADO CON BOTÓN ADMIN */}
       <PageHeader 
         title="Configuración"
         subtitle="Gestiona tu perfil y seguridad"
@@ -80,7 +69,7 @@ const Settings = () => {
               color="primary"
               startIcon={<AdminPanelSettingsIcon />}
               onClick={() => navigate("/admin-settings")}
-              sx={{ bgcolor: 'white', '&:hover': { bgcolor: '#f5f5f5' } }}
+              sx={{ bgcolor: 'background.paper' }}
             >
               Panel de Administración
             </Button>
@@ -89,19 +78,14 @@ const Settings = () => {
       />
 
       <Container maxWidth="md" sx={{ mt: -2 }}>
-        
-        {/* Mensajes */}
         {message && <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-        {/* 2. TARJETA PRINCIPAL CENTRADA */}
-        <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, border: '1px solid #e0e0e0' }}>
+        <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
             
             {/* SECCIÓN PERFIL */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 3, mb: 4 }}>
-                <Avatar 
-                    sx={{ width: 80, height: 80, bgcolor: 'primary.main', fontSize: '2.5rem' }}
-                >
+                <Avatar sx={{ width: 80, height: 80, bgcolor: 'primary.main', fontSize: '2.5rem' }}>
                     {user?.nombre?.charAt(0) || user?.username?.charAt(0)}
                 </Avatar>
                 <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
@@ -112,10 +96,10 @@ const Settings = () => {
                         {user?.email}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'center', sm: 'flex-start' } }}>
-                        <Typography variant="caption" sx={{ bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', color: 'text.secondary', border: '1px solid #e0e0e0' }}>
+                        <Typography variant="caption" sx={{ bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', color: 'text.secondary', border: '1px solid', borderColor: 'divider' }}>
                             ROL: {user?.rol}
                         </Typography>
-                      <Typography variant="caption" sx={{ bgcolor: 'grey.100', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', color: 'text.secondary', border: '1px solid #e0e0e0' }}>
+                      <Typography variant="caption" sx={{ bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', color: 'text.secondary', border: '1px solid', borderColor: 'divider' }}>
                             USUARIO: {user?.username}
                       </Typography>
                     </Box>
@@ -134,55 +118,25 @@ const Settings = () => {
                 </Typography>
 
                 <Stack spacing={2}>
-                    <TextField
-                        label="Contraseña Actual"
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        fullWidth
-                        required
-                        variant="outlined"
-                    />
-                    
-                    <Box sx={{ height: 8 }} /> {/* Espaciador */}
-
-                    <TextField
-                        label="Nueva Contraseña"
-                        type="password"
-                        name="newPassword"
-                        value={formData.newPassword}
-                        onChange={handleChange}
-                        fullWidth
-                        required
-                        helperText="Mínimo 6 caracteres"
-                    />
-                    
-                    <TextField
-                        label="Confirmar Nueva Contraseña"
-                        type="password"
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        fullWidth
-                        placeholder="Repite la nueva contraseña"
-                    />
+                    <TextField label="Contraseña Actual" type="password" name="password" value={formData.password} onChange={handleChange} fullWidth required />
+                    <Box sx={{ height: 8 }} />
+                    <TextField label="Nueva Contraseña" type="password" name="newPassword" value={formData.newPassword} onChange={handleChange} fullWidth required helperText="Mínimo 6 caracteres" />
+                    <TextField label="Confirmar Nueva Contraseña" type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} fullWidth placeholder="Repite la nueva contraseña" />
                 </Stack>
 
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
                     <Button 
                         type="submit"
                         variant="contained" 
+                        color="primary"
                         size="large"
                         startIcon={<SaveIcon />}
-                        className="primary-action-button"
                         sx={{ px: 4, py: 1.2 }}
                     >
                         Actualizar Seguridad
                     </Button>
                 </Box>
             </Box>
-
         </Paper>
       </Container>
     </Box>

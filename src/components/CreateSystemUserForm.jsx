@@ -11,7 +11,8 @@ import {
   Button,
 } from "@mui/material";
 import api from "../api/axios";
-import "../pages/styles/ConfigButtons.css"; // Asegúrate de que esta importación exista
+
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
   const [formData, setFormData] = useState({
@@ -28,27 +29,29 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
+    if (setError) setError("");
+    if (setMessage) setMessage("");
     try {
       await api.post("/auth/create-user", formData);
-      setMessage("Usuario del sistema creado exitosamente.");
+      if (setMessage) setMessage("Usuario del sistema creado exitosamente.");
       onUserCreated();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || "Error al crear el usuario.");
+      if (setError) setError(err.response?.data?.error || "Error al crear el usuario.");
     }
   };
 
   return (
     <Box>
+      {/* ✅ TÍTULO REFACTORIZADO */}
       <Typography 
         variant="h6" 
-        sx={{ mb: 2 }}
-        className="modal-title-color" /* 👈 CLASE AÑADIDA PARA CORREGIR EL COLOR */
+        sx={{ mb: 2, fontWeight: 'bold' }}
+        color="text.primary"
       >
         Crear nuevo usuario del sistema
       </Typography>
+
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <TextField
           label="Nombre completo"
@@ -97,11 +100,12 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
             <MenuItem value="ADMIN">ADMIN</MenuItem>
           </Select>
         </FormControl>
+        
+        {/* ✅ BOTÓN REFACTORIZADO */}
         <Button 
           type="submit" 
           variant="contained" 
           color="primary"
-          className="primary-action-button"
         >
           Crear usuario
         </Button>

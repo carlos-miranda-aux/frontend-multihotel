@@ -7,39 +7,33 @@ import Sidebar from "../components/Sidebar.jsx";
 
 const MainLayout = () => {
   return (
-    // 1. Contenedor "Padre" bloqueado al tamaño de la ventana (100vh)
-    // 'overflow: hidden' evita que aparezca doble barra de scroll
-    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    // Contenedor principal: Ocupa toda la pantalla, fondo gris del tema
+    <Box sx={{ display: "flex", height: "100vh", bgcolor: "background.default", overflow: "hidden" }}>
       
-      {/* Sidebar Fijo a la izquierda */}
+      {/* Sidebar fijo */}
       <Sidebar 
         open={true} 
         variant="permanent" 
-        onClose={() => {}} 
       />
 
-      {/* 2. Columna Derecha (Topbar + Contenido) */}
+      {/* Área derecha: Topbar + Contenido scrolleable */}
       <Box 
         sx={{ 
           flex: 1, 
           display: "flex", 
           flexDirection: "column",
-          height: "100%", // Asegura que ocupe todo el alto disponible
+          height: "100%", 
+          overflow: "hidden" 
         }}
       >
-        {/* TopBar Fijo arriba */}
-        {/* Al no ser parte del área con scroll, se quedará siempre visible */}
-        <Box sx={{ zIndex: 1200 }}>
-          <TopBar onMenuClick={() => {}} /> 
-        </Box>
+        <TopBar onMenuClick={() => {}} />
 
-        {/* 3. Área de Contenido con Scroll Independiente */}
         <Box 
           component="main"
           sx={{ 
-            flex: 1,        // Ocupa el espacio restante
-            p: 3,           // Padding
-            overflow: "auto" // 👈 AQUÍ ESTÁ LA MAGIA: Solo esto hace scroll
+            flex: 1,
+            overflow: "auto", // El scroll ocurre solo aquí
+            p: 0 // El padding lo manejan las páginas individualmente
           }}
         >
           <Outlet />

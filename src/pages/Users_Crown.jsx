@@ -12,7 +12,8 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateCrownUserForm from "../components/CreateCrownUserForm";
 import ImportButton from "../components/ImportButton";
-import "../pages/styles/ConfigButtons.css";
+
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -32,10 +33,8 @@ const UsersCrownP = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [search, setSearch] = useState(""); 
 
-  // Estado de Ordenamiento
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
-  // Fetch con ordenamiento
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -89,16 +88,30 @@ const UsersCrownP = () => {
     setPage(0);
   };
 
-  const headerStyle = { fontWeight: 'bold', color: '#333' };
+  // Estilo usando tokens del tema
+  const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Usuarios de Crown Paradise</Typography>
+        <Typography variant="h4" color="primary" fontWeight="bold">Usuarios de Crown Paradise</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField label="Buscar usuario..." variant="outlined" size="small" value={search} onChange={handleSearchChange} />
+          <TextField 
+            label="Buscar usuario..." 
+            variant="outlined" 
+            size="small" 
+            value={search} 
+            onChange={handleSearchChange} 
+          />
           <ImportButton endpoint="/users/import" onSuccess={fetchUsers} label="Importar" />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal} className="primary-action-button">
+          
+          {/* ✅ BOTÓN REFACTORIZADO */}
+          <Button 
+            variant="contained" 
+            color="primary"
+            startIcon={<AddIcon />} 
+            onClick={handleOpenModal}
+          >
             Crear Usuario
           </Button>
         </Box>
@@ -111,19 +124,32 @@ const UsersCrownP = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'nombre' ? sortConfig.direction : false}>
-                  <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.key === 'nombre' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('nombre')}>
+              {/* ✅ Fondo del tema */}
+              <TableRow sx={{ backgroundColor: 'background.default' }}>
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel 
+                    active={sortConfig.key === 'nombre'} 
+                    direction={sortConfig.direction} 
+                    onClick={() => handleRequestSort('nombre')}
+                  >
                     Nombre
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'area.nombre' ? sortConfig.direction : false}>
-                  <TableSortLabel active={sortConfig.key === 'area.nombre'} direction={sortConfig.key === 'area.nombre' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('area.nombre')}>
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel 
+                    active={sortConfig.key === 'area.nombre'} 
+                    direction={sortConfig.direction} 
+                    onClick={() => handleRequestSort('area.nombre')}
+                  >
                     Área
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={headerStyle} sortDirection={sortConfig.key === 'usuario_login' ? sortConfig.direction : false}>
-                  <TableSortLabel active={sortConfig.key === 'usuario_login'} direction={sortConfig.key === 'usuario_login' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('usuario_login')}>
+                <TableCell sx={headerStyle}>
+                  <TableSortLabel 
+                    active={sortConfig.key === 'usuario_login'} 
+                    direction={sortConfig.direction} 
+                    onClick={() => handleRequestSort('usuario_login')}
+                  >
                     Usuario
                   </TableSortLabel>
                 </TableCell>
@@ -140,8 +166,13 @@ const UsersCrownP = () => {
                     <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>
                     <TableCell>
-                      <IconButton color="primary" onClick={() => handleEdit(u.id)} className="action-icon-color"><EditIcon /></IconButton>
-                      <IconButton color="error" onClick={() => handleDelete(u.id)}><DeleteIcon /></IconButton>
+                      {/* ✅ ICONOS REFACTORIZADOS */}
+                      <IconButton color="primary" onClick={() => handleEdit(u.id)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDelete(u.id)}>
+                        <DeleteIcon />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))
@@ -150,9 +181,13 @@ const UsersCrownP = () => {
           </Table>
         </TableContainer>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]} component="div" count={totalUsers}
-          rowsPerPage={rowsPerPage} page={page}
-          onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25]} 
+          component="div" 
+          count={totalUsers}
+          rowsPerPage={rowsPerPage} 
+          page={page}
+          onPageChange={handleChangePage} 
+          onRowsPerPageChange={handleChangeRowsPerPage}
           labelRowsPerPage="Filas por página:"
         />
       </Paper>

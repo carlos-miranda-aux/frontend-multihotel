@@ -1,9 +1,11 @@
 // src/components/common/PageHeader.jsx
 import React from 'react';
-import { Box, Typography, Stack, Button, Paper } from '@mui/material';
+import { Box, Typography, Stack, Button, Paper, useTheme, alpha } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const PageHeader = ({ title, subtitle, status, onBack, actions }) => {
+  const theme = useTheme();
+
   return (
     <Paper
       elevation={0}
@@ -13,9 +15,11 @@ const PageHeader = ({ title, subtitle, status, onBack, actions }) => {
         position: 'sticky',
         top: 0,
         zIndex: 1100,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        // Usamos el color del tema con transparencia para el efecto blur
+        backgroundColor: alpha(theme.palette.background.paper, 0.95),
         backdropFilter: 'blur(6px)',
-        borderBottom: '1px solid #e0e0e0',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
         borderRadius: 0,
         display: 'flex',
         justifyContent: 'space-between',
@@ -30,7 +34,7 @@ const PageHeader = ({ title, subtitle, status, onBack, actions }) => {
           <Button 
             startIcon={<ArrowBackIcon />} 
             onClick={onBack} 
-            sx={{ color: 'text.secondary' }}
+            sx={{ color: 'text.secondary', minWidth: 'auto' }}
           >
             Volver
           </Button>

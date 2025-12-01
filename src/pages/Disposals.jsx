@@ -9,7 +9,8 @@ import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSortableData } from "../hooks/useSortableData";
-import "../pages/styles/ConfigButtons.css"; 
+
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css"; 
 
 const Disposals = () => {
   const [disposals, setDisposals] = useState([]);
@@ -56,13 +57,13 @@ const Disposals = () => {
     setPage(0);
   };
 
-  // Estilo para encabezado
-  const headerStyle = { fontWeight: 'bold', color: '#333' };
+  // ✅ Estilo Header del tema
+  const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Equipos dados de Baja</Typography>
+        <Typography variant="h4" fontWeight="bold" color="primary">Equipos dados de Baja</Typography>
         <TextField label="Buscar..." variant="outlined" size="small" value={search} onChange={handleSearchChange} />
       </Box>
 
@@ -72,8 +73,9 @@ const Disposals = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}> {/* 👈 Fondo Gris */}
-                <TableCell sx={headerStyle} sortDirection={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : false}>
+              {/* ✅ Fondo del tema */}
+              <TableRow sx={{ backgroundColor: 'background.default' }}> 
+                <TableCell sx={headerStyle}>
                   <TableSortLabel
                     active={sortConfig?.key === 'nombre_equipo'}
                     direction={sortConfig?.key === 'nombre_equipo' ? sortConfig.direction : 'asc'}
@@ -83,7 +85,7 @@ const Disposals = () => {
                   </TableSortLabel>
                 </TableCell>
                 <TableCell sx={headerStyle}>Serie</TableCell>
-                <TableCell sx={headerStyle} sortDirection={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : false}>
+                <TableCell sx={headerStyle}>
                   <TableSortLabel
                     active={sortConfig?.key === 'tipo.nombre'}
                     direction={sortConfig?.key === 'tipo.nombre' ? sortConfig.direction : 'asc'}
@@ -92,7 +94,7 @@ const Disposals = () => {
                     Tipo
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={headerStyle} sortDirection={sortConfig?.key === 'motivo_baja' ? sortConfig.direction : false}>
+                <TableCell sx={headerStyle}>
                   <TableSortLabel
                     active={sortConfig?.key === 'motivo_baja'}
                     direction={sortConfig?.key === 'motivo_baja' ? sortConfig.direction : 'asc'}
@@ -102,7 +104,7 @@ const Disposals = () => {
                   </TableSortLabel>
                 </TableCell>
                 <TableCell sx={headerStyle}>Observaciones</TableCell>
-                <TableCell sx={headerStyle} sortDirection={sortConfig?.key === 'fecha_baja' ? sortConfig.direction : false}>
+                <TableCell sx={headerStyle}>
                   <TableSortLabel
                     active={sortConfig?.key === 'fecha_baja'}
                     direction={sortConfig?.key === 'fecha_baja' ? sortConfig.direction : 'asc'}
@@ -128,7 +130,10 @@ const Disposals = () => {
                     <TableCell>{disposal.fecha_baja ? new Date(disposal.fecha_baja).toLocaleDateString() : 'N/A'}</TableCell>
                     {(user?.rol === "ADMIN" || user?.rol === "EDITOR") && (
                       <TableCell>
-                        <IconButton color="primary" onClick={() => handleEdit(disposal.id)} className="action-icon-color"><EditIcon /></IconButton>
+                        {/* ✅ ICONO REFACTORIZADO */}
+                        <IconButton color="primary" onClick={() => handleEdit(disposal.id)}>
+                            <EditIcon />
+                        </IconButton>
                       </TableCell>
                     )}
                   </TableRow>

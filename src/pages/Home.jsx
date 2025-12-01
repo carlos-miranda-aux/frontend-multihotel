@@ -12,25 +12,27 @@ import {
   ListItemIcon,
   Divider,
   Button,
-  useTheme
+  useTheme,
+  alpha
 } from "@mui/material";
-// Iconos (LISTA COMPLETA Y CORRECTA)
+
+// Iconos
 import DevicesIcon from "@mui/icons-material/Devices";
 import BuildIcon from "@mui/icons-material/Build";
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import PeopleIcon from "@mui/icons-material/People";
-import WarningIcon from "@mui/icons-material/Warning";
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'; 
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import AssessmentIcon from '@mui/icons-material/Assessment'; 
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // Para el botón de Vigentes
-import CancelIcon from '@mui/icons-material/Cancel'; // Para el botón de Expiradas
-import AccessTimeIcon from '@mui/icons-material/AccessTime'; // Para el botón de En Riesgo
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios"; 
 import { AlertContext } from "../context/AlertContext";
-import "../pages/styles/Home.css"; 
+
+// ❌ ELIMINADO: import "../pages/styles/Home.css"; 
 
 // Gráficos Recharts
 import { 
@@ -39,34 +41,48 @@ import {
 } from 'recharts';
 
 /**
- * Componente de Tarjeta KPI (Indicadores Superiores)
+ * Componente de Tarjeta KPI (Refactorizado con sx para reemplazar el CSS)
  */
 const WidgetCard = ({ title, value, icon, color, onClick, subtitle }) => {
   const theme = useTheme();
+  
   return (
     <Paper
       onClick={onClick}
-      className="widget-card-base"
+      elevation={2}
       sx={{
-        borderLeft: `4px solid ${color}`, 
+        p: 3,
+        minHeight: 150,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        transition: 'all 0.2s ease',
         cursor: onClick ? 'pointer' : 'default',
+        // Borde izquierdo de color, igual que antes
+        borderLeft: `4px solid ${color}`,
+        backgroundColor: 'background.paper',
+        // Efecto hover (antes estaba en el CSS)
+        '&:hover': onClick ? {
+            transform: 'translateY(-4px)',
+            boxShadow: theme.shadows[6] // Sombra más pronunciada al flotar
+        } : {}
       }}
-      elevation={3}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', mb: 1 }}>
-          <Typography variant="h3" component="div" fontWeight="bold" color={theme.palette.text.primary} sx={{ lineHeight: 1.2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+          <Typography variant="h3" fontWeight="bold" color="text.primary" sx={{ lineHeight: 1.2 }}>
             {value}
           </Typography>
-          <Box sx={{ color: color, opacity: 0.7 }}>
-            {React.cloneElement(icon, { sx: { fontSize: 50 } })} 
+          <Box sx={{ color: color, opacity: 0.8 }}>
+            {/* Clonamos el icono para asegurarnos que tenga el tamaño correcto */}
+            {React.cloneElement(icon, { sx: { fontSize: 40 } })} 
           </Box>
       </Box>
       <Box>
-        <Typography color="textSecondary" variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.2 }}>
+        <Typography variant="subtitle2" fontWeight="600" color="text.secondary">
             {title}
         </Typography>
         {subtitle && (
-            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 0.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                 {subtitle}
             </Typography>
         )}
@@ -78,7 +94,6 @@ const WidgetCard = ({ title, value, icon, color, onClick, subtitle }) => {
 const Home = () => {
   const {
     loading: alertLoading, 
-    warrantyAlertsList,
     pendingMaintenancesList, 
     totalPendingMaintenancesCount, 
     devices, 
@@ -96,8 +111,7 @@ const Home = () => {
     expiredWarrantiesCount: 0 
   });
   
-  // Data para Gráficos
-  const [warrantyBarData, setWarrantyBarData] = useState([]);   // Bar Chart: Expiradas, Riesgo, Vigentes
+  const [warrantyBarData, setWarrantyBarData] = useState([]);
   const [pandaData, setPandaData] = useState([]); 
   const [currentMonthName, setCurrentMonthName] = useState("");
   const [pageLoading, setPageLoading] = useState(true); 
@@ -105,13 +119,12 @@ const Home = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
-  // Colores para Gráficos
+  // Colores dinámicos del tema para los gráficos
   const COLORS = { 
     Vigentes: theme.palette.success.main, 
     Riesgo: theme.palette.warning.main,    
     Expiradas: theme.palette.error.dark
   };
-  // Colores para Panda
   const COLORS_PANDA = { 
     ConPanda: theme.palette.success.main, 
     SinPanda: theme.palette.error.main
@@ -121,13 +134,11 @@ const Home = () => {
     if (!alertLoading) {
       const fetchSimpleData = async () => {
         try {
-          
           const now = new Date();
           setCurrentMonthName(now.toLocaleString('es-MX', { month: 'long' }));
           const currentMonth = now.getMonth();
           const currentYear = now.getFullYear();
 
-          // 1. Consultas API (disposals)
           const [usersRes, disposalsRes] = await Promise.all([
             api.get("/users/get?page=1&limit=1"),
             api.get("/disposals/get?page=1&limit=2000")
@@ -136,7 +147,6 @@ const Home = () => {
           const totalUsersCount = usersRes.data.totalCount || 0;
           const allDisposals = disposalsRes.data.data || [];
 
-          // A. Bajas del Mes
           let monthlyDisposals = 0;
           allDisposals.forEach(d => {
             if (d.fecha_baja) {
@@ -147,7 +157,7 @@ const Home = () => {
             }
           });
 
-          // B. Garantías (Vigente vs. Riesgo 90 días vs Expiradas)
+          // Lógica de garantías (Sin cambios, solo cálculo)
           const today = new Date(); today.setHours(0,0,0,0);
           const ninetyDays = new Date(); ninetyDays.setDate(today.getDate() + 90);
           
@@ -158,20 +168,12 @@ const Home = () => {
           devices.forEach((d) => {
             if (d.garantia_fin) {
               const exp = new Date(d.garantia_fin);
-              
-              if (exp < today) {
-                  expiredCount++; // Ya expiró (antes de hoy)
-              } else if (exp >= today && exp <= ninetyDays) {
-                  riskCount++; // Riesgo (próximo a vencer)
-              } else {
-                  safeCount++; // Vigente (más de 90 días o sin fecha de fin)
-              }
-            } else {
-                safeCount++; // Sin fecha de fin se considera 'safe'
-            }
+              if (exp < today) expiredCount++;
+              else if (exp >= today && exp <= ninetyDays) riskCount++;
+              else safeCount++;
+            } else safeCount++;
           });
           
-          // Data para el Bar Chart optimizado
           setWarrantyBarData([{
             name: 'Total Equipos',
             Vigentes: safeCount,
@@ -179,28 +181,23 @@ const Home = () => {
             Expiradas: expiredCount
           }]);
           
-          // C. Configurar datos de Panda para el gráfico (Usa pandaStatus del contexto)
           setPandaData([
             { name: 'Con Panda', value: pandaStatus.devicesWithPanda },
             { name: 'Sin Panda', value: pandaStatus.devicesWithoutPanda }
           ]);
 
-
-          // D. Actualizar Stats
           setStats({
             totalDevices: pandaStatus.totalActiveDevices, 
             totalUsers: totalUsersCount,
             pendingTasksCount: totalPendingMaintenancesCount, 
             monthlyDisposalsCount: monthlyDisposals,
-            warrantyAlertsCount: riskCount, // El KPI de Riesgo sigue siendo solo el conteo de 90 días
+            warrantyAlertsCount: riskCount, 
             devicesWithPanda: pandaStatus.devicesWithPanda, 
             devicesWithoutPanda: pandaStatus.devicesWithoutPanda,
             expiredWarrantiesCount: expiredCount 
           });
 
-          if (pageLoading) {
-            setPageLoading(false);
-          }
+          if (pageLoading) setPageLoading(false);
         } catch (error) {
            console.error("Error dashboard:", error);
            setPageLoading(false);
@@ -208,27 +205,23 @@ const Home = () => {
       };
       fetchSimpleData();
     }
-  }, [alertLoading, devices, totalPendingMaintenancesCount, pendingMaintenancesList, warrantyAlertsList, pandaStatus, pageLoading]); 
+  }, [alertLoading, devices, totalPendingMaintenancesCount, pendingMaintenancesList, pandaStatus, pageLoading]); 
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
-  };
+  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : "N/A";
 
   if (alertLoading || pageLoading) {
     return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
   }
   
   const pandaColor = stats.devicesWithoutPanda > 0 ? theme.palette.error.main : theme.palette.success.main;
-  // Borde para el gráfico de Garantías basado en la existencia de riesgo o expiradas
-  const warrantyBorderColor = (stats.expiredWarrantiesCount > 0 || stats.warrantyAlertsCount > 0) 
-                              ? COLORS.Riesgo : theme.palette.grey[300]; 
-  
+  const warrantyBorderColor = (stats.expiredWarrantiesCount > 0 || stats.warrantyAlertsCount > 0) ? COLORS.Riesgo : theme.palette.divider;
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>Panel de Control</Typography>
-      <Typography variant="subtitle1" color="textSecondary" sx={{ mb: 4 }}>
+      <Typography variant="h4" fontWeight="bold" gutterBottom color="primary">
+        Panel de Control
+      </Typography>
+      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
         Resumen administrativo del inventario.
       </Typography>
       
@@ -243,7 +236,7 @@ const Home = () => {
             onClick={() => navigate("/inventory")} 
           />
         </Grid>
-                
+        
         <Grid item xs={12} sm={6} md={3}> 
           <WidgetCard 
             title="Usuarios Gestionados" 
@@ -273,30 +266,29 @@ const Home = () => {
             onClick={() => navigate("/disposals")}
           />
         </Grid>
-        
       </Grid>
       
-      {/* ================= FILA 2: LISTA Y GRÁFICOS (Distribución: 4, 2, 6) ================= */}
+      {/* ================= FILA 2: LISTA Y GRÁFICOS ================= */}
       <Grid container spacing={3}>
         
-        {/* LISTA: Tareas Críticas (md={4}) */}
+        {/* LISTA: Tareas Críticas */}
         <Grid item xs={12} md={4}> 
-          <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={3}>
+          <Paper sx={{ p: 3, height: '100%', minHeight: 350 }} elevation={2}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <EventBusyIcon sx={{ mr: 1, color: theme.palette.warning.main }} />
+                    <EventBusyIcon sx={{ mr: 1, color: 'warning.main' }} />
                     <Typography variant="h6" fontWeight="bold">Actividades próximas</Typography> 
                 </Box>
-                <Button size="small" onClick={() => navigate("/maintenances")}>Ver todo ({pendingMaintenancesList.length})</Button> 
+                <Button size="small" onClick={() => navigate("/maintenances")}>Ver todo</Button> 
             </Box>
             <Divider sx={{ mb: 2 }} />
             
             {pendingMaintenancesList.length > 0 ? (
               <List dense disablePadding>
                 {pendingMaintenancesList.slice(0, 5).map((m) => ( 
-                  <ListItemButton key={`m-${m.id}`} divider onClick={() => navigate(`/maintenances/edit/${m.id}`)} alignItems="flex-start">
+                  <ListItemButton key={`m-${m.id}`} divider onClick={() => navigate(`/maintenances/edit/${m.id}`)}>
                     <ListItemText
-                      primary={<strong>{m.device?.nombre_equipo || 'Equipo Desconocido'}</strong>}
+                      primary={<Typography variant="body2" fontWeight="bold" color="text.primary">{m.device?.nombre_equipo || 'Desconocido'}</Typography>}
                       secondary={`${m.descripcion} — ${formatDate(m.fecha_programada)}`}
                     />
                   </ListItemButton>
@@ -304,29 +296,24 @@ const Home = () => {
               </List>
             ) : (
               <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography color="textSecondary">¡Todo al día! No hay tareas críticas.</Typography>
+                <Typography color="text.secondary">¡Todo al día! No hay tareas críticas.</Typography>
               </Box>
             )}
           </Paper>
         </Grid>
         
-        {/* GRÁFICO 1: ESTATUS DE PANDA (md={2} - Reducido) */}
+        {/* GRÁFICO 1: ESTATUS DE PANDA */}
         <Grid item xs={12} sm={6} md={2}> 
           <Paper 
             sx={{ 
-              p: 3, 
-              height: '100%', 
-              minHeight: 350, 
-              border: 1, 
-              borderColor: pandaColor
+              p: 3, height: '100%', minHeight: 350, 
+              border: 1, borderColor: pandaColor 
             }} 
-            elevation={3}
+            elevation={2}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: pandaColor }}>
               <VerifiedUserIcon sx={{ mr: 1 }} />
-              <Typography variant="h6" fontWeight="bold">
-                Estado de Panda
-              </Typography>
+              <Typography variant="h6" fontWeight="bold">Estado de Panda</Typography>
             </Box>
             
             <Box sx={{ height: 200, width: '100%', position: 'relative' }}> 
@@ -349,57 +336,35 @@ const Home = () => {
               </ResponsiveContainer>
               
               <Box sx={{ position: 'absolute', top: '45%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                <Typography variant="h5" fontWeight="bold" 
-                  sx={{ 
-                    color: pandaColor, 
-                    lineHeight: 1.1
-                  }}>
-                  {stats.devicesWithoutPanda}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>
-                  SIN PANDA
-                </Typography>
+                <Typography variant="h5" fontWeight="bold" sx={{ color: pandaColor, lineHeight: 1 }}>{stats.devicesWithoutPanda}</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>SIN PANDA</Typography>
               </Box>
             </Box>
             
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Button 
-                    size="small" 
-                    onClick={() => navigate("/inventory?filter=no-panda")} 
-                >
-                    Ver Equipos ({stats.devicesWithoutPanda})
-                </Button>
+                <Button size="small" onClick={() => navigate("/inventory?filter=no-panda")}>Ver Equipos</Button>
             </Box>
           </Paper>
         </Grid>
         
-        {/* GRÁFICO 2: Estado General de Garantía (md={6} - AMPLIADO) */}
+        {/* GRÁFICO 2: Estado General de Garantía */}
         <Grid item xs={12} sm={6} md={6}> 
           <Paper 
             sx={{ 
-              p: 3, 
-              height: '100%', 
-              minHeight: 350, 
-              border: 1, 
-              borderColor: warrantyBorderColor 
+              p: 3, height: '100%', minHeight: 350, 
+              border: 1, borderColor: warrantyBorderColor 
             }} 
-            elevation={3}
+            elevation={2}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: theme.palette.text.primary }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: 'text.primary' }}>
               <AssessmentIcon sx={{ mr: 1 }} />
-              <Typography variant="h6" fontWeight="bold">
-                Estado de Garantía
-              </Typography>
+              <Typography variant="h6" fontWeight="bold">Estado de Garantía</Typography>
             </Box>
             
             <Box sx={{ height: 200, width: '100%', position: 'relative', pt: 2 }}> 
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                    data={warrantyBarData} 
-                    // Se pueden ajustar los márgenes si es necesario, pero ResponsiveContainer se encarga de la adaptación
-                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }} 
-                >
+                <BarChart data={warrantyBarData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" hide /> 
                   <YAxis type="number" allowDecimals={false} />
@@ -407,7 +372,6 @@ const Home = () => {
                     formatter={(value, name) => [value, name]}
                     wrapperStyle={{ fontSize: '12px' }}
                   />
-                  {/* Se invierte el orden para mostrar Expiradas/Riesgo/Vigentes en orden lógico */}
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
                   <Bar dataKey="Expiradas" name="Expiradas" fill={COLORS.Expiradas} />
                   <Bar dataKey="Riesgo" name="En Riesgo" fill={COLORS.Riesgo} />
@@ -417,35 +381,10 @@ const Home = () => {
             </Box>
             
             <Divider sx={{ my: 2 }} />
-            {/* BOTONES DE ACCIÓN PARA FILTRADO */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, px: 2 }}>
-                <Button 
-                    size="small" 
-                    variant="outlined"
-                    startIcon={<CheckCircleIcon />}
-                    sx={{ color: COLORS.Vigentes, borderColor: COLORS.Vigentes }}
-                    onClick={() => navigate("/inventory?filter=safe-warranty")} 
-                >
-                    Ver Vigentes
-                </Button>
-                <Button 
-                    size="small" 
-                    variant="outlined"
-                    startIcon={<AccessTimeIcon />}
-                    sx={{ color: COLORS.Riesgo, borderColor: COLORS.Riesgo }}
-                    onClick={() => navigate("/inventory?filter=warranty-risk")} 
-                >
-                    Ver En Riesgo
-                </Button>
-                <Button 
-                    size="small" 
-                    variant="outlined"
-                    startIcon={<CancelIcon />}
-                    color="error"
-                    onClick={() => navigate("/inventory?filter=expired-warranty")} 
-                >
-                    Ver Expiradas
-                </Button>
+                <Button size="small" variant="outlined" startIcon={<CheckCircleIcon />} color="success" onClick={() => navigate("/inventory?filter=safe-warranty")}>Ver Vigentes</Button>
+                <Button size="small" variant="outlined" startIcon={<AccessTimeIcon />} color="warning" onClick={() => navigate("/inventory?filter=warranty-risk")}>Ver En Riesgo</Button>
+                <Button size="small" variant="outlined" startIcon={<CancelIcon />} color="error" onClick={() => navigate("/inventory?filter=expired-warranty")}>Ver Expiradas</Button>
             </Box>
           </Paper>
         </Grid>

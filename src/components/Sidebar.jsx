@@ -9,24 +9,31 @@ import {
     ListItemText, 
     Box, 
     Typography, 
-    Divider 
+    Divider,
+    useTheme,
+    alpha // Importante para las transparencias
 } from "@mui/material";
-// Icons
+
+// Iconos
 import HomeIcon from "@mui/icons-material/Home";
-import DevicesIcon from "@mui/icons-material/Devices"; // Cambiado de InventoryIcon en la referencia anterior
+import DevicesIcon from "@mui/icons-material/Devices";
 import BuildIcon from "@mui/icons-material/Build";
 import PeopleIcon from "@mui/icons-material/People";
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Cambiado de SettingsIcon en la referencia anterior
-import AssessmentIcon from '@mui/icons-material/Assessment'; // Añadido para Reportes
-import DeleteIcon from '@mui/icons-material/Delete'; // Añadido para Bajas
-import LogoImg from "../assets/Logo.png"; // Icono Logo
-import { AuthContext } from "../context/AuthContext";
-import "../components/styles/Sidebar.css"; // 👈 NUEVA IMPORTACIÓN
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import DeleteIcon from '@mui/icons-material/Delete';
+import LogoutIcon from '@mui/icons-material/Logout'; // Opcional si quieres poner logout abajo
 
-const Sidebar = ({ open, onClose, variant = 'persistent' }) => { 
+import LogoImg from "../assets/Logo.png";
+import { AuthContext } from "../context/AuthContext";
+
+const SIDEBAR_WIDTH = 260; // Un poco más ancho para que respire mejor
+
+const Sidebar = ({ open, variant = 'persistent' }) => { 
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useContext(AuthContext);
+  const theme = useTheme();
 
   const menuItems = [
     { text: "Inicio", icon: <HomeIcon />, path: "/home" },
@@ -41,76 +48,152 @@ const Sidebar = ({ open, onClose, variant = 'persistent' }) => {
     { text: "Configuración Admin", icon: <AdminPanelSettingsIcon />, path: "/admin-settings" },
   ];
 
-  const isSelected = (path) => location.pathname === path;
+  const isSelected = (path) => location.pathname.startsWith(path);
 
-  const handleNavigation = (path) => {
-    navigate(path);
+  // Función para renderizar un item de la lista con el nuevo estilo
+  const renderListItem = (item) => {
+    const active = isSelected(item.path);
+
+    return (
+      <ListItemButton
+        key={item.text}
+        onClick={() => navigate(item.path)}
+        sx={{
+          // 1. Márgenes y Redondeo: Efecto botón flotante
+          mx: 1.5, // Margen horizontal
+          my: 0.5, // Margen vertical entre items
+          borderRadius: 2, 
+          transition: 'all 0.2s ease-in-out',
+          
+          // 2. Estilos base (inactivo)
+          color: theme.palette.text.secondary,
+          '&:hover': {
+            backgroundColor: alpha(theme.palette.primary.main, 0.08),
+            color: theme.palette.primary.main,
+            transform: 'translateX(4px)', // Pequeña animación al pasar el mouse
+            "& .MuiListItemIcon-root": {
+               color: theme.palette.primary.main,
+            }
+          },
+
+          // 3. Estilos ACTIVOS (Seleccionado)
+          ...(active && {
+            backgroundColor: alpha(theme.palette.primary.main, 0.12), // Fondo suave
+            color: theme.palette.primary.main, // Texto morado
+            fontWeight: 'bold',
+            "& .MuiListItemIcon-root": {
+              color: theme.palette.primary.main, // Icono morado
+            },
+            '&:hover': {
+               backgroundColor: alpha(theme.palette.primary.main, 0.18),
+            }
+          }),
+        }}
+      >
+        <ListItemIcon 
+          sx={{ 
+            minWidth: 40,
+            color: active ? theme.palette.primary.main : theme.palette.text.secondary,
+            transition: 'color 0.2s'
+          }}
+        >
+          {item.icon}
+        </ListItemIcon>
+        <ListItemText 
+            primary={item.text} 
+            primaryTypographyProps={{ 
+                fontSize: '0.9rem', 
+                fontWeight: active ? 600 : 500,
+                fontFamily: theme.typography.fontFamily
+            }} 
+        />
+        {/* Indicador visual opcional a la derecha si está activo */}
+        {active && (
+            <Box 
+                sx={{ 
+                    width: 4, 
+                    height: 4, 
+                    borderRadius: '50%', 
+                    bgcolor: 'primary.main',
+                    ml: 1
+                }} 
+            />
+        )}
+      </ListItemButton>
+    );
   };
 
   return (
     <Drawer
-      // [CLAVE]: Utiliza el variant='permanent'
       variant={variant} 
       anchor="left"
       open={open}
-      // onClose={onClose} // No usado en modo permanente
-      // ⚠️ Usamos una clase dinámica para aplicar estilos condicionales/fijos
-      className={variant === 'permanent' ? 'sidebar-drawer-permanent' : ''}
       sx={{
+        width: SIDEBAR_WIDTH,
+        flexShrink: 0,
         "& .MuiDrawer-paper": {
-          // ✅ APLICAR ESTILOS FIJOS USANDO LA VARIABLE CSS
+          width: SIDEBAR_WIDTH,
           boxSizing: "border-box",
-          width: 'var(--sidebar-width)',
-          backgroundColor: '#f5f5f5'
+          backgroundColor: "#ffffff", // Fondo blanco limpio
+          borderRight: "1px solid rgba(0,0,0,0.08)", // Borde muy sutil
+          boxShadow: variant === 'temporary' ? 4 : 'none',
         },
       }}
     >
-      {/* Logo */}
+      {/* --- LOGO AREA --- */}
       <Box
         sx={{
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          p: 2,
+          py: 4, // Más espacio vertical
           cursor: "pointer",
         }}
         onClick={() => navigate("/home")}
       >
-        <img src={LogoImg} alt="Logo" style={{ width: "120px", height: "auto" }} />
+        <img 
+            src={LogoImg} 
+            alt="Logo" 
+            style={{ 
+                width: "100px", 
+                height: "auto", 
+                filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))' // Sombra suave al logo
+            }} 
+        />
       </Box>
 
-      <Divider />
-
-      {/* Menú */}
-      <List>
-        {menuItems.map((item) => (
-          <ListItemButton
-            key={item.text}
-            selected={isSelected(item.path)}
-            onClick={() => handleNavigation(item.path)}
-          >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
-      </List>
-      
-      {/* Menú de administración (Admin o Editor) */}
-      {user && (user.rol === "ADMIN" || user.rol === "EDITOR") && (
-        <List>
-          <Divider />
-          {adminItems.map((item) => (
-            <ListItemButton
-              key={item.text}
-              selected={isSelected(item.path)}
-              onClick={() => handleNavigation(item.path)}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          ))}
+      {/* --- MENU PRINCIPAL --- */}
+      <Box sx={{ px: 0 }}>
+        <Typography variant="caption" sx={{ pl: 3, mb: 1, display: 'block', color: 'text.disabled', fontWeight: 600 }}>
+            MENU
+        </Typography>
+        <List component="nav">
+            {menuItems.map((item) => renderListItem(item))}
         </List>
+      </Box>
+      
+      {/* --- MENU ADMIN --- */}
+      {user && (user.rol === "ADMIN" || user.rol === "EDITOR") && (
+        <Box sx={{ mt: 2 }}>
+            <Divider sx={{ my: 2, mx: 3, opacity: 0.6 }} />
+            
+            <Typography variant="caption" sx={{ pl: 3, mb: 1, display: 'block', color: 'text.disabled', fontWeight: 600 }}>
+                ADMINISTRACIÓN
+            </Typography>
+            <List component="nav">
+                {adminItems.map((item) => renderListItem(item))}
+            </List>
+        </Box>
       )}
+
+      {/* Footer opcional (versión o copyright) */}
+      <Box sx={{ mt: 'auto', p: 2, textAlign: 'center' }}>
+        <Typography variant="caption" color="text.disabled">
+            v1.0.0 &copy; 2025
+        </Typography>
+      </Box>
+
     </Drawer>
   );
 };

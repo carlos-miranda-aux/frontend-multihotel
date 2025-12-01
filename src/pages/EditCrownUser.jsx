@@ -1,41 +1,42 @@
 // src/pages/EditCrownUser.jsx
 import React, { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form"; // 👈 Hook Form
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Typography, TextField, Button, Grid,
   CircularProgress, Alert, MenuItem, ListSubheader,
-  Stack, FormControlLabel, Switch, Divider, Chip, Avatar
+  Stack, FormControlLabel, Switch, Divider, Chip, Avatar, FormControl, InputLabel
 } from "@mui/material";
 
-// Iconos
 import SaveIcon from '@mui/icons-material/Save';
 import PersonIcon from '@mui/icons-material/Person';
 import DomainIcon from '@mui/icons-material/Domain';
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
 import BadgeIcon from '@mui/icons-material/Badge';
 
-// Importaciones propias
 import api from "../api/axios";
 import PageHeader from "../components/common/PageHeader";
 import SectionCard from "../components/common/SectionCard";
-import "../pages/styles/ConfigButtons.css"; 
 
 const EditCrownUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    nombre: "",
-    correo: "",
-    areaId: "", 
-    usuario_login: "",
+  const { control, handleSubmit, reset, watch } = useForm({
+    defaultValues: { nombre: "", correo: "", areaId: "", usuario_login: "", isManager: false }
   });
-  const [isManager, setIsManager] = useState(false); 
+
   const [areas, setAreas] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
+  // Watchers para visualización
+  const watchedName = watch("nombre");
+  const watchedCorreo = watch("correo");
+  const watchedAreaId = watch("areaId");
+  const isManager = watch("isManager");
+
   const [departmentName, setDepartmentName] = useState("N/A");
 
   useEffect(() => {
@@ -51,49 +52,35 @@ const EditCrownUser = () => {
         const areasData = areasRes.data || [];
         setAreas(areasData);
 
-        setFormData({
+        reset({
           nombre: userData.nombre || "",
           correo: userData.correo || "",
           areaId: userData.areaId || "", 
           usuario_login: userData.usuario_login || "", 
+          isManager: userData.es_jefe_de_area || false
         });
         
-        setIsManager(userData.es_jefe_de_area || false);
-        
-        // Calcular nombre del departamento inicial
-        const assignedArea = areasData.find(a => a.id === userData.areaId);
-        setDepartmentName(assignedArea?.departamento?.nombre || "N/A");
-
         setLoading(false);
       } catch (err) {
-        console.error("Error al cargar datos:", err);
         setError("Error al cargar los datos del usuario.");
         setLoading(false);
       }
     };
     fetchUserAndAreas();
-  }, [id]);
+  }, [id, reset]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    
-    // Auto-actualizar el nombre del departamento al cambiar el área
-    if (name === 'areaId') {
-      const selectedArea = areas.find(a => a.id === value);
+  // Actualizar depto cuando cambia el area
+  useEffect(() => {
+      const selectedArea = areas.find(a => a.id === watchedAreaId);
       setDepartmentName(selectedArea?.departamento?.nombre || "N/A");
-    }
-  };
+  }, [watchedAreaId, areas]);
 
-  const handleUpdateUser = async (e) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
-
+  const onSubmit = async (data) => {
+    setError(""); setMessage("");
     const payload = {
-      ...formData,
-      areaId: formData.areaId ? Number(formData.areaId) : null,
-      es_jefe_de_area: isManager
+      ...data,
+      areaId: data.areaId ? Number(data.areaId) : null,
+      es_jefe_de_area: data.isManager
     };
 
     try {
@@ -101,15 +88,13 @@ const EditCrownUser = () => {
       setMessage("Usuario de Crown actualizado correctamente.");
       setTimeout(() => navigate("/users"), 1500);
     } catch (err) {
-      setError(err.response?.data?.error || "Error al actualizar el usuario.");
+      setError(err.response?.data?.error || "Error al actualizar.");
     }
   };
 
-  // Renderizador de opciones agrupadas (mismo estilo que EditDevice)
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
-    // Ordenar por departamento para agrupar visualmente
     const sortedAreas = [...areas].sort((a, b) => (a.departamento?.nombre || "").localeCompare(b.departamento?.nombre || ""));
 
     sortedAreas.forEach(area => {
@@ -117,177 +102,88 @@ const EditCrownUser = () => {
         options.push(<ListSubheader key={`header-${area.id}`} sx={{ fontWeight: 'bold', color: 'primary.main' }}>{area.departamento.nombre}</ListSubheader>);
         lastDept = area.departamento.nombre;
       }
-      options.push(
-        <MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>
-          {area.nombre}
-        </MenuItem>
-      );
+      options.push(<MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>{area.nombre}</MenuItem>);
     });
     return options;
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
   return (
-    <Box sx={{ pb: 4, bgcolor: '#f4f6f8', minHeight: '100vh' }}>
-      
-      {/* 1. HEADER */}
+    <Box sx={{ pb: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
       <PageHeader 
-        title={formData.nombre}
-        // Badge personalizado para Jefes
+        title={watchedName}
         status={
-            isManager ? (
-                <Chip 
-                    icon={<SupervisorAccountIcon />} 
-                    label="Jefe de Área" 
-                    color="primary" 
-                    size="small" 
-                    sx={{ fontWeight: 'bold' }}
-                />
-            ) : (
-                <Chip 
-                    icon={<PersonIcon />} 
-                    label="Staff" 
-                    variant="outlined" 
-                    size="small" 
-                />
-            )
+            isManager ? <Chip icon={<SupervisorAccountIcon />} label="Jefe de Área" color="primary" size="small" sx={{ fontWeight: 'bold' }} /> 
+                      : <Chip icon={<PersonIcon />} label="Staff" variant="outlined" size="small" />
         }
         onBack={() => navigate(-1)}
         actions={
-          <Button 
-            variant="contained" 
-            startIcon={<SaveIcon />} 
-            onClick={handleUpdateUser}
-            className="primary-action-button"
-          >
-            Guardar Cambios
-          </Button>
+          <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSubmit(onSubmit)} color="primary">Guardar Cambios</Button>
         }
       />
 
-      {/* 2. MENSAJES */}
       <Box sx={{ px: 3, mb: 2 }}>
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       </Box>
 
-      {/* 3. CONTENIDO */}
       <Box component="form" noValidate sx={{ px: 3 }}>
         <Grid container spacing={3}>
-          
-          {/* === COLUMNA IZQUIERDA: DATOS PERSONALES === */}
           <Grid item xs={12} md={8}>
             <SectionCard title="Información Personal" icon={<BadgeIcon />}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 2 }}>
-                    <Avatar 
-                        sx={{ width: 64, height: 64, bgcolor: isManager ? 'primary.main' : 'grey.400', fontSize: '1.75rem' }}
-                    >
-                        {formData.nombre.charAt(0).toUpperCase()}
+                    <Avatar sx={{ width: 64, height: 64, bgcolor: isManager ? 'primary.main' : 'grey.400', fontSize: '1.75rem' }}>
+                        {watchedName ? watchedName.charAt(0).toUpperCase() : "?"}
                     </Avatar>
                     <Box>
-                        <Typography variant="h6">{formData.nombre}</Typography>
-                        <Typography variant="body2" color="text.secondary">{formData.correo || "Sin correo registrado"}</Typography>
+                        <Typography variant="h6">{watchedName}</Typography>
+                        <Typography variant="body2" color="text.secondary">{watchedCorreo || "Sin correo registrado"}</Typography>
                     </Box>
                 </Box>
 
                 <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                        <TextField
-                            label="Nombre"
-                            name="nombre"
-                            value={formData.nombre}
-                            onChange={handleChange}
-                            fullWidth
-                            required
-                        />
+                        <Controller name="nombre" control={control} rules={{required:true}} render={({field})=><TextField {...field} label="Nombre" fullWidth required />} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                        <TextField
-                            label="Correo Electrónico"
-                            name="correo"
-                            type="email"
-                            value={formData.correo}
-                            onChange={handleChange}
-                            fullWidth
-                        />
+                        <Controller name="correo" control={control} render={({field})=><TextField {...field} label="Correo Electrónico" type="email" fullWidth />} />
                     </Grid>
                     <Grid item xs={12}>
-                        <TextField
-                            label="Usuario"
-                            name="usuario_login"
-                            value={formData.usuario_login}
-                            onChange={handleChange}
-                            fullWidth
-                            helperText="Ej: CROWNCUN\usuario o ARRIVA\usuario"
-                            InputProps={{
-                                startAdornment: <Typography color="text.secondary" sx={{ mr: 1, fontSize: '0.8rem' }}></Typography>
-                            }}
-                        />
+                        <Controller name="usuario_login" control={control} render={({field})=><TextField {...field} label="Usuario" fullWidth helperText="Ej: CROWNCUN\usuario" />} />
                     </Grid>
                 </Grid>
             </SectionCard>
           </Grid>
 
-          {/* === COLUMNA DERECHA: ORGANIZACIÓN === */}
           <Grid item xs={12} md={4}>
             <Stack spacing={3}>
                 <SectionCard title="Organización" icon={<DomainIcon />}>
                     <Stack spacing={3}>
-                        
-                        {/* Selector de Área con estilo consistente */}
-                        <TextField
-                            select
-                            label="Área Asignada"
-                            name="areaId"
-                            value={formData.areaId || ""}
-                            onChange={handleChange}
-                            fullWidth
-
-                        >
-                            <MenuItem value=""><em>Ninguna</em></MenuItem>
-                            {renderAreaOptions()}
-                        </TextField>
-                        
-                        {/* Departamento (Solo lectura) */}
-                        <TextField
-                            label="Departamento"
-                            name="departamento"
-                            value={departmentName}
-                            fullWidth
-                            InputProps={{ readOnly: true }}
-                            variant="filled"
-                            size="small"
-                        />
-
-                        <Divider />
-
-                        {/* Switch de Jefe */}
-                        <FormControlLabel
-                            control={
-                            <Switch
-                                checked={isManager}
-                                onChange={(e) => setIsManager(e.target.checked)}
-                                color="primary"
+                        <FormControl fullWidth>
+                            <InputLabel>Área Asignada</InputLabel>
+                            <Controller
+                                name="areaId" control={control}
+                                render={({ field }) => (
+                                    <Select {...field} label="Área Asignada">
+                                        <MenuItem value=""><em>Ninguna</em></MenuItem>
+                                        {renderAreaOptions()}
+                                    </Select>
+                                )}
                             />
-                            }
-                            label={
-                                <Box>
-                                    <Typography variant="body1" fontWeight={isManager ? "bold" : "normal"}>Es Jefe de Área</Typography>
-                                </Box>
-                            }
+                        </FormControl>
+                        <TextField label="Departamento" value={departmentName} fullWidth InputProps={{ readOnly: true }} variant="filled" size="small" />
+                        <Divider />
+                        <Controller
+                            name="isManager" control={control}
+                            render={({ field: { onChange, value } }) => (
+                                <FormControlLabel control={<Switch checked={value} onChange={onChange} color="primary" />} label="Es Jefe de Área" />
+                            )}
                         />
                     </Stack>
                 </SectionCard>
             </Stack>
           </Grid>
-
         </Grid>
       </Box>
     </Box>

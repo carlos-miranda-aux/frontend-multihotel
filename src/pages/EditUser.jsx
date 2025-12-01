@@ -15,7 +15,8 @@ import {
 } from "@mui/material";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
-import "../pages/styles/ConfigButtons.css"; // 👈 IMPORTAR ESTILOS
+
+// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const EditUser = () => {
   const { id } = useParams();
@@ -59,13 +60,11 @@ const EditUser = () => {
     setError("");
     setMessage("");
 
-    // Evitar cambiar el rol del superadministrador
     if (formData.username === "superadmin" && formData.rol !== "ADMIN") {
       setError("No se puede cambiar el rol del superadministrador.");
       return;
     }
     
-    // Solo enviar los campos que se han modificado
     const payload = {};
     if (formData.nombre) payload.nombre = formData.nombre;
     if (formData.email) payload.email = formData.email;
@@ -75,22 +74,22 @@ const EditUser = () => {
     try {
       await api.put(`/auth/put/${id}`, payload);
       setMessage("Usuario actualizado correctamente.");
-      setTimeout(() => navigate("/admin-settings"), 2000);
+      setTimeout(() => navigate("/admin-settings"), 2000); // Redirige a AdminSettings o UserManager según prefieras
     } catch (err) {
       setError(err.response?.data?.error || "Error al actualizar el usuario.");
     }
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>
+    <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }} color="primary">
         Editar Usuario: {formData.username}
       </Typography>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: 3, maxWidth: 600 }}>
         <Box component="form" onSubmit={handleUpdateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <TextField
             label="Nombre"
@@ -129,11 +128,13 @@ const EditUser = () => {
             fullWidth
             helperText="Dejar en blanco para no cambiar la contraseña."
           />
+          
+          {/* ✅ BOTÓN REFACTORIZADO */}
           <Button 
             type="submit" 
             variant="contained" 
             color="primary"
-            className="primary-action-button" // 👈 Aplicar clase CSS
+            sx={{ alignSelf: 'flex-start', mt: 1 }}
           >
             Guardar cambios
           </Button>

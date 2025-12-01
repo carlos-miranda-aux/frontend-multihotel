@@ -1,5 +1,6 @@
 // src/pages/EditMaintenance.jsx
 import React, { useState, useEffect, useContext } from "react";
+import { useForm, Controller } from "react-hook-form"; // 👈 Hook Form
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Typography, TextField, Button, Grid, Fade, 
@@ -7,32 +8,22 @@ import {
   Divider, Stack, Alert
 } from "@mui/material";
 
-// Iconos
 import SaveIcon from '@mui/icons-material/Save';
 import EventIcon from '@mui/icons-material/Event';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-// Importaciones Propias (Verifica que estas rutas existan)
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
 import PageHeader from "../components/common/PageHeader"; 
 import SectionCard from "../components/common/SectionCard";
 import StatusBadge from "../components/common/StatusBadge";
+import { MAINTENANCE_STATUS, MAINTENANCE_TYPE } from "../config/constants"; 
 
-// Ajuste de ruta CSS: './styles' asume que 'styles' está en la misma carpeta que este archivo
-import "./styles/ConfigButtons.css"; 
-
-// Helper seguro para fechas
 const safeDateValue = (dateString) => {
   if (!dateString) return "";
-  try {
-    const d = new Date(dateString);
-    return isNaN(d.getTime()) ? "" : d.toISOString().substring(0, 10);
-  } catch (e) {
-    return "";
-  }
+  try { return new Date(dateString).toISOString().substring(0, 10); } catch (e) { return ""; }
 };
 
 const EditMaintenance = () => {
@@ -40,18 +31,17 @@ const EditMaintenance = () => {
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
 
-  const [formData, setFormData] = useState({
-    descripcion: "",
-    fecha_programada: "",
-    fecha_realizacion: "",
-    estado: "pendiente",
-    deviceId: "",
-    diagnostico: "",
-    acciones_realizadas: "",
-    observaciones: "",
-    tipo_mantenimiento: "Preventivo",
+  const { control, handleSubmit, reset, watch, setValue } = useForm({
+    defaultValues: {
+      descripcion: "", fecha_programada: "", fecha_realizacion: "",
+      estado: MAINTENANCE_STATUS.PENDING, deviceId: "", diagnostico: "",
+      acciones_realizadas: "", observaciones: "", tipo_mantenimiento: MAINTENANCE_TYPE.PREVENTIVE,
+    }
   });
-  
+
+  const estadoActual = watch("estado"); // Observamos el estado para mostrar campos extra
+  const fechaRealizacionActual = watch("fecha_realizacion");
+
   const [deviceInfo, setDeviceInfo] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -61,66 +51,46 @@ const EditMaintenance = () => {
     const fetchMaintenanceData = async () => {
       try {
         setLoading(true);
-        // Validamos que el ID exista
-        if (!id) throw new Error("ID de mantenimiento no válido");
-
         const res = await api.get(`/maintenances/get/${id}`);
-        
-        // Verificamos que la respuesta tenga datos
-        if (!res.data) throw new Error("No se recibieron datos del servidor");
         const data = res.data;
-        
-        // Guardamos info del equipo de forma segura
         setDeviceInfo(data.device || {}); 
 
-        setFormData({
+        reset({
           descripcion: data.descripcion || "",
           fecha_programada: safeDateValue(data.fecha_programada),
           fecha_realizacion: safeDateValue(data.fecha_realizacion),
-          estado: data.estado || "pendiente",
+          estado: data.estado || MAINTENANCE_STATUS.PENDING,
           deviceId: data.deviceId || "",
           diagnostico: data.diagnostico || "",
           acciones_realizadas: data.acciones_realizadas || "",
           observaciones: data.observaciones || "",
-          tipo_mantenimiento: data.tipo_mantenimiento || "Preventivo",
+          tipo_mantenimiento: data.tipo_mantenimiento || MAINTENANCE_TYPE.PREVENTIVE,
         });
       } catch (err) {
-        console.error("Error al cargar datos:", err);
-        setError("No se pudo cargar el mantenimiento. Verifica la consola.");
+        setError("No se pudo cargar el mantenimiento.");
       } finally {
         setLoading(false);
       }
     };
     fetchMaintenanceData();
-  }, [id]);
+  }, [id, reset]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    // Auto-rellenar fecha si se marca como realizado
-    if (name === "estado" && value === "realizado" && !formData.fecha_realizacion) {
-      setFormData(prev => ({
-        ...prev,
-        estado: value,
-        fecha_realizacion: new Date().toISOString().substring(0, 10)
-      }));
-    } else {
-       setFormData(prev => ({ ...prev, [name]: value }));
+  // Efecto para auto-llenar fecha si cambia a completado
+  useEffect(() => {
+    if (estadoActual === MAINTENANCE_STATUS.COMPLETED && !fechaRealizacionActual) {
+        setValue("fecha_realizacion", new Date().toISOString().substring(0, 10));
     }
-  };
+  }, [estadoActual, fechaRealizacionActual, setValue]);
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
-
-    // Conversión de fechas para enviar al backend
+  const onSubmit = async (data) => {
+    setError(""); setMessage("");
     const prepareDate = (d) => (d ? new Date(d).toISOString() : null);
 
     const payload = {
-      ...formData,
-      deviceId: Number(formData.deviceId),
-      fecha_programada: prepareDate(formData.fecha_programada),
-      fecha_realizacion: prepareDate(formData.fecha_realizacion),
+      ...data,
+      deviceId: Number(data.deviceId),
+      fecha_programada: prepareDate(data.fecha_programada),
+      fecha_realizacion: prepareDate(data.fecha_realizacion),
     };
 
     try {
@@ -129,198 +99,94 @@ const EditMaintenance = () => {
       setMessage("Mantenimiento actualizado correctamente.");
       setTimeout(() => navigate("/maintenances"), 1200);
     } catch (err) {
-      console.error(err);
       setError(err.response?.data?.error || "Error al actualizar.");
     }
   };
 
-  // Renderizado de carga
-  if (loading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
-  }
-
-  // Renderizado de error fatal si no cargó nada
-  if (!formData.deviceId && !loading && error) {
-      return (
-          <Box sx={{ p: 4 }}>
-              <Alert severity="error">{error}</Alert>
-              <Button onClick={() => navigate(-1)} sx={{ mt: 2 }}>Volver</Button>
-          </Box>
-      )
-  }
-
-  const isCompleted = formData.estado === 'realizado';
+  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
   return (
-    <Box sx={{ pb: 4, bgcolor: '#f4f6f8', minHeight: '100vh' }}>
+    <Box sx={{ pb: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
       
-      {/* 1. HEADER */}
       <PageHeader 
         title={`Mantenimiento #${id || '...'}`}
         subtitle={deviceInfo?.nombre_equipo ? `${deviceInfo.nombre_equipo} (${deviceInfo.etiqueta || 'S/E'})` : "Equipo desconocido"}
-        status={<StatusBadge status={formData.estado} />}
+        status={<StatusBadge status={estadoActual} />}
         onBack={() => navigate(-1)}
         actions={
-          <Button 
-            variant="contained" 
-            startIcon={<SaveIcon />} 
-            onClick={handleUpdate}
-            className="primary-action-button"
-          >
+          <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSubmit(onSubmit)}>
             Guardar Cambios
           </Button>
         }
       />
 
-      {/* 2. ALERTAS */}
       <Box sx={{ px: 3, mb: 2 }}>
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       </Box>
 
-      {/* 3. CONTENIDO (SPLIT VIEW) */}
       <Box component="form" noValidate sx={{ px: 3 }}>
         <Grid container spacing={3}>
-          
-          {/* === PANEL IZQUIERDO: PLANIFICACIÓN (Contexto) === */}
           <Grid item xs={12} md={5} lg={4}>
             <SectionCard title="Planificación Original" icon={<EventIcon />} color="text.secondary">
                <Stack spacing={3}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                        Equipo Afectado
-                    </Typography>
-                    <Typography variant="body1" fontWeight="500">
-                        {deviceInfo?.nombre_equipo || "N/A"}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        SN: {deviceInfo?.numero_serie || "N/A"}
-                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>Equipo Afectado</Typography>
+                    <Typography variant="body1" fontWeight="500">{deviceInfo?.nombre_equipo || "N/A"}</Typography>
+                    <Typography variant="body2" color="text.secondary">SN: {deviceInfo?.numero_serie || "N/A"}</Typography>
                   </Box>
-
                   <Divider />
-
-                  <TextField
-                    label="Tipo de Mantenimiento"
-                    value={formData.tipo_mantenimiento}
-                    fullWidth
-                    InputProps={{ readOnly: true }} 
-                    variant="filled"
-                    size="small"
-                  />
-
-                  <TextField
-                    label="Fecha Programada"
-                    type="date"
-                    value={formData.fecha_programada}
-                    fullWidth
-                    InputProps={{ readOnly: true }}
-                    variant="filled"
-                    size="small"
-                  />
-
-                  <TextField
-                    label="Tarea Solicitada"
-                    value={formData.descripcion}
-                    fullWidth
-                    multiline
-                    rows={4}
-                    InputProps={{ readOnly: true }}
-                    variant="filled"
-                  />
+                  <Controller name="tipo_mantenimiento" control={control} render={({ field }) => <TextField {...field} label="Tipo" fullWidth InputProps={{ readOnly: true }} variant="filled" size="small" />} />
+                  <Controller name="fecha_programada" control={control} render={({ field }) => <TextField {...field} label="Fecha Programada" type="date" fullWidth InputProps={{ readOnly: true }} variant="filled" size="small" />} />
+                  <Controller name="descripcion" control={control} render={({ field }) => <TextField {...field} label="Tarea Solicitada" fullWidth multiline rows={4} InputProps={{ readOnly: true }} variant="filled" />} />
                </Stack>
             </SectionCard>
           </Grid>
 
-          {/* === PANEL DERECHO: EJECUCIÓN (Editable) === */}
           <Grid item xs={12} md={7} lg={8}>
             <Stack spacing={3}>
-                
-                {/* TARJETA DE ESTADO */}
                 <SectionCard title="Estado del Servicio" icon={<AssignmentIcon />}>
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
                             <FormControl fullWidth>
                                 <InputLabel>Estado Actual</InputLabel>
-                                <Select
-                                  name="estado"
-                                  value={formData.estado}
-                                  onChange={handleChange}
-                                  label="Estado Actual"
-                                >
-                                  <MenuItem value="pendiente">Pendiente</MenuItem>
-                                  <MenuItem value="realizado">Realizado</MenuItem>
-                                  <MenuItem value="cancelado">Cancelado</MenuItem>
-                                </Select>
+                                <Controller
+                                    name="estado" control={control}
+                                    render={({ field }) => (
+                                        <Select {...field} label="Estado Actual">
+                                            <MenuItem value={MAINTENANCE_STATUS.PENDING}>Pendiente</MenuItem>
+                                            <MenuItem value={MAINTENANCE_STATUS.COMPLETED}>Realizado</MenuItem>
+                                            <MenuItem value={MAINTENANCE_STATUS.CANCELLED}>Cancelado</MenuItem>
+                                        </Select>
+                                    )}
+                                />
                             </FormControl>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Fecha de Realización"
-                                name="fecha_realizacion"
-                                type="date"
-                                value={formData.fecha_realizacion}
-                                onChange={handleChange}
-                                fullWidth
-                                InputLabelProps={{ shrink: true }}
-                                disabled={!isCompleted}
-                                helperText={isCompleted ? "Fecha real del trabajo" : "Se habilita al completar"}
+                            <Controller
+                                name="fecha_realizacion" control={control}
+                                render={({ field }) => (
+                                    <TextField {...field} label="Fecha de Realización" type="date" fullWidth InputLabelProps={{ shrink: true }} disabled={estadoActual !== MAINTENANCE_STATUS.COMPLETED} helperText={estadoActual === MAINTENANCE_STATUS.COMPLETED ? "Fecha real del trabajo" : "Se habilita al completar"} />
+                                )}
                             />
                         </Grid>
                     </Grid>
                 </SectionCard>
 
-                {/* TARJETA DE REPORTE TÉCNICO (Condicional) */}
-                <Fade in={isCompleted} unmountOnExit>
+                <Fade in={estadoActual === MAINTENANCE_STATUS.COMPLETED} unmountOnExit>
                     <Box>
-                        <SectionCard 
-                            title="Informe Técnico" 
-                            icon={<EngineeringIcon />}
-                            color="success.main"
-                        >
+                        <SectionCard title="Informe Técnico" icon={<EngineeringIcon />} color="success.main">
                             <Stack spacing={3}>
-                                <Alert severity="info" icon={<CheckCircleIcon />} sx={{ mb: 1 }}>
-                                    Documenta los hallazgos y soluciones para el historial del equipo.
-                                </Alert>
-                                
-                                <TextField
-                                    label="Diagnóstico (Hallazgos)"
-                                    name="diagnostico"
-                                    fullWidth
-                                    multiline
-                                    rows={3}
-                                    value={formData.diagnostico}
-                                    onChange={handleChange}
-                                    placeholder="¿Qué problema se encontró?"
-                                />
-                                <TextField
-                                    label="Acciones Realizadas"
-                                    name="acciones_realizadas"
-                                    fullWidth
-                                    multiline
-                                    rows={3}
-                                    value={formData.acciones_realizadas}
-                                    onChange={handleChange}
-                                    placeholder="¿Qué procedimiento se aplicó?"
-                                />
-                                <TextField
-                                    label="Observaciones Finales"
-                                    name="observaciones"
-                                    fullWidth
-                                    multiline
-                                    rows={2}
-                                    value={formData.observaciones}
-                                    onChange={handleChange}
-                                    placeholder="Recomendaciones o notas extra."
-                                />
+                                <Alert severity="info" icon={<CheckCircleIcon />} sx={{ mb: 1 }}>Documenta los hallazgos y soluciones.</Alert>
+                                <Controller name="diagnostico" control={control} render={({ field }) => <TextField {...field} label="Diagnóstico" fullWidth multiline rows={3} placeholder="¿Qué problema se encontró?" />} />
+                                <Controller name="acciones_realizadas" control={control} render={({ field }) => <TextField {...field} label="Acciones Realizadas" fullWidth multiline rows={3} placeholder="¿Qué procedimiento se aplicó?" />} />
+                                <Controller name="observaciones" control={control} render={({ field }) => <TextField {...field} label="Observaciones Finales" fullWidth multiline rows={2} placeholder="Recomendaciones o notas extra." />} />
                             </Stack>
                         </SectionCard>
                     </Box>
                 </Fade>
-
             </Stack>
           </Grid>
-
         </Grid>
       </Box>
     </Box>

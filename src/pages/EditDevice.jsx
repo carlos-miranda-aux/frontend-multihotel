@@ -5,7 +5,7 @@ import {
   Box, Typography, TextField, Button, Grid, Fade, MenuItem, CircularProgress, 
   Chip, Checkbox, ListItemText, FormControlLabel, Switch, Alert, Avatar, Stack, Divider, 
   FormControl, InputLabel, FormHelperText, useTheme, alpha,
-  ListSubheader, Select // 👈 AGREGADO: Select y ListSubheader
+  ListSubheader, Select 
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -21,6 +21,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
+import { AuthContext } from "../context/AuthContext"; // 👈 IMPORTANTE: Importar AuthContext
 import PageHeader from "../components/common/PageHeader"; 
 import SectionCard from "../components/common/SectionCard"; 
 import StatusBadge from "../components/common/StatusBadge"; 
@@ -35,6 +36,7 @@ const EditDevice = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
+  const { user } = useContext(AuthContext); // 👈 Extraer usuario
   const theme = useTheme();
 
   // 👇 CONFIGURACIÓN DE REACT HOOK FORM
@@ -202,6 +204,10 @@ const EditDevice = () => {
   const departmentName = selectedArea?.departamento?.nombre || 'N/A';
   const assignedUser = users.find(u => u.id === watchUsuarioId);
 
+  // 👇 LÓGICA DE PERMISOS: Solo el admin puede editar si está en baja
+  const isAdmin = user?.rol === 'ADMIN';
+  const isEditingDisabled = isPermanentlyBaja && !isAdmin;
+
   if (loading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
 
   return (
@@ -227,9 +233,11 @@ const EditDevice = () => {
       <Box sx={{ px: 3, mb: 2 }}>
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        
+        {/* 👇 ALERT DINÁMICO */}
         {isPermanentlyBaja && (
             <Alert severity="warning" icon={<DeleteForeverIcon />} sx={{ mb: 2 }}>
-                Este equipo está dado de baja. La edición está restringida.
+                Este equipo está dado de baja. {isAdmin ? "Como Administrador, puedes reactivarlo cambiando el estado." : "La edición está restringida."}
             </Alert>
         )}
       </Box>
@@ -452,7 +460,8 @@ const EditDevice = () => {
                         name="estadoId" control={control}
                         rules={{ required: "Requerido" }}
                         render={({ field }) => (
-                            <Select {...field} label="Estado Actual *" disabled={isPermanentlyBaja}>
+                            // 👇 MODIFICACIÓN: Deshabilitar solo si es permanente Y NO ES ADMIN
+                            <Select {...field} label="Estado Actual *" disabled={isEditingDisabled}>
                                 {deviceStatuses.map((s) => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
                             </Select>
                         )}

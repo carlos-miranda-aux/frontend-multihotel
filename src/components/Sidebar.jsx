@@ -23,6 +23,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LogoutIcon from '@mui/icons-material/Logout'; // Opcional si quieres poner logout abajo
+import HistoryIcon from '@mui/icons-material/History';
 
 import LogoImg from "../assets/Logo.png";
 import { AuthContext } from "../context/AuthContext";
@@ -46,6 +47,7 @@ const Sidebar = ({ open, variant = 'persistent' }) => {
   const adminItems = [
     { text: "Reportes", icon: <AssessmentIcon />, path: "/reportes" },
     { text: "Configuración Admin", icon: <AdminPanelSettingsIcon />, path: "/admin-settings" },
+    { text: "Bitácora", icon: <HistoryIcon />, path: "/audit-log" },
   ];
 
   const isSelected = (path) => location.pathname.startsWith(path);

@@ -15,6 +15,7 @@ import EditUsers from "./pages/EditUser.jsx";
 import EditCrownUser from "./pages/EditCrownUser.jsx";
 import AdminSettings from "./pages/AdminSettings.jsx";
 import Reportes from "./pages/Reportes.jsx";
+import AuditLog from "./pages/AuditLog";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
           <Route path="/users/edit/:id" element={<EditCrownUser />} />
           <Route path="/reportes" element={<Reportes />} />
           <Route path="/admin-settings" element={<AdminSettings />} />
+          <Route path="/audit-log" element={<AuditLog />} />
         </Route>
       </Routes>
     </Router>

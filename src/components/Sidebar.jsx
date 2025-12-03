@@ -192,7 +192,7 @@ const Sidebar = ({ open, variant = 'persistent' }) => {
       {/* Footer opcional (versión o copyright) */}
       <Box sx={{ mt: 'auto', p: 2, textAlign: 'center' }}>
         <Typography variant="caption" color="text.disabled">
-            v1.0.0 &copy; 2025
+            &copy; 2025 - Simet
         </Typography>
       </Box>
 

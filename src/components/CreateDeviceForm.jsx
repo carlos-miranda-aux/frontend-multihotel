@@ -185,7 +185,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                     render={({ field }) => (
                         <TextField 
                             {...field} 
-                            label="Rol / Puesto (Descripción)" 
+                            label="Descripción" 
                             fullWidth 
                             error={!!errors.descripcion} 
                             helperText={errors.descripcion?.message} 
@@ -199,7 +199,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                 render={({ field }) => (
                     <TextField 
                         {...field} 
-                        label="Comentarios / Estado físico" 
+                        label="Comentarios" 
                         fullWidth multiline rows={2} 
                         error={!!errors.comentarios} 
                         helperText={errors.comentarios?.message} 
@@ -431,11 +431,11 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ p: 1 }}>
                     <Controller 
                         name="garantia_numero_reporte" control={control} 
-                        render={({ field }) => <TextField {...field} label="N° Reporte" fullWidth helperText={errors.garantia_numero_reporte?.message || "Registro."} error={!!errors.garantia_numero_reporte} />} 
+                        render={({ field }) => <TextField {...field} label="N° Reporte" fullWidth helperText={errors.garantia_numero_reporte?.message || "Registro"} error={!!errors.garantia_numero_reporte} />} 
                     />
                     <Controller 
                         name="garantia_notes" control={control} 
-                        render={({ field }) => <TextField {...field} label="Notas" fullWidth multiline rows={2} helperText={errors.garantia_notes?.message || "Detalles."} error={!!errors.garantia_notes} />} 
+                        render={({ field }) => <TextField {...field} label="Notas" fullWidth multiline rows={2} helperText={errors.garantia_notes?.message || "Detalles"} error={!!errors.garantia_notes} />} 
                     />
                  </Stack>
              </Fade>

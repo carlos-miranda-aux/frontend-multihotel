@@ -115,7 +115,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
         
         <Controller
             name="usuario_login" control={control}
-            render={({ field }) => <TextField {...field} label="Usuario de Login" fullWidth error={!!errors.usuario_login} helperText={errors.usuario_login?.message} />}
+            render={({ field }) => <TextField {...field} label="Usuario" fullWidth error={!!errors.usuario_login} helperText={errors.usuario_login?.message} />}
         />
 
         <Controller

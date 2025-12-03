@@ -2,19 +2,19 @@
 import React, { useState, useContext } from "react";
 import {
   Box, Typography, TextField, Button, Alert, 
-  Stack, Divider, Avatar, Container, Paper
+  Stack, Divider, Avatar, Container, Paper, Link
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
+// Iconos
 import SaveIcon from '@mui/icons-material/Save';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import ContactSupportIcon from '@mui/icons-material/ContactSupport'; // 👈 Nuevo icono
 
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import PageHeader from "../components/common/PageHeader";
-
-// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const Settings = () => {
   const { user } = useContext(AuthContext);
@@ -81,6 +81,7 @@ const Settings = () => {
         {message && <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
+        {/* --- TARJETA PRINCIPAL: PERFIL Y SEGURIDAD --- */}
         <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
             
             {/* SECCIÓN PERFIL */}
@@ -138,6 +139,53 @@ const Settings = () => {
                 </Box>
             </Box>
         </Paper>
+
+        {/* --- NUEVA SECCIÓN: SOPORTE TÉCNICO --- */}
+        <Box sx={{ mt: 4 }}>
+            <Paper 
+                elevation={0} 
+                sx={{ 
+                    p: 3, 
+                    borderRadius: 3, 
+                    border: '1px solid', 
+                    borderColor: 'info.main', // Borde azulito para destacar
+                    bgcolor: 'info.50'        // Fondo muy suave
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                    <ContactSupportIcon color="info" fontSize="large" />
+                    <Typography variant="h6" fontWeight="bold" color="text.primary">
+                        Soporte del Sistema
+                    </Typography>
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary" sx={{ ml: { sm: 6 } }}>
+                    Si encuentras algún problema técnico o requieres mantenimiento del sistema, por favor contacta al desarrollador:
+                </Typography>
+                
+                <Divider sx={{ my: 2, ml: { sm: 6 }, borderColor: 'info.200' }} />
+                
+                <Box sx={{ ml: { sm: 6 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
+                    <Box>
+                        <Typography variant="caption" fontWeight="bold" color="text.secondary">DESARROLLADOR</Typography>
+                        <Typography variant="body1">Carlos Miranda</Typography>
+                    </Box>
+                    <Box>
+                        <Typography variant="caption" fontWeight="bold" color="text.secondary">CONTACTO</Typography>
+                        <Typography variant="body1">
+                            <Link href="mailto:miranda.c4rlos@outlook.com" underline="hover" color="primary">
+                                miranda.c4rlos@outlook.com
+                            </Link>
+                        </Typography>
+                    </Box>
+                    <Box>
+                        <Typography variant="caption" fontWeight="bold" color="text.secondary">VERSIÓN</Typography>
+                        <Typography variant="body1">v1.0.0</Typography>
+                    </Box>
+                </Box>
+            </Paper>
+        </Box>
+
       </Container>
     </Box>
   );

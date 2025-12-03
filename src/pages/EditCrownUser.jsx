@@ -1,5 +1,5 @@
 // src/pages/EditCrownUser.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -83,6 +83,9 @@ const EditCrownUser = () => {
       areaId: data.areaId ? Number(data.areaId) : null,
       es_jefe_de_area: data.isManager
     };
+
+    // SOLUCIÓN: Eliminar el campo temporal 'isManager' que no es parte del modelo de Prisma.
+    delete payload.isManager; 
 
     try {
       await api.put(`/users/put/${id}`, payload);

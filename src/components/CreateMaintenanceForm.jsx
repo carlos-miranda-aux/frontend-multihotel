@@ -1,22 +1,25 @@
 // src/components/CreateMaintenanceForm.jsx
 import React, { useState, useEffect, useContext } from "react";
-import { useForm, Controller } from "react-hook-form"; // 👈 Hook Form
+import { useForm, Controller } from "react-hook-form";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem,
-  Button, Grid, Divider, Autocomplete, Alert, FormHelperText
+  Button, Grid, Divider, Autocomplete, FormHelperText
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
-import { MAINTENANCE_STATUS, MAINTENANCE_TYPE } from "../config/constants"; // Constantes
+// 👇 IMPORTANTE: Importamos las constantes para evitar strings mágicos
+import { MAINTENANCE_STATUS, MAINTENANCE_TYPE } from "../config/constants"; 
 
 const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setError }) => {
   const { control, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
-      selectedDevice: null, // Objeto completo del Autocomplete
+      selectedDevice: null,
       descripcion: "",
       fecha_programada: "",
-      estado: MAINTENANCE_STATUS.PENDING,
-      tipo_mantenimiento: MAINTENANCE_TYPE.CORRECTIVE,
+      // 👇 Usamos la constante, no el string "pendiente"
+      estado: MAINTENANCE_STATUS.PENDING, 
+      // 👇 Usamos la constante, no el string "Correctivo"
+      tipo_mantenimiento: MAINTENANCE_TYPE.CORRECTIVE, 
     }
   });
 
@@ -43,17 +46,25 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
     if (setMessage) setMessage(""); 
     if (setError) setError(""); 
 
+    // Ajuste de hora para evitar desfase de zona horaria
+    const fechaFixed = new Date(data.fecha_programada + "T12:00:00").toISOString();
+
     const payload = {
       descripcion: data.descripcion,
       estado: data.estado,
       tipo_mantenimiento: data.tipo_mantenimiento,
-      deviceId: Number(data.selectedDevice.id), // Extraemos ID del objeto
-      fecha_programada: new Date(data.fecha_programada).toISOString(),
+      deviceId: Number(data.selectedDevice.id),
+      fecha_programada: fechaFixed,
     };
+
+    // 👇 Validación usando CONSTANTE
+    if (payload.estado === MAINTENANCE_STATUS.COMPLETED) {
+        payload.fecha_realizacion = fechaFixed;
+    }
 
     try {
       await api.post("/maintenances/post", payload);
-      if (setMessage) setMessage("Mantenimiento programado exitosamente.");
+      if (setMessage) setMessage("Mantenimiento registrado exitosamente.");
       refreshAlerts();
       onMaintenanceCreated(); 
       onClose(); 
@@ -116,6 +127,7 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
                     control={control}
                     render={({ field }) => (
                         <Select {...field} label="Tipo de Mantenimiento">
+                            {/* 👇 Usamos constantes para el valor y el texto visible */}
                             <MenuItem value={MAINTENANCE_TYPE.CORRECTIVE}>{MAINTENANCE_TYPE.CORRECTIVE}</MenuItem>
                             <MenuItem value={MAINTENANCE_TYPE.PREVENTIVE}>{MAINTENANCE_TYPE.PREVENTIVE}</MenuItem>
                         </Select>
@@ -132,12 +144,12 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
                 render={({ field }) => (
                     <TextField
                         {...field}
-                        label="Fecha Programada"
+                        label="Fecha"
                         type="date"
                         fullWidth
                         InputLabelProps={{ shrink: true }}
                         error={!!errors.fecha_programada}
-                        helperText={errors.fecha_programada?.message}
+                        helperText={errors.fecha_programada?.message || "Fecha de programación o ejecución"}
                     />
                 )}
             />
@@ -163,26 +175,25 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
           </Grid>
           
           <Grid item xs={12}>
-            <FormControl fullWidth disabled>
+            <FormControl fullWidth>
               <InputLabel>Estado</InputLabel>
               <Controller
                   name="estado"
                   control={control}
                   render={({ field }) => (
                       <Select {...field} label="Estado">
+                        {/* 👇 Usamos constantes para los valores que se envían a la BD */}
                         <MenuItem value={MAINTENANCE_STATUS.PENDING}>Pendiente</MenuItem>
                         <MenuItem value={MAINTENANCE_STATUS.COMPLETED}>Realizado</MenuItem>
-                        <MenuItem value={MAINTENANCE_STATUS.CANCELLED}>Cancelado</MenuItem>
                       </Select>
                   )}
               />
-              <FormHelperText>El estado inicial es siempre "Pendiente".</FormHelperText>
             </FormControl>
           </Grid>
         </Grid>
         
         <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
-          Crear Mantenimiento
+          Registrar Mantenimiento
         </Button>
       </Box>
     </Box>

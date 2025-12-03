@@ -2,9 +2,8 @@ import axios from "axios";
 
 
 const api = axios.create({
-  baseURL: "/api" //para produccion
-  //baseURL: "http://localhost:3000/api"
-  //baseURL: import.meta.env.VITE_API_UR //"http://localhost:3000/api", // tu backend
+  //baseURL: "/api" //para produccion
+  baseURL: "http://localhost:3000/api"
 });
 
 export default api;

@@ -1,9 +1,11 @@
 // src/context/AlertContext.jsx
-import React, { createContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useState, useEffect, useCallback, useContext } from "react";
 import api from "../api/axios";
+import { AuthContext } from "./AuthContext"; // 👈 1. Importar AuthContext
 
 export const AlertContext = createContext();
 
+// Helpers de fechas
 const isBusinessDay = (date) => {
     const day = date.getDay();
     return day !== 0 && day !== 6;
@@ -27,7 +29,6 @@ const getFiveBusinessDaysFromNow = () => {
 
 const _fetchAlertLogic = async () => {
     try {
-        // 1. Petición optimizada al backend
         const [statsRes, maintenancesRes] = await Promise.all([
             api.get("/devices/get/dashboard-stats"), 
             api.get("/maintenances/get?status=pendiente&limit=1000") 
@@ -43,10 +44,8 @@ const _fetchAlertLogic = async () => {
         
         const criticalMaintenances = allPendingMaintenances.filter(m => {
             if (!m.fecha_programada) return false;
-            
             const scheduledDate = new Date(m.fecha_programada);
             const isDue = scheduledDate.getTime() >= today.getTime() && scheduledDate.getTime() <= fiveBusinessDaysFromNow.getTime();
-            
             return isDue && isBusinessDay(scheduledDate);
         });
 
@@ -60,27 +59,21 @@ const _fetchAlertLogic = async () => {
             warrantyAlertsList: statsData.warrantyAlertsList || []
         };
     } catch (error) {
-        console.error("Error en lógica de alertas:", error);
+        console.error("Error en lógica de alertas (silencioso):", error.response?.status);
         return null;
     }
 };
 
 export const AlertProvider = ({ children }) => {
-  const [loading, setLoading] = useState(true); 
+  // 👈 2. Obtenemos el estado de autenticación
+  const { user, token } = useContext(AuthContext);
+  
+  const [loading, setLoading] = useState(false); // Inicializamos en false para no bloquear login
   
   const [alertState, setAlertState] = useState({
       dashboardStats: {
-          kpis: { 
-              totalActiveDevices: 0, 
-              devicesWithPanda: 0, 
-              devicesWithoutPanda: 0, 
-              monthlyDisposals: 0 
-          },
-          warrantyStats: { 
-              expired: 0, 
-              risk: 0, 
-              safe: 0 
-          },
+          kpis: { totalActiveDevices: 0, devicesWithPanda: 0, devicesWithoutPanda: 0, monthlyDisposals: 0 },
+          warrantyStats: { expired: 0, risk: 0, safe: 0 },
           warrantyAlertsList: []
       },
       warrantyAlertsList: [],
@@ -90,38 +83,40 @@ export const AlertProvider = ({ children }) => {
   });
 
   const fetchInitialData = useCallback(async () => {
+    // 👈 3. BLINDAJE: Si no hay usuario o token, NO hacemos peticiones
+    if (!user || !token) return;
+
     try {
       setLoading(true); 
       const newState = await _fetchAlertLogic();
       if (newState) setAlertState(newState);
     } catch (error) {
-      console.error("Error cargando datos de alertas:", error);
+      console.error("Error cargando alertas:", error);
     } finally {
       setLoading(false); 
     }
-  }, []);
+  }, [user, token]);
   
   const refreshAlerts = useCallback(async () => {
+      if (!user || !token) return; // Protección en refresh también
+      
       try {
           const newState = await _fetchAlertLogic();
           if (newState) setAlertState(newState);
       } catch (error) {
           console.error("Error refrescando alertas:", error);
       }
-  }, []);
+  }, [user, token]);
 
+  // 👈 4. El efecto depende del usuario
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    if (user && token) {
+        fetchInitialData();
+    }
+  }, [fetchInitialData, user, token]);
 
   return (
-    <AlertContext.Provider
-      value={{
-        loading,
-        ...alertState,
-        refreshAlerts, 
-      }}
-    >
+    <AlertContext.Provider value={{ loading, ...alertState, refreshAlerts }}>
       {children}
     </AlertContext.Provider>
   );

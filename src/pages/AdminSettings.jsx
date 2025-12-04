@@ -1,82 +1,108 @@
 // src/pages/AdminSettings.jsx
-import React, { useState } from "react";
-import { Box, Typography, Button, Stack, Divider } from "@mui/material";
+import React, { useContext } from 'react';
+import { Box, Typography, Grid, Card, CardContent, CardActionArea, Avatar, useTheme } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import { ROLES } from '../config/constants';
 
-// Iconos para el menú de selección
-import ListIcon from '@mui/icons-material/List';
-import PeopleIcon from '@mui/icons-material/People';
-import DomainIcon from '@mui/icons-material/Domain'; 
-
-// Subcomponentes refactorizados
-import CrudTable from "../components/CrudTable.jsx";
-import UsersSystemTable from "../components/admin/UserSystemTable.jsx";
-import AreasTable from "../components/admin/AreasTable.jsx";
+// Iconos
+import BusinessIcon from '@mui/icons-material/Business';
+import GroupIcon from '@mui/icons-material/Group';
+import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const AdminSettings = () => {
-  const [activeTable, setActiveTable] = useState(null);
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const { user } = useContext(AuthContext);
+  const isRoot = user?.rol === ROLES.ROOT;
 
-  const tables = [
-    { name: "Departamentos", url: "/departments" },
-    { name: "Áreas", url: "/areas", icon: <DomainIcon /> }, 
-    { name: "Sistemas Operativos", url: "/operating-systems" },
-    { name: "Tipos de Dispositivo", url: "/device-types" },
-    { name: "Estados de Dispositivo", url: "/device-status" },
-    { name: "Gestión de Usuarios", url: "/auth", icon: <PeopleIcon /> },
+  const menuItems = [
+    {
+      title: "Usuarios del Sistema",
+      description: "Gestiona administradores, técnicos y permisos de acceso al sistema.",
+      icon: <GroupIcon fontSize="large" />,
+      path: "/user-manager",
+      color: theme.palette.primary.main,
+      show: true
+    },
+    {
+      title: "Estructura Organizacional",
+      description: "Administra los departamentos y áreas operativas del hotel.",
+      icon: <BusinessIcon fontSize="large" />,
+      path: "/areas",
+      color: theme.palette.success.main,
+      show: true
+    },
+    {
+      title: "Bitácora de Auditoría",
+      description: "Revisa el historial detallado de movimientos y seguridad.",
+      icon: <HistoryEduIcon fontSize="large" />,
+      path: "/audit",
+      color: theme.palette.warning.main,
+      show: isRoot // Solo Root ve la auditoría global desde aquí
+    }
   ];
 
-  const handleTableChange = (tableName) => {
-    setActiveTable(tableName);
-  };
-
-  const renderActiveTable = () => {
-    if (!activeTable) {
-        return (
-            <Typography sx={{ mt: 4, textAlign: 'center', color: 'text.secondary' }}>
-                Selecciona una opción del menú superior.
-            </Typography>
-        );
-    }
-
-    // Renderizamos el componente específico según la selección
-    if (activeTable === "Gestión de Usuarios") return <UsersSystemTable />;
-    if (activeTable === "Áreas") return <AreasTable />;
-
-    // Para tablas sencillas, usamos el genérico
-    const tableData = tables.find(t => t.name === activeTable);
-    return <CrudTable title={tableData.name} apiUrl={tableData.url} />;
-  };
-
   return (
-    <Box sx={{ p: 3, minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }} color="primary">
-        Configuración
-      </Typography>
-      <Typography variant="h6" sx={{ mb: 2 }} color="text.secondary">
-        Tablas del Sistema:
-      </Typography>
-
-      {/* Menú de Selección */}
-      <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
-        {tables.map((table) => (
-          <Button
-            key={table.name}
-            variant={activeTable === table.name ? "contained" : "outlined"}
-            color="primary"
-            onClick={() => handleTableChange(table.name)} 
-            startIcon={table.icon || <ListIcon />}
-            sx={{ minWidth: 150 }}
-          >
-            {table.name}
-          </Button>
-        ))}
-      </Stack>
-
-      <Divider sx={{ my: 4 }} />
-
-      {/* Área de Contenido */}
-      <Box sx={{ minHeight: 400 }}>
-        {renderActiveTable()}
+    <Box sx={{ p: 4, minHeight: '100vh', bgcolor: 'background.default' }}>
+      
+      {/* Header */}
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <CardActionArea 
+            onClick={() => navigate('/home')} 
+            sx={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+        >
+            <ArrowBackIcon color="action" />
+        </CardActionArea>
+        <Box>
+            <Typography variant="h4" fontWeight="bold" color="text.primary">
+            Panel de Administración
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+            Configuración avanzada del sistema {isRoot && "(Modo Global)"}
+            </Typography>
+        </Box>
       </Box>
+
+      {/* Grid de Opciones */}
+      <Grid container spacing={3}>
+        {menuItems.map((item, index) => (
+          item.show && (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+                <Card 
+                    elevation={0}
+                    sx={{ 
+                        height: '100%', 
+                        border: '1px solid', 
+                        borderColor: 'divider',
+                        borderRadius: 3,
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        '&:hover': { 
+                            transform: 'translateY(-4px)', 
+                            boxShadow: theme.shadows[4],
+                            borderColor: item.color
+                        }
+                    }}
+                >
+                <CardActionArea onClick={() => navigate(item.path)} sx={{ height: '100%', p: 3 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
+                        <Avatar sx={{ width: 64, height: 64, bgcolor: `${item.color}22`, color: item.color }}>
+                            {item.icon}
+                        </Avatar>
+                        <Typography variant="h6" fontWeight="bold">
+                            {item.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {item.description}
+                        </Typography>
+                    </Box>
+                </CardActionArea>
+                </Card>
+            </Grid>
+          )
+        ))}
+      </Grid>
     </Box>
   );
 };

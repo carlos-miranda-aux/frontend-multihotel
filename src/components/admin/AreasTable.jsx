@@ -1,15 +1,17 @@
 // src/components/admin/AreasTable.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Box, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, IconButton, Alert, Modal, Fade,
-  Backdrop, TablePagination, CircularProgress, TableSortLabel
+  Backdrop, TablePagination, CircularProgress, TableSortLabel, Chip
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import api from "../../api/axios";
 import CreateAreaForm from "../CreateAreaForm";
+import { AuthContext } from "../../context/AuthContext"; // 👈 Contexto
+import { ROLES } from "../../config/constants"; // 👈 Roles
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -22,7 +24,6 @@ const AreasTable = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
-  // Estado para Modal (Crear y Editar)
   const [openModal, setOpenModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
@@ -30,6 +31,9 @@ const AreasTable = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
+
+  const { user } = useContext(AuthContext);
+  const isRoot = user?.rol === ROLES.ROOT; // 👈 Check Root
 
   const fetchAreas = useCallback(async () => {
     setLoading(true);
@@ -46,16 +50,14 @@ const AreasTable = () => {
           setTotalCount(response.data.length);
       }
     } catch (err) {
-      console.error("Error fetching areas:", err);
+      console.error(err);
       setError("Error al cargar las áreas.");
     } finally {
       setLoading(false);
     }
   }, [page, rowsPerPage, sortConfig]);
 
-  useEffect(() => {
-    fetchAreas();
-  }, [fetchAreas]);
+  useEffect(() => { fetchAreas(); }, [fetchAreas]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("¿Estás seguro de eliminar este registro?")) return;
@@ -68,20 +70,9 @@ const AreasTable = () => {
     }
   };
 
-  const handleCreateClick = () => {
-    setEditingItem(null);
-    setOpenModal(true);
-  };
-
-  const handleEditClick = (item) => {
-    setEditingItem(item);
-    setOpenModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpenModal(false);
-    setEditingItem(null);
-  };
+  const handleCreateClick = () => { setEditingItem(null); setOpenModal(true); };
+  const handleEditClick = (item) => { setEditingItem(item); setOpenModal(true); };
+  const handleCloseModal = () => { setOpenModal(false); setEditingItem(null); };
 
   const handleRequestSort = (key) => {
     const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
@@ -89,10 +80,7 @@ const AreasTable = () => {
   };
 
   const handleChangePage = (event, newPage) => setPage(newPage);
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
 
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
@@ -113,6 +101,9 @@ const AreasTable = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
+                {/* 👇 Columna Root */}
+                {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                
                 <TableCell sx={headerStyle}>
                     <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>
                         Nombre Área
@@ -128,10 +119,16 @@ const AreasTable = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={3} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={isRoot ? 4 : 3} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 areas.map((area) => (
                   <TableRow key={area.id}>
+                    {/* 👇 Chip Hotel */}
+                    {isRoot && (
+                        <TableCell>
+                             <Chip label={area.hotelId === 1 ? "Cancún" : area.hotelId === 2 ? "Sensira" : area.hotelId === 3 ? "Corp" : "Global"} size="small" variant="outlined" />
+                        </TableCell>
+                    )}
                     <TableCell>{area.nombre}</TableCell>
                     <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
                     <TableCell>
@@ -144,9 +141,6 @@ const AreasTable = () => {
                     </TableCell>
                   </TableRow>
                 ))
-              )}
-              {!loading && areas.length === 0 && (
-                  <TableRow><TableCell colSpan={3} align="center">No se encontraron áreas.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

@@ -1,6 +1,6 @@
 // src/pages/EditMaintenance.jsx
 import React, { useState, useEffect, useContext } from "react";
-import { useForm, Controller } from "react-hook-form"; // 👈 Hook Form
+import { useForm, Controller } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Typography, TextField, Button, Grid, Fade, 
@@ -13,9 +13,13 @@ import EventIcon from '@mui/icons-material/Event';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DomainIcon from '@mui/icons-material/Domain'; // 👈 Icono Hotel
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
+import { AuthContext } from "../context/AuthContext"; // 👈 Importar Auth
+import { ROLES } from "../config/constants"; // 👈 Roles
+
 import PageHeader from "../components/common/PageHeader"; 
 import SectionCard from "../components/common/SectionCard";
 import StatusBadge from "../components/common/StatusBadge";
@@ -30,6 +34,8 @@ const EditMaintenance = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
+  const { user } = useContext(AuthContext); // 👈 Contexto Usuario
+  const isRoot = user?.rol === ROLES.ROOT;
 
   const { control, handleSubmit, reset, watch, setValue } = useForm({
     defaultValues: {
@@ -39,7 +45,7 @@ const EditMaintenance = () => {
     }
   });
 
-  const estadoActual = watch("estado"); // Observamos el estado para mostrar campos extra
+  const estadoActual = watch("estado");
   const fechaRealizacionActual = watch("fecha_realizacion");
 
   const [deviceInfo, setDeviceInfo] = useState(null); 
@@ -67,7 +73,7 @@ const EditMaintenance = () => {
           tipo_mantenimiento: data.tipo_mantenimiento || MAINTENANCE_TYPE.PREVENTIVE,
         });
       } catch (err) {
-        setError("No se pudo cargar el mantenimiento.");
+        setError("No se pudo cargar el mantenimiento o acceso denegado.");
       } finally {
         setLoading(false);
       }
@@ -75,7 +81,6 @@ const EditMaintenance = () => {
     fetchMaintenanceData();
   }, [id, reset]);
 
-  // Efecto para auto-llenar fecha si cambia a completado
   useEffect(() => {
     if (estadoActual === MAINTENANCE_STATUS.COMPLETED && !fechaRealizacionActual) {
         setValue("fecha_realizacion", new Date().toISOString().substring(0, 10));
@@ -105,6 +110,9 @@ const EditMaintenance = () => {
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
+  // Helper nombre hotel
+  const hotelLabel = deviceInfo?.hotelId === 1 ? "Cancún" : deviceInfo?.hotelId === 2 ? "Sensira" : "Corp";
+
   return (
     <Box sx={{ pb: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
       
@@ -123,6 +131,13 @@ const EditMaintenance = () => {
       <Box sx={{ px: 3, mb: 2 }}>
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        
+        {/* 👇 ALERTA VISUAL PARA ROOT */}
+        {isRoot && (
+            <Alert severity="info" icon={<DomainIcon />} sx={{ mb: 3 }}>
+                Este mantenimiento pertenece al hotel: <b>{hotelLabel}</b>.
+            </Alert>
+        )}
       </Box>
 
       <Box component="form" noValidate sx={{ px: 3 }}>

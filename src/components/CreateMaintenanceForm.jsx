@@ -1,199 +1,140 @@
 // src/components/CreateMaintenanceForm.jsx
 import React, { useState, useEffect, useContext } from "react";
-import { useForm, Controller } from "react-hook-form";
 import {
-  Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem,
-  Button, Grid, Divider, Autocomplete, FormHelperText
+  Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Button, 
+  Autocomplete, FormHelperText
 } from "@mui/material";
 import api from "../api/axios";
-import { AlertContext } from "../context/AlertContext";
-// 👇 IMPORTANTE: Importamos las constantes para evitar strings mágicos
-import { MAINTENANCE_STATUS, MAINTENANCE_TYPE } from "../config/constants"; 
+import { ROLES } from "../config/constants";
+import { AuthContext } from "../context/AuthContext";
 
 const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setError }) => {
-  const { control, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: {
-      selectedDevice: null,
-      descripcion: "",
-      fecha_programada: "",
-      // 👇 Usamos la constante, no el string "pendiente"
-      estado: MAINTENANCE_STATUS.PENDING, 
-      // 👇 Usamos la constante, no el string "Correctivo"
-      tipo_mantenimiento: MAINTENANCE_TYPE.CORRECTIVE, 
-    }
+  const { user } = useContext(AuthContext);
+  const isRoot = user?.rol === ROLES.ROOT;
+
+  const [formData, setFormData] = useState({
+    deviceId: null,
+    tipo_mantenimiento: "Preventivo",
+    descripcion: "",
+    fecha_programada: ""
   });
 
   const [devices, setDevices] = useState([]);
-  const { refreshAlerts } = useContext(AlertContext);
 
   useEffect(() => {
     const fetchDevices = async () => {
       try {
+        // Obtenemos nombres de dispositivos (el backend ya filtra por hotel)
         const res = await api.get("/devices/get/all-names");
-        const formattedDevices = res.data.map(d => ({
-            ...d,
-            label: `${d.etiqueta || d.nombre_equipo} - ${d.nombre_equipo || d.tipo?.nombre}` 
-        }));
-        setDevices(formattedDevices); 
+        setDevices(res.data || []);
       } catch (err) {
-        console.error("Error fetching devices:", err);
+        if (setError) setError("Error al cargar la lista de equipos.");
       }
     };
     fetchDevices();
-  }, []); 
+  }, [setError]);
 
-  const onSubmit = async (data) => {
-    if (setMessage) setMessage(""); 
-    if (setError) setError(""); 
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-    // Ajuste de hora para evitar desfase de zona horaria
-    const fechaFixed = new Date(data.fecha_programada + "T12:00:00").toISOString();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (setError) setError("");
+    if (setMessage) setMessage("");
 
-    const payload = {
-      descripcion: data.descripcion,
-      estado: data.estado,
-      tipo_mantenimiento: data.tipo_mantenimiento,
-      deviceId: Number(data.selectedDevice.id),
-      fecha_programada: fechaFixed,
-    };
-
-    // 👇 Validación usando CONSTANTE
-    if (payload.estado === MAINTENANCE_STATUS.COMPLETED) {
-        payload.fecha_realizacion = fechaFixed;
+    if (!formData.deviceId) {
+        if (setError) setError("Debes seleccionar un equipo.");
+        return;
     }
+
+    // Preparar payload
+    const payload = {
+        deviceId: formData.deviceId.id, // Autocomplete devuelve objeto
+        tipo_mantenimiento: formData.tipo_mantenimiento,
+        descripcion: formData.descripcion,
+        fecha_programada: new Date(formData.fecha_programada).toISOString()
+    };
 
     try {
       await api.post("/maintenances/post", payload);
-      if (setMessage) setMessage("Mantenimiento registrado exitosamente.");
-      refreshAlerts();
-      onMaintenanceCreated(); 
-      onClose(); 
+      if (setMessage) setMessage("Mantenimiento programado exitosamente.");
+      onMaintenanceCreated();
+      onClose();
     } catch (err) {
-      if (setError) setError(err.response?.data?.error || "Error al crear el mantenimiento.");
+      if (setError) setError(err.response?.data?.error || "Error al crear mantenimiento.");
     }
   };
 
   return (
-    <Box sx={{ p: 1, pt: 0 }}> 
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold' }} color="text.primary">
-        Crear nuevo mantenimiento
+    <Box>
+      <Typography variant="h6" sx={{ mb: 3, fontWeight: 'bold' }} color="text.primary">
+        Programar Mantenimiento
       </Typography>
-      
-      <Divider sx={{ mb: 3 }} />
 
-      <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
         
-        <Typography variant="subtitle1" color="text.secondary" fontWeight="bold">
-            Información del Equipo
-        </Typography>
-        
-        <Box> 
-            <Controller
-                name="selectedDevice"
-                control={control}
-                rules={{ required: "Debes seleccionar un equipo" }}
-                render={({ field: { onChange, value } }) => (
-                    <Autocomplete
-                        options={devices}
-                        getOptionLabel={(option) => option.label || ""}
-                        value={value}
-                        onChange={(_, newValue) => onChange(newValue)}
-                        isOptionEqualToValue={(option, val) => option.id === val.id} 
-                        renderInput={(params) => (
-                            <TextField 
-                                {...params} 
-                                label="Buscar Equipo" 
-                                fullWidth 
-                                error={!!errors.selectedDevice}
-                                helperText={errors.selectedDevice?.message}
-                            />
-                        )}
-                        noOptionsText="No hay equipos coincidentes"
-                    />
-                )}
-            />
-        </Box>
-
-        <Typography variant="subtitle1" color="text.secondary" fontWeight="bold" sx={{ mb: -2, mt: 1 }}>
-            Detalles del Mantenimiento
-        </Typography>
-        
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth required>
-                <InputLabel>Tipo de Mantenimiento</InputLabel>
-                <Controller
-                    name="tipo_mantenimiento"
-                    control={control}
-                    render={({ field }) => (
-                        <Select {...field} label="Tipo de Mantenimiento">
-                            {/* 👇 Usamos constantes para el valor y el texto visible */}
-                            <MenuItem value={MAINTENANCE_TYPE.CORRECTIVE}>{MAINTENANCE_TYPE.CORRECTIVE}</MenuItem>
-                            <MenuItem value={MAINTENANCE_TYPE.PREVENTIVE}>{MAINTENANCE_TYPE.PREVENTIVE}</MenuItem>
-                        </Select>
-                    )}
+        {/* Selector de Equipo con Búsqueda */}
+        <Autocomplete
+            options={devices}
+            getOptionLabel={(option) => {
+                // Si es ROOT, mostramos más info para distinguir
+                const hotelTag = isRoot && option.hotelId ? ` (H:${option.hotelId})` : ""; 
+                return `${option.etiqueta || 'S/N'} - ${option.nombre_equipo}${hotelTag}`;
+            }}
+            value={formData.deviceId}
+            onChange={(event, newValue) => {
+                setFormData({ ...formData, deviceId: newValue });
+            }}
+            renderInput={(params) => (
+                <TextField 
+                    {...params} 
+                    label="Seleccionar Equipo" 
+                    required 
+                    helperText="Busca por etiqueta o nombre"
                 />
-            </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Controller
-                name="fecha_programada"
-                control={control}
-                rules={{ required: "La fecha es obligatoria" }}
-                render={({ field }) => (
-                    <TextField
-                        {...field}
-                        label="Fecha"
-                        type="date"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        error={!!errors.fecha_programada}
-                        helperText={errors.fecha_programada?.message || "Fecha de programación o ejecución"}
-                    />
-                )}
-            />
-          </Grid>
-          
-          <Grid item xs={12}>
-            <Controller
-                name="descripcion"
-                control={control}
-                rules={{ required: "La descripción es obligatoria" }}
-                render={({ field }) => (
-                    <TextField
-                        {...field}
-                        label="Descripción"
-                        fullWidth
-                        multiline
-                        rows={3}
-                        error={!!errors.descripcion}
-                        helperText={errors.descripcion?.message}
-                    />
-                )}
-            />
-          </Grid>
-          
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel>Estado</InputLabel>
-              <Controller
-                  name="estado"
-                  control={control}
-                  render={({ field }) => (
-                      <Select {...field} label="Estado">
-                        {/* 👇 Usamos constantes para los valores que se envían a la BD */}
-                        <MenuItem value={MAINTENANCE_STATUS.PENDING}>Pendiente</MenuItem>
-                        <MenuItem value={MAINTENANCE_STATUS.COMPLETED}>Realizado</MenuItem>
-                      </Select>
-                  )}
-              />
-            </FormControl>
-          </Grid>
-        </Grid>
-        
-        <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
-          Registrar Mantenimiento
+            )}
+            noOptionsText="No se encontraron equipos"
+        />
+
+        <FormControl fullWidth>
+          <InputLabel>Tipo de Mantenimiento</InputLabel>
+          <Select
+            name="tipo_mantenimiento"
+            value={formData.tipo_mantenimiento}
+            onChange={handleChange}
+            label="Tipo de Mantenimiento"
+          >
+            <MenuItem value="Preventivo">Preventivo</MenuItem>
+            <MenuItem value="Correctivo">Correctivo</MenuItem>
+          </Select>
+        </FormControl>
+
+        <TextField
+          label="Descripción / Tarea"
+          name="descripcion"
+          value={formData.descripcion}
+          onChange={handleChange}
+          multiline
+          rows={3}
+          fullWidth
+          required
+          placeholder="Ej: Limpieza física, Actualización de RAM..."
+        />
+
+        <TextField
+          label="Fecha Programada"
+          name="fecha_programada"
+          type="date"
+          value={formData.fecha_programada}
+          onChange={handleChange}
+          fullWidth
+          required
+          InputLabelProps={{ shrink: true }}
+        />
+
+        <Button type="submit" variant="contained" color="primary" size="large">
+          Programar
         </Button>
       </Box>
     </Box>

@@ -1,9 +1,9 @@
 // src/pages/Users_Crown.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react"; // 👈 useContext
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   IconButton, Button, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress,
-  TableSortLabel, TextField
+  TableSortLabel, TextField, Chip // 👈 Chip
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -12,8 +12,8 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateCrownUserForm from "../components/CreateCrownUserForm";
 import ImportButton from "../components/ImportButton";
-
-// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
+import { AuthContext } from "../context/AuthContext"; // 👈 Contexto
+import { ROLES } from "../config/constants"; // 👈 Roles
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -27,6 +27,10 @@ const UsersCrownP = () => {
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  
+  // 👈 LOGICA ROOT
+  const { user } = useContext(AuthContext);
+  const isRoot = user?.rol === ROLES.ROOT;
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -51,69 +55,38 @@ const UsersCrownP = () => {
     }
   }, [page, rowsPerPage, search, sortConfig]);
 
-  useEffect(() => {
-    fetchUsers(); 
-  }, [fetchUsers]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-    setPage(0);
-  };
-
+  const handleSearchChange = (e) => { setSearch(e.target.value); setPage(0); };
   const handleRequestSort = (key) => {
     const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
     setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
   };
-
   const handleDelete = async (id) => {
-    setMessage("");
-    setError("");
     if (window.confirm("¿Estás seguro de que quieres eliminar este usuario?")) {
       try {
         await api.delete(`/users/delete/${id}`);
-        setMessage("Usuario eliminado correctamente.");
+        setMessage("Usuario eliminado.");
         fetchUsers();
       } catch (err) {
-        setError(err.response?.data?.error || "Error al eliminar el usuario.");
+        setError(err.response?.data?.error || "Error al eliminar.");
       }
     }
   };
-
   const handleEdit = (id) => navigate(`/users/edit/${id}`);
-  const handleOpenModal = () => setOpenModal(true);
-  const handleCloseModal = () => setOpenModal(false);
-  const handleChangePage = (event, newPage) => setPage(newPage);
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const handleChangePage = (e, n) => setPage(n);
+  const handleChangeRowsPerPage = (e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); };
 
-  // Estilo usando tokens del tema
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" color="primary" fontWeight="bold">Usuarios de Crown Paradise</Typography>
+        <Typography variant="h4" color="primary" fontWeight="bold">Usuarios de Staff</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField 
-            label="Buscar usuario..." 
-            variant="outlined" 
-            size="small" 
-            value={search} 
-            onChange={handleSearchChange} 
-          />
+          <TextField label="Buscar usuario..." variant="outlined" size="small" value={search} onChange={handleSearchChange} />
           <ImportButton endpoint="/users/import" onSuccess={fetchUsers} label="Importar" />
-          
-          {/* ✅ BOTÓN REFACTORIZADO */}
-          <Button 
-            variant="contained" 
-            color="primary"
-            startIcon={<AddIcon />} 
-            onClick={handleOpenModal}
-          >
-            Crear Usuario
-          </Button>
+          <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => setOpenModal(true)}>Crear Usuario</Button>
         </Box>
       </Box>
 
@@ -124,55 +97,36 @@ const UsersCrownP = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              {/* ✅ Fondo del tema */}
               <TableRow sx={{ backgroundColor: 'background.default' }}>
+                {/* 👇 COLUMNA ROOT */}
+                {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                
                 <TableCell sx={headerStyle}>
-                  <TableSortLabel 
-                    active={sortConfig.key === 'nombre'} 
-                    direction={sortConfig.direction} 
-                    onClick={() => handleRequestSort('nombre')}
-                  >
-                    Nombre
-                  </TableSortLabel>
+                  <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre</TableSortLabel>
                 </TableCell>
-                <TableCell sx={headerStyle}>
-                  <TableSortLabel 
-                    active={sortConfig.key === 'area.nombre'} 
-                    direction={sortConfig.direction} 
-                    onClick={() => handleRequestSort('area.nombre')}
-                  >
-                    Área
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={headerStyle}>
-                  <TableSortLabel 
-                    active={sortConfig.key === 'usuario_login'} 
-                    direction={sortConfig.direction} 
-                    onClick={() => handleRequestSort('usuario_login')}
-                  >
-                    Usuario
-                  </TableSortLabel>
-                </TableCell>
+                <TableCell sx={headerStyle}>Área</TableCell>
+                <TableCell sx={headerStyle}>Usuario</TableCell>
                 <TableCell sx={headerStyle}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={isRoot ? 5 : 4} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 users.map((u) => (
                   <TableRow key={u.id}>
+                    {/* 👇 DATA ROOT */}
+                    {isRoot && (
+                        <TableCell>
+                            <Chip label={u.hotelId === 1 ? "Cancún" : u.hotelId === 2 ? "Sensira" : "N/A"} size="small" variant="outlined" />
+                        </TableCell>
+                    )}
                     <TableCell>{u.nombre}</TableCell>
                     <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>
                     <TableCell>
-                      {/* ✅ ICONOS REFACTORIZADOS */}
-                      <IconButton color="primary" onClick={() => handleEdit(u.id)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton color="error" onClick={() => handleDelete(u.id)}>
-                        <DeleteIcon />
-                      </IconButton>
+                      <IconButton color="primary" onClick={() => handleEdit(u.id)}><EditIcon /></IconButton>
+                      <IconButton color="error" onClick={() => handleDelete(u.id)}><DeleteIcon /></IconButton>
                     </TableCell>
                   </TableRow>
                 ))
@@ -181,21 +135,16 @@ const UsersCrownP = () => {
           </Table>
         </TableContainer>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]} 
-          component="div" 
-          count={totalUsers}
-          rowsPerPage={rowsPerPage} 
-          page={page}
-          onPageChange={handleChangePage} 
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Filas por página:"
+          rowsPerPageOptions={[5, 10, 25]} component="div" count={totalUsers}
+          rowsPerPage={rowsPerPage} page={page}
+          onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
 
-      <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
+      <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openModal}>
           <Box sx={modalStyle}>
-            <CreateCrownUserForm onClose={handleCloseModal} onUserCreated={fetchUsers} setMessage={setMessage} setError={setError} />
+            <CreateCrownUserForm onClose={() => setOpenModal(false)} onUserCreated={fetchUsers} setMessage={setMessage} setError={setError} />
           </Box>
         </Fade>
       </Modal>

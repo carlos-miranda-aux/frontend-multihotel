@@ -1,5 +1,5 @@
 // src/pages/Reportes.jsx
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   Box, Typography, Paper, Grid, TextField, Alert, useTheme, Card,
   CardActionArea, CardContent, Avatar, Chip
@@ -14,9 +14,15 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DownloadIcon from '@mui/icons-material/Download';
 
+import { AuthContext } from "../context/AuthContext";
+import { ROLES } from "../config/constants";
+
 const Reportes = () => {
   const theme = useTheme();
-  // Puedes usar import.meta.env.VITE_API_URL si lo tienes configurado, o dejarlo así por ahora
+  const { user } = useContext(AuthContext);
+  const isRoot = user?.rol === ROLES.ROOT;
+
+  // URL Base de la API (Ajustar si usas variables de entorno)
   const apiBaseUrl = "http://localhost:3000/api"; 
   
   const [startDate, setStartDate] = useState('');
@@ -27,6 +33,7 @@ const Reportes = () => {
     setReportError('');
     let finalUrl = url;
     
+    // Si requiere fechas, las adjuntamos
     if (isFiltered) {
         if (!startDate || !endDate) {
             setReportError("⚠️ Para este reporte es obligatorio seleccionar un rango de fechas.");
@@ -58,7 +65,7 @@ const Reportes = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(href);
     })
-    .catch(err => setReportError(err.message || "Error al descargar."));
+    .catch(err => setReportError(err.message || "Error al descargar el reporte."));
   };
 
   const reportList = [
@@ -102,14 +109,15 @@ const Reportes = () => {
       color: theme.palette.success.main,
       isFiltered: false
     },
-    { 
+    // Este reporte solo es visible para Admin o Root
+    ...(user?.rol === ROLES.ROOT || user?.rol === "HOTEL_ADMIN" ? [{ 
       name: "Usuarios del Sistema", 
       description: "Administradores y editores con acceso a SIMET.", 
       url: `${apiBaseUrl}/auth/export/all`,
       icon: <AdminPanelSettingsIcon fontSize="large" />,
       color: theme.palette.secondary.main,
       isFiltered: false
-    },
+    }] : []),
   ];
 
   return (
@@ -121,6 +129,7 @@ const Reportes = () => {
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
           Descarga información clave en formato Excel para tu análisis.
+          {isRoot && <Chip label="Modo Global" size="small" color="secondary" sx={{ ml: 2 }} />}
         </Typography>
       </Box>
 
@@ -132,7 +141,6 @@ const Reportes = () => {
           bgcolor: 'background.paper'
         }}
       >
-          {/* Usamos el color primario del tema */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'primary.main' }}>
             <AccessTimeIcon sx={{ mr: 1 }} />
             <Typography variant="h6" fontWeight="bold">Filtro por Fechas</Typography>

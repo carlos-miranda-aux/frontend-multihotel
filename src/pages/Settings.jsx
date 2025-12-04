@@ -10,15 +10,19 @@ import { useNavigate } from "react-router-dom";
 import SaveIcon from '@mui/icons-material/Save';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
-import ContactSupportIcon from '@mui/icons-material/ContactSupport'; // 👈 Nuevo icono
+import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import PageHeader from "../components/common/PageHeader";
+import { ROLES } from "../config/constants"; // 👈 Importar Roles
 
 const Settings = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  // 👇 Verificamos si tiene permisos administrativos
+  const canAccessAdminPanel = user?.rol === ROLES.ROOT || user?.rol === ROLES.HOTEL_ADMIN;
 
   const [formData, setFormData] = useState({
     password: "", newPassword: "", confirmPassword: ""
@@ -63,7 +67,8 @@ const Settings = () => {
         title="Configuración"
         subtitle="Gestiona tu perfil y seguridad"
         actions={
-          user?.rol === "ADMIN" && (
+          // 👇 Botón condicional actualizado
+          canAccessAdminPanel && (
             <Button 
               variant="outlined" 
               color="primary"
@@ -81,10 +86,8 @@ const Settings = () => {
         {message && <Alert severity="success" sx={{ mb: 3 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-        {/* --- TARJETA PRINCIPAL: PERFIL Y SEGURIDAD --- */}
         <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
             
-            {/* SECCIÓN PERFIL */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 3, mb: 4 }}>
                 <Avatar sx={{ width: 80, height: 80, bgcolor: 'primary.main', fontSize: '2.5rem' }}>
                     {user?.nombre?.charAt(0) || user?.username?.charAt(0)}
@@ -100,16 +103,18 @@ const Settings = () => {
                         <Typography variant="caption" sx={{ bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', color: 'text.secondary', border: '1px solid', borderColor: 'divider' }}>
                             ROL: {user?.rol}
                         </Typography>
-                      <Typography variant="caption" sx={{ bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', color: 'text.secondary', border: '1px solid', borderColor: 'divider' }}>
-                            USUARIO: {user?.username}
-                      </Typography>
+                        {/* Mostramos el Hotel si existe */}
+                        {user?.hotelId && (
+                             <Typography variant="caption" sx={{ bgcolor: 'primary.50', color: 'primary.main', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', border: '1px solid', borderColor: 'primary.200' }}>
+                                ID HOTEL: {user.hotelId}
+                             </Typography>
+                        )}
                     </Box>
                 </Box>
             </Box>
 
             <Divider sx={{ mb: 4 }} />
 
-            {/* SECCIÓN SEGURIDAD */}
             <Box component="form" onSubmit={handleUpdate} sx={{ maxWidth: 500, margin: '0 auto' }}>
                 <Typography variant="h6" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <VpnKeyIcon color="action" /> Cambiar Contraseña
@@ -126,45 +131,23 @@ const Settings = () => {
                 </Stack>
 
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-                    <Button 
-                        type="submit"
-                        variant="contained" 
-                        color="primary"
-                        size="large"
-                        startIcon={<SaveIcon />}
-                        sx={{ px: 4, py: 1.2 }}
-                    >
+                    <Button type="submit" variant="contained" color="primary" size="large" startIcon={<SaveIcon />} sx={{ px: 4, py: 1.2 }}>
                         Actualizar Seguridad
                     </Button>
                 </Box>
             </Box>
         </Paper>
 
-        {/* --- NUEVA SECCIÓN: SOPORTE TÉCNICO --- */}
         <Box sx={{ mt: 4 }}>
-            <Paper 
-                elevation={0} 
-                sx={{ 
-                    p: 3, 
-                    borderRadius: 3, 
-                    border: '1px solid', 
-                    borderColor: 'info.main', // Borde azulito para destacar
-                    bgcolor: 'info.50'        // Fondo muy suave
-                }}
-            >
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'info.main', bgcolor: 'info.50' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                     <ContactSupportIcon color="info" fontSize="large" />
-                    <Typography variant="h6" fontWeight="bold" color="text.primary">
-                        Soporte del Sistema
-                    </Typography>
+                    <Typography variant="h6" fontWeight="bold" color="text.primary">Soporte del Sistema</Typography>
                 </Box>
-                
                 <Typography variant="body2" color="text.secondary" sx={{ ml: { sm: 6 } }}>
-                    Si encuentras algún problema técnico o requieres mantenimiento del sistema, por favor contacta al desarrollador:
+                    Si encuentras algún problema técnico o requieres mantenimiento del sistema, contacta al desarrollador.
                 </Typography>
-                
                 <Divider sx={{ my: 2, ml: { sm: 6 }, borderColor: 'info.200' }} />
-                
                 <Box sx={{ ml: { sm: 6 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
                     <Box>
                         <Typography variant="caption" fontWeight="bold" color="text.secondary">DESARROLLADOR</Typography>
@@ -173,14 +156,12 @@ const Settings = () => {
                     <Box>
                         <Typography variant="caption" fontWeight="bold" color="text.secondary">CONTACTO</Typography>
                         <Typography variant="body1">
-                            <Link href="mailto:miranda.c4rlos@outlook.com" underline="hover" color="primary">
-                                miranda.c4rlos@outlook.com
-                            </Link>
+                            <Link href="mailto:miranda.c4rlos@outlook.com" underline="hover" color="primary">miranda.c4rlos@outlook.com</Link>
                         </Typography>
                     </Box>
                     <Box>
                         <Typography variant="caption" fontWeight="bold" color="text.secondary">VERSIÓN</Typography>
-                        <Typography variant="body1">v1.0.0</Typography>
+                        <Typography variant="body1">v2.0.0 (Multi-Hotel)</Typography>
                     </Box>
                 </Box>
             </Paper>

@@ -3,7 +3,7 @@ import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Button,
   Typography, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress, TableSortLabel,
-  TextField
+  TextField, Chip
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete"; 
@@ -14,8 +14,7 @@ import CreateDeviceForm from "../components/CreateDeviceForm";
 import ImportButton from "../components/ImportButton"; 
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
-
-// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
+import { ROLES } from "../config/constants"; // 👈 Importar constantes
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -36,12 +35,12 @@ const Inventory = () => {
 
   const [activeFilter, setActiveFilter] = useState(""); 
   const [searchParams, setSearchParams] = useSearchParams(); 
-
   const [sortConfig, setSortConfig] = useState({ key: 'nombre_equipo', direction: 'asc' });
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
   const { user } = useContext(AuthContext);
+  const isRoot = user?.rol === ROLES.ROOT; // 👈 Chequeo de rol
 
   const fetchDevices = useCallback(async (filterToUse, pageToUse, sortKey, sortDir) => {
     setLoading(true);
@@ -166,6 +165,10 @@ const Inventory = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}> 
+                
+                {/* 👇 COLUMNA CONDICIONAL PARA ROOT */}
+                {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
+
                 <TableCell sx={headerStyle}>
                   <TableSortLabel active={sortConfig.key === 'nombre_equipo'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre_equipo')}>
                     Nombre Equipo
@@ -194,10 +197,24 @@ const Inventory = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={8} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={isRoot ? 9 : 8} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 devices.map((device) => (
                   <TableRow key={device.id}>
+                    
+                    {/* 👇 CELDA CONDICIONAL PARA ROOT */}
+                    {isRoot && (
+                        <TableCell>
+                            <Chip 
+                                // TODO: Mapear ID a Nombre de forma más elegante si tienes muchos hoteles
+                                label={device.hotelId === 1 ? "Cancún" : device.hotelId === 2 ? "Sensira" : device.hotelId === 3 ? "Corp" : "N/A"} 
+                                size="small" 
+                                variant="outlined" 
+                                color="default"
+                            />
+                        </TableCell>
+                    )}
+
                     <TableCell>{device.nombre_equipo}</TableCell>
                     <TableCell>{device.descripcion || 'N/A'}</TableCell>
                     <TableCell>{device.usuario?.nombre || 'N/A'}</TableCell>
@@ -217,7 +234,7 @@ const Inventory = () => {
                       <IconButton color="primary" onClick={() => handleEdit(device.id)}>
                         <EditIcon />
                       </IconButton>
-                      {user?.rol === "ADMIN" && (
+                      {(user?.rol === "ADMIN" || isRoot) && (
                         <IconButton color="error" onClick={() => handleDelete(device.id)}>
                           <DeleteIcon />
                         </IconButton>

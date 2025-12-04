@@ -2,26 +2,18 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Box, Typography, TextField, Button, Paper, Alert, FormControl, InputLabel, Select, MenuItem, Divider
 } from "@mui/material";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
-
-// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
+import { ROLES } from "../config/constants"; // 👈 Importar Roles
+import HotelSelect from "../components/common/HotelSelect"; // 👈 Importar Selector
 
 const EditUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const isRoot = user?.rol === ROLES.ROOT;
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -29,6 +21,7 @@ const EditUser = () => {
     email: "",
     rol: "",
     password: "",
+    hotelId: ""
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -41,11 +34,12 @@ const EditUser = () => {
           nombre: response.data.nombre || "",
           username: response.data.username || "",
           email: response.data.email || "",
-          rol: response.data.rol || "USER",
+          rol: response.data.rol || ROLES.HOTEL_GUEST,
+          hotelId: response.data.hotelId || "", // 👈 Cargar hotel
           password: "",
         });
       } catch (err) {
-        setError(err.response?.data?.error || "Error al cargar los datos del usuario.");
+        setError(err.response?.data?.error || "Error al cargar los datos.");
       }
     };
     fetchUser();
@@ -57,26 +51,25 @@ const EditUser = () => {
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
+    setError(""); setMessage("");
 
-    if (formData.username === "superadmin" && formData.rol !== "ADMIN") {
-      setError("No se puede cambiar el rol del superadministrador.");
+    if (formData.username === "root" && formData.rol !== ROLES.ROOT) {
+      setError("No se puede cambiar el rol del usuario ROOT.");
       return;
     }
     
-    const payload = {};
-    if (formData.nombre) payload.nombre = formData.nombre;
-    if (formData.email) payload.email = formData.email;
-    if (formData.rol) payload.rol = formData.rol;
-    if (formData.password) payload.password = formData.password;
+    const payload = { ...formData };
+    if (payload.hotelId) payload.hotelId = Number(payload.hotelId);
+    else payload.hotelId = null;
+
+    if (!payload.password) delete payload.password; // No enviar si está vacío
 
     try {
       await api.put(`/auth/put/${id}`, payload);
       setMessage("Usuario actualizado correctamente.");
-      setTimeout(() => navigate("/admin-settings"), 2000); // Redirige a AdminSettings o UserManager según prefieras
+      setTimeout(() => navigate("/admin-settings"), 1500);
     } catch (err) {
-      setError(err.response?.data?.error || "Error al actualizar el usuario.");
+      setError(err.response?.data?.error || "Error al actualizar.");
     }
   };
 
@@ -91,51 +84,35 @@ const EditUser = () => {
 
       <Paper sx={{ p: 3, maxWidth: 600 }}>
         <Box component="form" onSubmit={handleUpdateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <TextField
-            label="Nombre"
-            name="nombre"
-            value={formData.nombre}
-            onChange={handleChange}
-            fullWidth
-          />
-          <TextField
-            label="Correo electrónico"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            fullWidth
-          />
-          <FormControl fullWidth disabled={formData.username === "superadmin"}>
+          
+          {/* 👇 Selector para Root */}
+          {isRoot && (
+            <HotelSelect 
+                value={formData.hotelId} 
+                onChange={handleChange} 
+                name="hotelId"
+                required={![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)}
+            />
+          )}
+
+          <TextField label="Nombre" name="nombre" value={formData.nombre} onChange={handleChange} fullWidth />
+          <TextField label="Correo electrónico" name="email" type="email" value={formData.email} onChange={handleChange} fullWidth />
+          
+          <FormControl fullWidth disabled={formData.username === "root"}>
             <InputLabel>Rol</InputLabel>
-            <Select
-              name="rol"
-              value={formData.rol}
-              onChange={handleChange}
-              label="Rol"
-            >
-              <MenuItem value="USER">USER</MenuItem>
-              <MenuItem value="EDITOR">EDITOR</MenuItem>
-              <MenuItem value="ADMIN">ADMIN</MenuItem>
+            <Select name="rol" value={formData.rol} onChange={handleChange} label="Rol">
+                <MenuItem value={ROLES.HOTEL_ADMIN}>Admin de Hotel</MenuItem>
+                <MenuItem value={ROLES.HOTEL_AUX}>Auxiliar</MenuItem>
+                <MenuItem value={ROLES.HOTEL_GUEST}>Invitado</MenuItem>
+                {isRoot && <Divider />}
+                {isRoot && <MenuItem value={ROLES.CORP_VIEWER}>Auditor Global</MenuItem>}
+                {isRoot && <MenuItem value={ROLES.ROOT}>Root</MenuItem>}
             </Select>
           </FormControl>
-          <TextField
-            label="Nueva Contraseña"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            fullWidth
-            helperText="Dejar en blanco para no cambiar la contraseña."
-          />
+
+          <TextField label="Nueva Contraseña" name="password" type="password" value={formData.password} onChange={handleChange} fullWidth helperText="Dejar en blanco para mantener la actual." />
           
-          {/* ✅ BOTÓN REFACTORIZADO */}
-          <Button 
-            type="submit" 
-            variant="contained" 
-            color="primary"
-            sx={{ alignSelf: 'flex-start', mt: 1 }}
-          >
+          <Button type="submit" variant="contained" color="primary" sx={{ alignSelf: 'flex-start', mt: 1 }}>
             Guardar cambios
           </Button>
         </Box>

@@ -5,11 +5,11 @@ import {
   Box, Typography, TextField, Button, Grid, Fade, MenuItem, CircularProgress, 
   Chip, Checkbox, ListItemText, FormControlLabel, Switch, Alert, Avatar, Stack, Divider, 
   FormControl, InputLabel, FormHelperText, useTheme, alpha,
-  ListSubheader, Select 
+  ListSubheader, Select, OutlinedInput 
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 
-// Iconos
+// Icons
 import SaveIcon from '@mui/icons-material/Save';
 import ComputerIcon from '@mui/icons-material/Computer';
 import WifiIcon from '@mui/icons-material/Wifi';
@@ -18,28 +18,28 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import DomainIcon from '@mui/icons-material/Domain'; // Icon for Hotel
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
-import { AuthContext } from "../context/AuthContext"; // 👈 IMPORTANTE: Importar AuthContext
+import { AuthContext } from "../context/AuthContext"; 
+import { ROLES } from "../config/constants";
 import PageHeader from "../components/common/PageHeader"; 
 import SectionCard from "../components/common/SectionCard"; 
 import StatusBadge from "../components/common/StatusBadge"; 
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: { style: { maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP, width: 250 } },
-};
+const MenuProps = { PaperProps: { style: { maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP, width: 250 } } };
 
 const EditDevice = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  const { user } = useContext(AuthContext); // 👈 Extraer usuario
+  const { user } = useContext(AuthContext);
+  const isRoot = user?.rol === ROLES.ROOT;
   const theme = useTheme();
 
-  // 👇 CONFIGURACIÓN DE REACT HOOK FORM
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
     defaultValues: {
       nombre_equipo: "", modelo: "", numero_serie: "", ip_equipo: "", etiqueta: "",
@@ -48,15 +48,16 @@ const EditDevice = () => {
       office_tipo_licencia: "", office_serial: "", office_key: "", es_panda: false,
       garantia_numero_producto: "", garantia_numero_reporte: "", garantia_notes: "",
       garantia_inicio: "", garantia_fin: "", areaId: "", fecha_proxima_revision: "",
-      motivo_baja: "", observaciones_baja: "", isWarrantyApplied: false
+      motivo_baja: "", observaciones_baja: "", isWarrantyApplied: false,
+      hotelId: "" // Field to store the hotel ID (readonly)
     }
   });
 
-  // Watchers para lógica condicional
   const watchAreaId = watch("areaId");
   const watchUsuarioId = watch("usuarioId");
   const watchEstadoId = watch("estadoId");
   const isWarrantyApplied = watch("isWarrantyApplied");
+  const watchHotelId = watch("hotelId"); // Watch hotel to filter lists
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
@@ -64,7 +65,6 @@ const EditDevice = () => {
   const [deviceStatuses, setDeviceStatuses] = useState([]);
   const [operatingSystems, setOperatingSystems] = useState([]);
   const [areas, setAreas] = useState([]);
-  
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [bajaStatusId, setBajaStatusId] = useState(null);
@@ -74,10 +74,10 @@ const EditDevice = () => {
     const fetchDeviceData = async () => {
       try {
         setLoading(true);
-        const [
-          deviceResponse, usersRes, deviceTypesRes, 
-          deviceStatusesRes, operatingSystemsRes, areasRes
-        ] = await Promise.all([
+        // Fetch all necessary data. 
+        // Note: For 'areas' and 'users', the backend will filter them based on the user's hotel.
+        // If the user is ROOT, they will receive ALL areas/users, so we must filter them in the UI based on the device's hotel.
+        const [deviceResponse, usersRes, deviceTypesRes, deviceStatusesRes, operatingSystemsRes, areasRes] = await Promise.all([
           api.get(`/devices/get/${id}`),
           api.get("/users/get?limit=0"), 
           api.get("/device-types/get?limit=0"),
@@ -88,15 +88,14 @@ const EditDevice = () => {
 
         const deviceData = deviceResponse.data;
         const formatDate = (d) => d ? new Date(d).toISOString().substring(0, 10) : "";
-
         const statusList = Array.isArray(deviceStatusesRes.data) ? deviceStatusesRes.data : [];
-        const bajaStatus = statusList.find(s => s.nombre.toLowerCase() === 'baja');
+        
+        // Find the ID for "Inactivo" / "Baja" status
+        const bajaStatus = statusList.find(s => s.nombre.toLowerCase() === 'baja' || s.nombre.toLowerCase() === 'inactivo');
+        
         if (bajaStatus) setBajaStatusId(bajaStatus.id);
         if (bajaStatus && deviceData.estadoId === bajaStatus.id) setIsPermanentlyBaja(true);
 
-        const hasWarrantyData = !!(deviceData.garantia_numero_reporte || deviceData.garantia_notes);
-
-        // 👇 POBLAR EL FORMULARIO
         reset({
           ...deviceData,
           perfiles_usuario: deviceData.perfiles_usuario ? deviceData.perfiles_usuario.split(',').map(s => s.trim()) : [],
@@ -104,14 +103,14 @@ const EditDevice = () => {
           garantia_fin: formatDate(deviceData.garantia_fin),
           fecha_proxima_revision: formatDate(deviceData.fecha_proxima_revision),
           es_panda: deviceData.es_panda || false,
-          // Aseguramos que los IDs sean strings vacíos si son null para que los Selects no se quejen
           usuarioId: deviceData.usuarioId || "",
           areaId: deviceData.areaId || "",
           tipoId: deviceData.tipoId || "",
           estadoId: deviceData.estadoId || "",
           sistemaOperativoId: deviceData.sistemaOperativoId || "",
           comentarios: deviceData.comentarios || "",
-          isWarrantyApplied: hasWarrantyData
+          isWarrantyApplied: !!(deviceData.garantia_numero_reporte || deviceData.garantia_notes),
+          hotelId: deviceData.hotelId // Load the hotel ID
         });
 
         setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
@@ -119,10 +118,9 @@ const EditDevice = () => {
         setDeviceStatuses(statusList);
         setOperatingSystems(Array.isArray(operatingSystemsRes.data) ? operatingSystemsRes.data : []);
         setAreas(Array.isArray(areasRes.data) ? areasRes.data : []);
-
       } catch (err) {
-        console.error("Error cargando dispositivo:", err);
-        setError("Error al cargar los datos del dispositivo.");
+        setError("Error al cargar el dispositivo.");
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -131,63 +129,51 @@ const EditDevice = () => {
   }, [id, reset]);
 
   const onSubmit = async (data) => {
-    setError("");
-    setMessage("");
-
+    setError(""); setMessage("");
     const payload = { ...data };
     
-    // Limpieza de campos que no van al backend
-    const fieldsToRemove = [
-        'id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 
-        'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento', 'isWarrantyApplied'
-    ];
-    fieldsToRemove.forEach(field => delete payload[field]);
+    // Remove fields that should not be sent to the backend
+    const fieldsToRemove = ['id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento', 'isWarrantyApplied', 'hotelId'];
+    fieldsToRemove.forEach(field => delete payload[field]); 
 
+    // Convert foreign keys to numbers or null
     const foreignKeys = ['areaId', 'usuarioId', 'tipoId', 'estadoId', 'sistemaOperativoId'];
     foreignKeys.forEach(key => { payload[key] = payload[key] ? Number(payload[key]) : null; });
 
-    if (Array.isArray(payload.perfiles_usuario)) {
-        payload.perfiles_usuario = payload.perfiles_usuario.length > 0 ? payload.perfiles_usuario.join(", ") : null;
-    }
-
-    if (!data.isWarrantyApplied) {
-        payload.garantia_numero_reporte = null;
-        payload.garantia_notes = null;
-    }
-
-    // Convertir fechas a ISO para Prisma
-    const toISO = (d) => d ? new Date(d).toISOString() : null;
-    payload.garantia_inicio = toISO(payload.garantia_inicio);
-    payload.garantia_fin = toISO(payload.garantia_fin);
-    payload.fecha_proxima_revision = toISO(payload.fecha_proxima_revision);
-
-    if (payload.estadoId !== bajaStatusId) {
-      payload.motivo_baja = null;
-      payload.observaciones_baja = null;
-    }
+    // Format profiles array to string
+    if (Array.isArray(payload.perfiles_usuario)) payload.perfiles_usuario = payload.perfiles_usuario.join(", ");
+    
+    // Format dates
+    ['garantia_inicio', 'garantia_fin', 'fecha_proxima_revision'].forEach(key => {
+        payload[key] = payload[key] ? new Date(payload[key]).toISOString() : null;
+    });
 
     try {
       await api.put(`/devices/put/${id}`, payload);
       refreshAlerts();
-      setMessage("Equipo actualizado correctamente.");
-      setTimeout(() => {
-          if (isPermanentlyBaja || payload.estadoId === bajaStatusId) navigate("/disposals");
-          else navigate("/inventory");
-      }, 1500);
+      setMessage("Guardado correctamente.");
+      setTimeout(() => navigate("/inventory"), 1500);
     } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.error || "Error al guardar cambios.");
+      setError(err.response?.data?.error || "Error al guardar.");
     }
   };
 
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
-    const sortedAreas = [...areas].sort((a, b) => (a.departamento?.nombre || "").localeCompare(b.departamento?.nombre || ""));
+    
+    // 🛡️ Filter areas by the device's hotel.
+    // If not Root, 'areas' is already filtered by backend.
+    // If Root, we filter 'areas' to match 'watchHotelId' (the device's hotel).
+    const filteredAreas = isRoot && watchHotelId 
+        ? areas.filter(a => a.hotelId === watchHotelId) 
+        : areas;
 
+    const sortedAreas = [...filteredAreas].sort((a, b) => (a.departamento?.nombre || "").localeCompare(b.departamento?.nombre || ""));
+    
     sortedAreas.forEach(area => {
       if (area.departamento?.nombre && area.departamento.nombre !== lastDept) {
-        options.push(<ListSubheader key={`header-${area.departamentoId}`}>{area.departamento.nombre}</ListSubheader>);
+        options.push(<ListSubheader key={`header-${area.departamentoId}`} disableSticky>{area.departamento.nombre}</ListSubheader>);
         lastDept = area.departamento.nombre;
       }
       options.push(<MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>{area.nombre}</MenuItem>);
@@ -195,255 +181,191 @@ const EditDevice = () => {
     return options;
   };
 
-  // Helpers visuales
-  const getStatusName = () => {
-      const status = deviceStatuses.find(s => s.id === watchEstadoId);
-      return status ? status.nombre : "N/A";
-  }
-  const selectedArea = areas.find(a => a.id === watchAreaId);
-  const departmentName = selectedArea?.departamento?.nombre || 'N/A';
+  const getStatusName = () => { const s = deviceStatuses.find(s => s.id === watchEstadoId); return s ? s.nombre : "N/A"; }
   const assignedUser = users.find(u => u.id === watchUsuarioId);
-
-  // 👇 LÓGICA DE PERMISOS: Solo el admin puede editar si está en baja
-  const isAdmin = user?.rol === 'ADMIN';
-  const isEditingDisabled = isPermanentlyBaja && !isAdmin;
+  const isAdmin = user?.rol === ROLES.HOTEL_ADMIN || isRoot;
+  
+  // Hotel label for display
+  const hotelName = watchHotelId === 1 ? "Cancún" : watchHotelId === 2 ? "Sensira" : watchHotelId === 3 ? "Corporativo" : "Desconocido";
 
   if (loading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
 
   return (
     <Box sx={{ pb: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
-      
       <PageHeader 
         title={watch("nombre_equipo")}
-        subtitle={`${watch("marca")} ${watch("modelo")} • SN: ${watch("numero_serie")}`}
+        subtitle={isRoot ? `Ubicación: ${hotelName}` : `${watch("marca")} ${watch("modelo")}`}
         status={<StatusBadge status={getStatusName()} />}
         onBack={() => navigate(-1)}
-        actions={
-          <Button 
-            variant="contained" 
-            color="primary"
-            startIcon={<SaveIcon />} 
-            onClick={handleSubmit(onSubmit)} 
-          >
-            Guardar
-          </Button>
-        }
+        actions={<Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSubmit(onSubmit)}>Guardar Cambios</Button>}
       />
 
       <Box sx={{ px: 3, mb: 2 }}>
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        
-        {/* 👇 ALERT DINÁMICO */}
-        {isPermanentlyBaja && (
-            <Alert severity="warning" icon={<DeleteForeverIcon />} sx={{ mb: 2 }}>
-                Este equipo está dado de baja. {isAdmin ? "Como Administrador, puedes reactivarlo cambiando el estado." : "La edición está restringida."}
-            </Alert>
-        )}
       </Box>
 
       <Box component="form" noValidate sx={{ px: 3 }}>
         <Grid container spacing={3}>
-          
+          {/* LEFT COLUMN: MAIN INFO */}
           <Grid item xs={12} lg={8}>
             <Stack spacing={3}>
               
+              {/* Hotel Warning for Root */}
+              {isRoot && (
+                 <Alert severity="info" icon={<DomainIcon />}>
+                    Estás editando un equipo del hotel: <b>{hotelName}</b>. (Solo se muestran usuarios y áreas de este hotel).
+                 </Alert>
+              )}
+
               <SectionCard title="Identidad del Equipo" icon={<ComputerIcon />}>
-                <Stack spacing={3}>
+                 <Stack spacing={3}>
                     <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <Controller name="nombre_equipo" control={control} rules={{ required: "Requerido" }}
-                                render={({ field }) => <TextField {...field} label="Nombre del Equipo" fullWidth required error={!!errors.nombre_equipo} helperText={errors.nombre_equipo?.message} />}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <Controller name="etiqueta" control={control} render={({ field }) => <TextField {...field} label="Etiqueta" fullWidth />} />
-                        </Grid>
-                    </Grid>
-
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={4}>
-                            <Controller name="marca" control={control} rules={{ required: "Requerido" }}
-                                render={({ field }) => <TextField {...field} label="Marca" fullWidth required error={!!errors.marca} />}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <Controller name="modelo" control={control} rules={{ required: "Requerido" }}
-                                render={({ field }) => <TextField {...field} label="Modelo" fullWidth required error={!!errors.modelo} />}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <FormControl fullWidth error={!!errors.tipoId}>
-                                <InputLabel>Tipo *</InputLabel>
-                                <Controller
-                                    name="tipoId" control={control} rules={{ required: "Requerido" }}
-                                    render={({ field }) => (
-                                        <Select {...field} label="Tipo *">
-                                            <MenuItem value=""><em>Ninguno</em></MenuItem>
-                                            {deviceTypes.map((t) => <MenuItem key={t.id} value={t.id}>{t.nombre}</MenuItem>)}
-                                        </Select>
-                                    )}
-                                />
-                            </FormControl>
-                        </Grid>
-                    </Grid>
-
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <Controller name="numero_serie" control={control} rules={{ required: "Requerido" }}
-                                render={({ field }) => <TextField {...field} label="Número de Serie" fullWidth required error={!!errors.numero_serie} />}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                             <Controller name="descripcion" control={control} render={({ field }) => <TextField {...field} label="Descripción" fullWidth />} />
-                        </Grid>
+                        <Grid item xs={12} sm={6}><Controller name="nombre_equipo" control={control} rules={{ required: "Requerido" }} render={({ field }) => <TextField {...field} label="Nombre del Equipo" fullWidth required error={!!errors.nombre_equipo} />} /></Grid>
+                        <Grid item xs={12} sm={6}><Controller name="etiqueta" control={control} render={({ field }) => <TextField {...field} label="Etiqueta" fullWidth />} /></Grid>
                     </Grid>
                     
-                    <Controller name="comentarios" control={control} render={({ field }) => <TextField {...field} label="Comentarios" fullWidth multiline rows={2} />} />
-                </Stack>
-              </SectionCard>
-
-              <SectionCard title="Red y Software" icon={<WifiIcon />}>
-                <Stack spacing={3}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                    <Controller name="ip_equipo" control={control} render={({ field }) => <TextField {...field} label="Dirección IP" fullWidth />} />
-                    <FormControl fullWidth>
-                        <InputLabel>Sistema Operativo</InputLabel>
-                        <Controller
-                            name="sistemaOperativoId" control={control}
-                            render={({ field }) => (
-                                <Select {...field} label="Sistema Operativo">
-                                    <MenuItem value=""><em>Ninguno</em></MenuItem>
-                                    {operatingSystems.map((os) => <MenuItem key={os.id} value={os.id}>{os.nombre}</MenuItem>)}
-                                </Select>
-                            )}
-                        />
-                    </FormControl>
-                  </Stack>
-
-                  <Box>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: 'bold' }}>Licenciamiento Office</Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={4}><Controller name="office_version" control={control} render={({ field }) => <TextField {...field} label="Versión" size="small" fullWidth />} /></Grid>
-                      <Grid item xs={12} sm={4}><Controller name="office_tipo_licencia" control={control} render={({ field }) => <TextField {...field} label="Tipo Licencia" size="small" fullWidth />} /></Grid>
-                      <Grid item xs={12} sm={4}><Controller name="office_key" control={control} render={({ field }) => <TextField {...field} label="Serial" size="small" fullWidth />} /></Grid>
+                        <Grid item xs={12} sm={4}><Controller name="marca" control={control} render={({ field }) => <TextField {...field} label="Marca" fullWidth />} /></Grid>
+                        <Grid item xs={12} sm={4}><Controller name="modelo" control={control} render={({ field }) => <TextField {...field} label="Modelo" fullWidth />} /></Grid>
+                        <Grid item xs={12} sm={4}><FormControl fullWidth><InputLabel>Tipo</InputLabel><Controller name="tipoId" control={control} render={({ field }) => <Select {...field} label="Tipo"><MenuItem value=""><em>Ninguno</em></MenuItem>{deviceTypes.map(t => <MenuItem key={t.id} value={t.id}>{t.nombre}</MenuItem>)}</Select>} /></FormControl></Grid>
                     </Grid>
-                  </Box>
-
-                  <Box>
-                    <Divider sx={{ mb: 2 }} />
-                    <Controller
+                    <Controller name="numero_serie" control={control} render={({ field }) => <TextField {...field} label="Número de Serie" fullWidth />} />
+                    <Controller name="descripcion" control={control} render={({ field }) => <TextField {...field} label="Descripción" fullWidth multiline rows={2} />} />
+                    <Controller name="comentarios" control={control} render={({ field }) => <TextField {...field} label="Comentarios / Observaciones" fullWidth multiline rows={2} />} />
+                 </Stack>
+              </SectionCard>
+              
+              <SectionCard title="Red y Software" icon={<WifiIcon />}>
+                  <Stack spacing={2}>
+                      <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}><Controller name="ip_equipo" control={control} render={({ field }) => <TextField {...field} label="Dirección IP" fullWidth />} /></Grid>
+                          <Grid item xs={12} sm={6}>
+                              <FormControl fullWidth>
+                                  <InputLabel>Sistema Operativo</InputLabel>
+                                  <Controller name="sistemaOperativoId" control={control} render={({ field }) => (
+                                      <Select {...field} label="Sistema Operativo">
+                                          <MenuItem value=""><em>Ninguno</em></MenuItem>
+                                          {operatingSystems.map(os => <MenuItem key={os.id} value={os.id}>{os.nombre}</MenuItem>)}
+                                      </Select>
+                                  )} />
+                              </FormControl>
+                          </Grid>
+                      </Grid>
+                      <Divider />
+                      <Typography variant="subtitle2" color="text.secondary">Licencias</Typography>
+                      <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}><Controller name="licencia_so" control={control} render={({ field }) => <TextField {...field} label="Licencia Windows" fullWidth />} /></Grid>
+                          <Grid item xs={12} sm={6}><Controller name="office_version" control={control} render={({ field }) => <TextField {...field} label="Versión Office" fullWidth />} /></Grid>
+                          <Grid item xs={12} sm={6}><Controller name="office_serial" control={control} render={({ field }) => <TextField {...field} label="Serial Office" fullWidth />} /></Grid>
+                          <Grid item xs={12} sm={6}><Controller name="office_key" control={control} render={({ field }) => <TextField {...field} label="Key Office" fullWidth />} /></Grid>
+                      </Grid>
+                      <Controller
                         name="es_panda" control={control}
                         render={({ field: { onChange, value } }) => (
-                            <FormControlLabel control={<Switch checked={value} onChange={onChange} color="success" />} label="Panda Antivirus Instalado" />
+                            <FormControlLabel control={<Switch checked={value} onChange={onChange} color="success" />} label="Antivirus Panda Instalado" />
                         )}
-                    />
-                  </Box>
-                </Stack>
+                      />
+                  </Stack>
               </SectionCard>
 
-              <SectionCard title="Garantía y Ciclo de Vida" icon={<VerifiedUserIcon />} color={isWarrantyApplied ? "primary.main" : "text.disabled"}>
-                <Stack spacing={3}>
-                   <Controller
+              <SectionCard title="Garantía" icon={<VerifiedUserIcon />}>
+                  <Stack spacing={2}>
+                      <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}><Controller name="garantia_numero_producto" control={control} render={({ field }) => <TextField {...field} label="N° Producto / Servicio" fullWidth />} /></Grid>
+                          <Grid item xs={12} sm={6}><Controller name="garantia_inicio" control={control} render={({ field }) => <TextField {...field} label="Inicio Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
+                          <Grid item xs={12} sm={6}><Controller name="garantia_fin" control={control} render={({ field }) => <TextField {...field} label="Fin Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
+                          <Grid item xs={12} sm={6}><Controller name="fecha_proxima_revision" control={control} render={({ field }) => <TextField {...field} label="Próxima Revisión" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
+                      </Grid>
+                      <Controller
                         name="isWarrantyApplied" control={control}
                         render={({ field: { onChange, value } }) => (
-                            <FormControlLabel control={<Switch checked={value} onChange={onChange} />} label="Aplicar información de garantía" />
+                            <FormControlLabel control={<Switch checked={value} onChange={onChange} />} label="¿Se ha aplicado garantía?" />
                         )}
-                   />
-                   
-                   <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}><Controller name="garantia_inicio" control={control} render={({ field }) => <TextField {...field} label="Inicio Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
-                      <Grid item xs={12} sm={6}><Controller name="garantia_fin" control={control} render={({ field }) => <TextField {...field} label="Fin Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
-                   </Grid>
-
-                   {isWarrantyApplied && (
-                     <Fade in={isWarrantyApplied}>
-                         <Box sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 2, border: '1px dashed #bdbdbd' }}>
-                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>Detalles del Proveedor</Typography>
-                            <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6}><Controller name="garantia_numero_reporte" control={control} render={({ field }) => <TextField {...field} label="N° Reporte Prov." size="small" fullWidth />} /></Grid>
-                                <Grid item xs={12} sm={6}><Controller name="garantia_numero_producto" control={control} render={({ field }) => <TextField {...field} label="N° Producto" size="small" fullWidth />} /></Grid>
-                                <Grid item xs={12}><Controller name="garantia_notes" control={control} render={({ field }) => <TextField {...field} label="Notas del Servicio" size="small" fullWidth multiline rows={2} />} /></Grid>
-                            </Grid>
-                         </Box>
-                     </Fade>
-                   )}
-                   
-                   <Divider />
-                   
-                   <Box>
-                       <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                           <CalendarMonthIcon fontSize="small"/> Planificación
-                       </Typography>
-                       <Controller name="fecha_proxima_revision" control={control} render={({ field }) => <TextField {...field} label="Sugerir Próxima Revisión" type="date" fullWidth InputLabelProps={{ shrink: true }} />} />
-                   </Box>
-                </Stack>
+                      />
+                      <Fade in={isWarrantyApplied} unmountOnExit>
+                          <Stack spacing={2}>
+                              <Controller name="garantia_numero_reporte" control={control} render={({ field }) => <TextField {...field} label="Número de Reporte" fullWidth />} />
+                              <Controller name="garantia_notes" control={control} render={({ field }) => <TextField {...field} label="Notas de Garantía" fullWidth multiline rows={2} />} />
+                          </Stack>
+                      </Fade>
+                  </Stack>
               </SectionCard>
-
             </Stack>
           </Grid>
 
+          {/* RIGHT COLUMN: ASSIGNMENT & STATUS */}
           <Grid item xs={12} lg={4}>
-            <Stack spacing={3} sx={{ position: 'sticky', top: 100 }}>
-              
+            <Stack spacing={3} sx={{ position: 'sticky', top: 20 }}>
               <SectionCard title="Responsable Actual" icon={<PersonIcon />}>
                 <Stack spacing={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 2 }}>
-                        <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main', fontSize: '1.5rem' }}>
-                            {assignedUser ? assignedUser.nombre.charAt(0).toUpperCase() : "?"}
+                        <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}>
+                            {assignedUser ? assignedUser.nombre.charAt(0) : "?"}
                         </Avatar>
                         <Box>
-                            <Typography variant="subtitle1" fontWeight="bold">{assignedUser ? assignedUser.nombre : "Sin Asignar"}</Typography>
-                            <Typography variant="body2" color="text.secondary">{assignedUser ? assignedUser.usuario_login : "---"}</Typography>
+                            <Typography variant="subtitle1" fontWeight="bold">
+                                {assignedUser ? assignedUser.nombre : "Sin Asignar"}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                {assignedUser ? assignedUser.usuario_login : ""}
+                            </Typography>
                         </Box>
                     </Box>
-
-                    <Divider sx={{ mb: 1 }} />
-
+                    
                     <FormControl fullWidth>
                         <InputLabel>Área</InputLabel>
-                        <Controller
-                            name="areaId" control={control}
+                        <Controller 
+                            name="areaId" control={control} 
                             render={({ field }) => (
                                 <Select {...field} label="Área">
                                     <MenuItem value=""><em>Ninguna</em></MenuItem>
                                     {renderAreaOptions()}
                                 </Select>
-                            )}
+                            )} 
                         />
                     </FormControl>
-                    
-                    <TextField label="Departamento" fullWidth value={departmentName} InputProps={{ readOnly: true }} variant="filled" size="small" />
 
                     <FormControl fullWidth>
-                        <InputLabel>Usuario Asignado</InputLabel>
-                        <Controller
-                            name="usuarioId" control={control}
+                        <InputLabel>Usuario</InputLabel>
+                        <Controller 
+                            name="usuarioId" control={control} 
                             render={({ field }) => (
-                                <Select {...field} label="Usuario Asignado">
+                                <Select {...field} label="Usuario">
                                     <MenuItem value=""><em>Ninguno</em></MenuItem>
-                                    {users.map((u) => <MenuItem key={u.id} value={u.id}>{u.nombre}</MenuItem>)}
+                                    {users
+                                      // 🛡️ Filter users by the device's hotel (same logic as areas)
+                                      .filter(u => !isRoot || !watchHotelId || u.hotelId === watchHotelId) 
+                                      .map(u => <MenuItem key={u.id} value={u.id}>{u.nombre}</MenuItem>)
+                                    }
                                 </Select>
-                            )}
+                            )} 
                         />
                     </FormControl>
 
                     <FormControl fullWidth>
-                        <InputLabel id="perf-label">Perfiles (Sesiones)</InputLabel>
+                        <InputLabel>Perfiles de Usuario</InputLabel>
                         <Controller
-                            name="perfiles_usuario" control={control}
+                            name="perfiles_usuario"
+                            control={control}
                             render={({ field }) => (
                                 <Select
                                     {...field}
-                                    labelId="perf-label"
                                     multiple
-                                    renderValue={(selected) => <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{selected.map((value) => <Chip key={value} label={value} size="small" />)}</Box>}
+                                    input={<OutlinedInput label="Perfiles de Usuario" />}
+                                    renderValue={(selected) => (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {selected.map((value) => <Chip key={value} label={value} size="small" />)}
+                                        </Box>
+                                    )}
                                     MenuProps={MenuProps}
                                 >
-                                    {users.map((u) => (
-                                        <MenuItem key={u.id} value={u.nombre}>
-                                            <Checkbox checked={field.value.indexOf(u.nombre) > -1} />
-                                            <ListItemText primary={u.nombre} />
+                                    {users
+                                        .filter(u => !isRoot || !watchHotelId || u.hotelId === watchHotelId)
+                                        .map((user) => (
+                                        <MenuItem key={user.id} value={user.nombre}>
+                                            <Checkbox checked={field.value.indexOf(user.nombre) > -1} />
+                                            <ListItemText primary={user.nombre} />
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -453,37 +375,26 @@ const EditDevice = () => {
                 </Stack>
               </SectionCard>
 
-              <SectionCard title="Estado del Equipo" icon={<SettingsIcon />}>
-                 <FormControl fullWidth error={!!errors.estadoId}>
-                    <InputLabel>Estado Actual *</InputLabel>
-                    <Controller
-                        name="estadoId" control={control}
-                        rules={{ required: "Requerido" }}
+              <SectionCard title="Estado del Activo" icon={<SettingsIcon />}>
+                 <FormControl fullWidth>
+                    <InputLabel>Estado</InputLabel>
+                    <Controller 
+                        name="estadoId" control={control} 
                         render={({ field }) => (
-                            // 👇 MODIFICACIÓN: Deshabilitar solo si es permanente Y NO ES ADMIN
-                            <Select {...field} label="Estado Actual *" disabled={isEditingDisabled}>
-                                {deviceStatuses.map((s) => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
+                            <Select {...field} label="Estado" disabled={isPermanentlyBaja && !isAdmin}>
+                                {deviceStatuses.map(s => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
                             </Select>
-                        )}
+                        )} 
                     />
                  </FormControl>
-
-                 <Fade in={watchEstadoId === bajaStatusId} mountOnEnter unmountOnExit>
-                    <Box sx={{ mt: 3, p: 2, bgcolor: alpha(theme.palette.warning.main, 0.1), borderRadius: 2, border: `1px solid ${theme.palette.warning.main}` }}>
-                        <Typography variant="subtitle2" color="warning.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
-                            <DeleteForeverIcon fontSize="small" sx={{ mr: 1 }}/> Información de Baja
-                        </Typography>
-                        <Stack spacing={2}>
-                            <Controller name="motivo_baja" control={control} render={({ field }) => <TextField {...field} label="Motivo de Baja" size="small" fullWidth />} />
-                            <Controller name="observaciones_baja" control={control} render={({ field }) => <TextField {...field} label="Observaciones Finales" size="small" fullWidth multiline rows={3} />} />
-                        </Stack>
-                    </Box>
-                 </Fade>
+                 {isPermanentlyBaja && (
+                     <Alert severity="warning" sx={{ mt: 2 }}>
+                         Este equipo está dado de baja (Inactivo). Para reactivarlo, cambia su estado a "Activo" (Solo Admins).
+                     </Alert>
+                 )}
               </SectionCard>
-
             </Stack>
           </Grid>
-
         </Grid>
       </Box>
     </Box>

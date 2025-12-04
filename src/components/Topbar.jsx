@@ -28,7 +28,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
 import { useNavigate } from "react-router-dom";
-import Logo from "../assets/CrownLogo.png";
+import Logo from "../assets/arriva.png";
 
 const TopBar = ({ onMenuClick }) => { 
   const { user, logout } = useContext(AuthContext);

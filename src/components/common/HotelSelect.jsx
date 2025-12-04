@@ -2,14 +2,14 @@
 import React from 'react';
 import { FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material';
 
-// NOTA: Idealmente, esto vendría de una API /api/hotels/get
-// Por ahora, usamos la misma lista que en tu seed del backend.
+// 💡 NOTA: Estos IDs deben coincidir con los que tienes en tu Base de Datos.
 const HOTELS_LIST = [
     { id: 1, nombre: "Crown Paradise Cancún" },
     { id: 2, nombre: "Sensira" },
 ];
 
-const HotelSelect = ({ value, onChange, error, helperText, required = true }) => {
+// 👇 AÑADIDO: Recibimos la prop 'name'
+const HotelSelect = ({ value, onChange, error, helperText, name, required = true }) => {
   return (
     <FormControl fullWidth error={!!error} required={required}>
       <InputLabel id="hotel-select-label">Asignar a Hotel</InputLabel>
@@ -18,6 +18,7 @@ const HotelSelect = ({ value, onChange, error, helperText, required = true }) =>
         value={value || ""}
         label="Asignar a Hotel"
         onChange={onChange}
+        name={name} // 👈 IMPORTANTE: Pasamos el name al componente Select
       >
         <MenuItem value="">
           <em>Seleccione un hotel</em>

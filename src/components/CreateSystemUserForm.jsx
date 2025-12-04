@@ -1,13 +1,21 @@
 // src/components/CreateSystemUserForm.jsx
 import React, { useState, useContext } from "react";
 import {
-  Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Button,
-  FormHelperText
+  Box, 
+  Typography, 
+  TextField, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem, 
+  Button,
+  FormHelperText,
+  Divider // 👈 ¡FALTABA ESTA IMPORTACIÓN!
 } from "@mui/material";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
-import { ROLES } from "../config/constants"; // 👈 Importamos roles nuevos
-import HotelSelect from "./common/HotelSelect"; // 👈 Importamos selector
+import { ROLES } from "../config/constants"; 
+import HotelSelect from "./common/HotelSelect"; 
 
 const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
   const { user } = useContext(AuthContext);
@@ -19,7 +27,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     email: "",
     password: "",
     rol: "",
-    hotelId: "" // 👈 Nuevo campo
+    hotelId: "" 
   });
 
   const handleChange = (e) => {
@@ -31,9 +39,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     if (setError) setError("");
     if (setMessage) setMessage("");
 
-    // Validación de Hotel para Root
-    // Si crea un ROOT o CORP_VIEWER, el hotel puede ser nulo (Global).
-    // Si crea un HOTEL_ADMIN/AUX, DEBE tener hotel.
+    // Validación: Si es Admin de Hotel, debe tener un hotel asignado
     if (isRoot && !formData.hotelId && ![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)) {
         if(setError) setError("Para este rol, es obligatorio asignar un Hotel.");
         return;
@@ -42,7 +48,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     const payload = { ...formData };
     
     if (payload.hotelId) payload.hotelId = Number(payload.hotelId);
-    else delete payload.hotelId; // Si es nulo o vacío, no lo enviamos
+    else delete payload.hotelId; 
 
     try {
       await api.post("/auth/create-user", payload);
@@ -62,13 +68,13 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
 
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         
-        {/* 👇 SELECTOR DE HOTEL (SOLO ROOT) */}
+        {/* Selector de Hotel (Solo para ROOT) */}
         {isRoot && (
             <HotelSelect 
                 value={formData.hotelId} 
                 onChange={handleChange} 
                 name="hotelId"
-                required={![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)} // Opcional solo para globales
+                required={![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)}
                 helperText="Deja vacío solo si es un usuario Global (Root/Corp)"
             />
         )}
@@ -86,12 +92,12 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
             onChange={handleChange}
             label="Rol"
           >
-            {/* 👇 ROLES ACTUALIZADOS */}
             <MenuItem value={ROLES.HOTEL_ADMIN}>Admin de Hotel (IT Manager)</MenuItem>
             <MenuItem value={ROLES.HOTEL_AUX}>Auxiliar (Soporte)</MenuItem>
             <MenuItem value={ROLES.HOTEL_GUEST}>Invitado (Solo lectura)</MenuItem>
             
-            {isRoot && <Divider />}
+            {/* Opciones exclusivas para ROOT */}
+            {isRoot && <Divider />} 
             {isRoot && <MenuItem value={ROLES.CORP_VIEWER}>Auditor Corporativo (Global)</MenuItem>}
             {isRoot && <MenuItem value={ROLES.ROOT}>Super Usuario (Root)</MenuItem>}
           </Select>

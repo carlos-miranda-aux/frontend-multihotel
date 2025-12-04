@@ -21,7 +21,7 @@ import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import LogoutIcon from "@mui/icons-material/Logout";
 import SecurityIcon from '@mui/icons-material/Security';
 
-import LogoImg from "../assets/Logo.png"; 
+import LogoImg from "../assets/logo_s.png"; 
 
 const drawerWidth = 280; 
 
@@ -92,7 +92,7 @@ const Sidebar = () => {
       }}
     >
       {/* 1. HEADER / LOGO */}
-      <Box sx={{ p: 3, display: "flex", justifyContent: "center", alignItems: "center" }}>
+      <Box sx={{ p: 2.5, display: "flex", justifyContent: "center", alignItems: "center" }}>
         <Box component="img" src={LogoImg} alt="Logo" sx={{ height: 45, objectFit: 'contain' }} />
       </Box>
 
@@ -146,40 +146,6 @@ const Sidebar = () => {
             </Box>
           );
         })}
-      </Box>
-
-      {/* 3. FOOTER / PERFIL DE USUARIO */}
-      <Box sx={{ px: 2, mt: 1 }}>
-        <Box 
-            sx={{ 
-                p: 2, borderRadius: '16px', backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                display: 'flex', alignItems: 'center', gap: 2, transition: '0.3s',
-                '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.1) }
-            }}
-        >
-            <Avatar sx={{ bgcolor: theme.palette.primary.main, color: '#fff', width: 40, height: 40, fontWeight: 'bold', fontSize: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                {user?.nombre ? user.nombre.charAt(0) : "U"}
-            </Avatar>
-            
-            <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-                <Typography variant="subtitle2" noWrap fontWeight="bold" sx={{ color: theme.palette.text.primary }}>
-                    {user?.nombre || "Usuario"}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {isRoot && <SecurityIcon sx={{ fontSize: 12, color: theme.palette.warning.main }} />}
-                    <Typography variant="caption" noWrap sx={{ color: theme.palette.text.secondary }}>
-                        {/* Limpiamos el nombre del rol para que se vea mejor */}
-                        {user?.rol === ROLES.ROOT ? "Super Admin" : user?.rol?.replace("HOTEL_", "") || "Invitado"}
-                    </Typography>
-                </Box>
-            </Box>
-
-            <Tooltip title="Cerrar Sesión">
-                <IconButton onClick={logout} size="small" sx={{ color: theme.palette.error.main }}>
-                    <LogoutIcon fontSize="small" />
-                </IconButton>
-            </Tooltip>
-        </Box>
       </Box>
     </Drawer>
   );

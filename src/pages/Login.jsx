@@ -5,8 +5,8 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { Box, TextField, Button, Typography, Paper, Alert } from "@mui/material";
 
-import Logo from "../assets/Logo.png";
-import HotelLogo from "../assets/cpcc.png";
+import Logo from "../assets/logo_s.png";
+import ArrivaLogo from "../assets/arriva.png";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -59,13 +59,12 @@ const Login = () => {
         alignItems: "center",
       }}
     >
-      <Paper elevation={4} sx={{ p: 4, borderRadius: 2, maxWidth: 450, width: "100%", textAlign: "center" }}>
+      <Paper elevation={4} sx={{ p: 4, borderRadius: 2, maxWidth: 400, width: "100%", textAlign: "center" }}>
         <Box sx={{ mb: 0.5, display: "flex", justifyContent: "center" }}>
-          <img src={HotelLogo} alt="Crown Paradise Club" style={{ maxWidth: "150%", height: "auto" }} />
+          <img src={ArrivaLogo} alt="Arriva Hospitality Group" style={{ maxWidth: "40%", height: "auto" }} />
         </Box>
-
-        <Box sx={{ mb: 0.5 }}>
-          <img src={Logo} alt="SIMET Logo" style={{ width: "80px", height: "auto", opacity: 0.9 }} />
+        <Box sx={{ mb: 5 }}>
+          <img src={Logo} alt="SIMET Logo" style={{ width: "90px", height: "auto", opacity: 1 }} />
         </Box>
 
         <Typography variant="subtitle1" sx={{ mb: 3, color: "text.secondary" }}>

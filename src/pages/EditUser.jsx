@@ -6,8 +6,8 @@ import {
 } from "@mui/material";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
-import { ROLES } from "../config/constants"; // 👈 Importar Roles
-import HotelSelect from "../components/common/HotelSelect"; // 👈 Importar Selector
+import { ROLES } from "../config/constants"; 
+import HotelSelect from "../components/common/HotelSelect"; 
 
 const EditUser = () => {
   const { id } = useParams();
@@ -21,7 +21,7 @@ const EditUser = () => {
     email: "",
     rol: "",
     password: "",
-    hotelId: ""
+    hotelIds: [] // 🔥 Array para edición múltiple
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -30,12 +30,17 @@ const EditUser = () => {
     const fetchUser = async () => {
       try {
         const response = await api.get(`/auth/get/${id}`);
+        const userData = response.data;
+        
+        // Extraemos los IDs de los hoteles asignados
+        const assignedHotelIds = userData.hotels ? userData.hotels.map(h => h.id) : [];
+
         setFormData({
-          nombre: response.data.nombre || "",
-          username: response.data.username || "",
-          email: response.data.email || "",
-          rol: response.data.rol || ROLES.HOTEL_GUEST,
-          hotelId: response.data.hotelId || "", // 👈 Cargar hotel
+          nombre: userData.nombre || "",
+          username: userData.username || "",
+          email: userData.email || "",
+          rol: userData.rol || ROLES.HOTEL_GUEST,
+          hotelIds: assignedHotelIds, // 🔥 Cargamos los IDs
           password: "",
         });
       } catch (err) {
@@ -46,7 +51,8 @@ const EditUser = () => {
   }, [id]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleUpdateUser = async (e) => {
@@ -59,15 +65,14 @@ const EditUser = () => {
     }
     
     const payload = { ...formData };
-    if (payload.hotelId) payload.hotelId = Number(payload.hotelId);
-    else payload.hotelId = null;
-
-    if (!payload.password) delete payload.password; // No enviar si está vacío
+    
+    // Limpieza de contraseña si está vacía
+    if (!payload.password) delete payload.password; 
 
     try {
       await api.put(`/auth/put/${id}`, payload);
       setMessage("Usuario actualizado correctamente.");
-      setTimeout(() => navigate("/admin-settings"), 1500);
+      setTimeout(() => navigate("/user-manager"), 1500); // Redirige a la tabla
     } catch (err) {
       setError(err.response?.data?.error || "Error al actualizar.");
     }
@@ -85,13 +90,15 @@ const EditUser = () => {
       <Paper sx={{ p: 3, maxWidth: 600 }}>
         <Box component="form" onSubmit={handleUpdateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           
-          {/* 👇 Selector para Root */}
+          {/* Selector de Hotel Múltiple (Solo Root) */}
           {isRoot && (
             <HotelSelect 
-                value={formData.hotelId} 
+                value={formData.hotelIds} 
                 onChange={handleChange} 
-                name="hotelId"
+                name="hotelIds"
+                multiple={true} // 🔥 Edición múltiple
                 required={![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)}
+                helperText="Selecciona los hoteles a los que tendrá acceso"
             />
           )}
 

@@ -1,9 +1,9 @@
 // src/pages/Users_Crown.jsx
-import React, { useState, useEffect, useCallback, useContext } from "react"; // 👈 useContext
+import React, { useState, useEffect, useCallback, useContext } from "react"; 
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   IconButton, Button, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress,
-  TableSortLabel, TextField, Chip // 👈 Chip
+  TableSortLabel, TextField, Chip, Tooltip
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -12,8 +12,8 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import CreateCrownUserForm from "../components/CreateCrownUserForm";
 import ImportButton from "../components/ImportButton";
-import { AuthContext } from "../context/AuthContext"; // 👈 Contexto
-import { ROLES } from "../config/constants"; // 👈 Roles
+import { AuthContext } from "../context/AuthContext"; 
+import { ROLES } from "../config/constants"; 
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -28,15 +28,17 @@ const UsersCrownP = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   
-  // 👈 LOGICA ROOT
   const { user } = useContext(AuthContext);
   const isRoot = user?.rol === ROLES.ROOT;
+
+  // 🔒 REGLA: Solo el ADMIN local (con exactamente 1 hotel) puede importar
+  const canImport = user?.rol === ROLES.HOTEL_ADMIN && user?.hotels?.length === 1;
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
   const [search, setSearch] = useState(""); 
-
+  
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
   const fetchUsers = useCallback(async () => {
@@ -83,12 +85,24 @@ const UsersCrownP = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" color="primary" fontWeight="bold">Usuarios de Staff</Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField label="Buscar usuario..." variant="outlined" size="small" value={search} onChange={handleSearchChange} />
-          <ImportButton endpoint="/users/import" onSuccess={fetchUsers} label="Importar" />
+          
+          {/* 🔥 Botón de importar visible SOLO para Admin Local */}
+          {canImport && (
+              <ImportButton 
+                endpoint="/users/import" 
+                onSuccess={fetchUsers} 
+                label="Importar" 
+              />
+          )}
+          
           <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => setOpenModal(true)}>Crear Usuario</Button>
         </Box>
       </Box>
+
+      {/* Si es Root y no ve el botón, un mensaje opcional podría ir aquí, pero mejor mantener la UI limpia */}
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -98,7 +112,6 @@ const UsersCrownP = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                {/* 👇 COLUMNA ROOT */}
                 {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
                 
                 <TableCell sx={headerStyle}>
@@ -115,10 +128,9 @@ const UsersCrownP = () => {
               ) : (
                 users.map((u) => (
                   <TableRow key={u.id}>
-                    {/* 👇 DATA ROOT */}
                     {isRoot && (
                         <TableCell>
-                            <Chip label={u.hotelId === 1 ? "Cancún" : u.hotelId === 2 ? "Sensira" : "N/A"} size="small" variant="outlined" />
+                            <Chip label={u.hotelId === 1 ? "Cancún" : u.hotelId === 2 ? "Sensira" : "ID: "+u.hotelId} size="small" variant="outlined" />
                         </TableCell>
                     )}
                     <TableCell>{u.nombre}</TableCell>

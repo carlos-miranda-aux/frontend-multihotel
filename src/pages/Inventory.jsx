@@ -3,7 +3,7 @@ import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Button,
   Typography, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress, TableSortLabel,
-  TextField, Chip
+  TextField, Chip, Tooltip
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete"; 
@@ -14,7 +14,7 @@ import CreateDeviceForm from "../components/CreateDeviceForm";
 import ImportButton from "../components/ImportButton"; 
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
-import { ROLES } from "../config/constants"; // 👈 Importar constantes
+import { ROLES } from "../config/constants"; 
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -40,7 +40,11 @@ const Inventory = () => {
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
   const { user } = useContext(AuthContext);
-  const isRoot = user?.rol === ROLES.ROOT; // 👈 Chequeo de rol
+  
+  // Lógica de Vistas y Permisos
+  const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
+  // 🔒 SOLO Admin Local (1 hotel) puede importar
+  const canImport = user?.rol === ROLES.HOTEL_ADMIN && user?.hotels?.length === 1;
 
   const fetchDevices = useCallback(async (filterToUse, pageToUse, sortKey, sortDir) => {
     setLoading(true);
@@ -131,7 +135,7 @@ const Inventory = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" color="primary" fontWeight="bold">Inventario de Equipos</Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
             label="Buscar equipo..."
             variant="outlined"
@@ -144,7 +148,15 @@ const Inventory = () => {
                 {getFilterLabel()}
             </Button>
           )}
-          <ImportButton endpoint="/devices/import" onSuccess={() => { fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); refreshAlerts(); }} label="Importar" />
+          
+          {/* 🔥 Botón Importar: SOLO visible para Admin Local */}
+          {canImport && (
+              <ImportButton 
+                endpoint="/devices/import" 
+                onSuccess={() => { fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); refreshAlerts(); }} 
+                label="Importar" 
+              />
+          )}
           
           <Button 
             variant="contained" 
@@ -157,6 +169,13 @@ const Inventory = () => {
         </Box>
       </Box>
 
+      {/* Mensaje para usuarios Globales/Regionales */}
+      {(isGlobalUser && !canImport) && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+              Vista Global/Regional: Puedes ver y gestionar equipos, pero la <b>importación masiva</b> está restringida al administrador local de cada propiedad.
+          </Alert>
+      )}
+
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -166,8 +185,8 @@ const Inventory = () => {
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}> 
                 
-                {/* 👇 COLUMNA CONDICIONAL PARA ROOT */}
-                {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                {/* 👇 Columna Hotel para usuarios globales/regionales */}
+                {isGlobalUser && <TableCell sx={headerStyle}>Hotel</TableCell>}
 
                 <TableCell sx={headerStyle}>
                   <TableSortLabel active={sortConfig.key === 'nombre_equipo'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre_equipo')}>
@@ -197,21 +216,16 @@ const Inventory = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isRoot ? 9 : 8} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={isGlobalUser ? 9 : 8} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 devices.map((device) => (
                   <TableRow key={device.id}>
                     
-                    {/* 👇 CELDA CONDICIONAL PARA ROOT */}
-                    {isRoot && (
+                    {/* 👇 Chip de Hotel para usuarios globales */}
+                    {isGlobalUser && (
                         <TableCell>
-                            <Chip 
-                                // TODO: Mapear ID a Nombre de forma más elegante si tienes muchos hoteles
-                                label={device.hotelId === 1 ? "Cancún" : device.hotelId === 2 ? "Sensira" : device.hotelId === 3 ? "Corp" : "N/A"} 
-                                size="small" 
-                                variant="outlined" 
-                                color="default"
-                            />
+                            {/* Aquí usamos el ID temporalmente, idealmente el backend debe enviar el nombre del hotel en el include */}
+                            <Chip label={`Hotel ID: ${device.hotelId}`} size="small" variant="outlined" color="default"/>
                         </TableCell>
                     )}
 
@@ -234,7 +248,7 @@ const Inventory = () => {
                       <IconButton color="primary" onClick={() => handleEdit(device.id)}>
                         <EditIcon />
                       </IconButton>
-                      {(user?.rol === "ADMIN" || isRoot) && (
+                      {(user?.rol === "ADMIN" || isGlobalUser) && (
                         <IconButton color="error" onClick={() => handleDelete(device.id)}>
                           <DeleteIcon />
                         </IconButton>

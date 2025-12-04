@@ -1,11 +1,11 @@
 // src/context/AlertContext.jsx
 import React, { createContext, useState, useEffect, useCallback, useContext } from "react";
 import api from "../api/axios";
-import { AuthContext } from "./AuthContext"; // 👈 1. Importar AuthContext
+import { AuthContext } from "./AuthContext"; // 👈 Importar contexto de Auth
 
 export const AlertContext = createContext();
 
-// Helpers de fechas
+// Helpers
 const isBusinessDay = (date) => {
     const day = date.getDay();
     return day !== 0 && day !== 6;
@@ -59,16 +59,14 @@ const _fetchAlertLogic = async () => {
             warrantyAlertsList: statsData.warrantyAlertsList || []
         };
     } catch (error) {
-        console.error("Error en lógica de alertas (silencioso):", error.response?.status);
+        console.error("Error silencioso en alertas:", error.message);
         return null;
     }
 };
 
 export const AlertProvider = ({ children }) => {
-  // 👈 2. Obtenemos el estado de autenticación
-  const { user, token } = useContext(AuthContext);
-  
-  const [loading, setLoading] = useState(false); // Inicializamos en false para no bloquear login
+  const { user, token } = useContext(AuthContext); // 👈 Usamos el usuario y token
+  const [loading, setLoading] = useState(false); 
   
   const [alertState, setAlertState] = useState({
       dashboardStats: {
@@ -83,7 +81,7 @@ export const AlertProvider = ({ children }) => {
   });
 
   const fetchInitialData = useCallback(async () => {
-    // 👈 3. BLINDAJE: Si no hay usuario o token, NO hacemos peticiones
+    // 🛡️ BLINDAJE: Si no hay usuario logueado, NO hacemos nada.
     if (!user || !token) return;
 
     try {
@@ -91,15 +89,14 @@ export const AlertProvider = ({ children }) => {
       const newState = await _fetchAlertLogic();
       if (newState) setAlertState(newState);
     } catch (error) {
-      console.error("Error cargando alertas:", error);
+      console.error("Error cargando datos:", error);
     } finally {
       setLoading(false); 
     }
-  }, [user, token]);
+  }, [user, token]); // Dependencias clave
   
   const refreshAlerts = useCallback(async () => {
-      if (!user || !token) return; // Protección en refresh también
-      
+      if (!user || !token) return;
       try {
           const newState = await _fetchAlertLogic();
           if (newState) setAlertState(newState);
@@ -108,15 +105,21 @@ export const AlertProvider = ({ children }) => {
       }
   }, [user, token]);
 
-  // 👈 4. El efecto depende del usuario
+  // Efecto que escucha cambios en el login
   useEffect(() => {
-    if (user && token) {
+    if (token && user) {
         fetchInitialData();
     }
-  }, [fetchInitialData, user, token]);
+  }, [fetchInitialData, token, user]);
 
   return (
-    <AlertContext.Provider value={{ loading, ...alertState, refreshAlerts }}>
+    <AlertContext.Provider
+      value={{
+        loading,
+        ...alertState,
+        refreshAlerts, 
+      }}
+    >
       {children}
     </AlertContext.Provider>
   );

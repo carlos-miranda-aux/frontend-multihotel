@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Box, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, IconButton, Alert, Modal, Fade,
-  Backdrop, TablePagination, CircularProgress, TableSortLabel, Chip
+  Backdrop, TablePagination, CircularProgress, TableSortLabel, Chip, Tooltip
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from "@mui/icons-material/Edit";
@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 import CreateSystemUserForm from "../CreateSystemUserForm";
-import { ROLES } from "../../config/constants"; // 👈 Importar
+import { ROLES } from "../../config/constants"; 
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -33,7 +33,9 @@ const UsersSystemTable = () => {
 
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const isRoot = user?.rol === ROLES.ROOT; // 👈 Check Root
+  
+  // Root y Corp Viewer ven la ubicación para contexto
+  const canViewLocation = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -80,12 +82,25 @@ const UsersSystemTable = () => {
   
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
-  // Helper nombre hotel
-  const getHotelName = (id) => {
-      if (id === 1) return "Cancún";
-      if (id === 2) return "Sensira";
-      if (id === 3) return "Corporativo";
-      return "Global";
+  // 🏷️ LÓGICA DE ETIQUETAS DE UBICACIÓN
+  const getLocationLabel = (userData) => {
+      const hotels = userData.hotels || [];
+      
+      if (hotels.length === 0) {
+          return <Chip label="Global" size="small" color="primary" variant="filled" />;
+      }
+      
+      if (hotels.length === 1) {
+          return <Chip label={hotels[0].nombre} size="small" variant="outlined" />;
+      }
+      
+      // Caso Regional / Compartido
+      const hotelNames = hotels.map(h => h.nombre).join(", ");
+      return (
+        <Tooltip title={hotelNames} arrow>
+            <Chip label="Regional / Compartido" size="small" color="secondary" variant="outlined" />
+        </Tooltip>
+      );
   };
 
   return (
@@ -102,8 +117,7 @@ const UsersSystemTable = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                {/* Columna Hotel para Root */}
-                {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                {canViewLocation && <TableCell sx={headerStyle}>Ubicación</TableCell>}
                 
                 <TableCell sx={headerStyle}>
                     <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre</TableSortLabel>
@@ -116,13 +130,13 @@ const UsersSystemTable = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isRoot ? 6 : 5} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={canViewLocation ? 6 : 5} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 users.map((u) => (
                   <TableRow key={u.id}>
-                    {isRoot && (
+                    {canViewLocation && (
                         <TableCell>
-                            <Chip label={getHotelName(u.hotelId)} size="small" variant="outlined" />
+                            {getLocationLabel(u)}
                         </TableCell>
                     )}
                     <TableCell>{u.nombre}</TableCell>

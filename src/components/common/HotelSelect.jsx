@@ -1,28 +1,47 @@
 // src/components/common/HotelSelect.jsx
 import React from 'react';
-import { FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material';
+import { FormControl, InputLabel, Select, MenuItem, FormHelperText, Box, Chip } from '@mui/material';
 
-// 💡 NOTA: Estos IDs deben coincidir con los que tienes en tu Base de Datos.
+// 💡 Idealmente, esta lista debería venir de un endpoint /api/hotels/get
 const HOTELS_LIST = [
     { id: 1, nombre: "Crown Paradise Cancún" },
     { id: 2, nombre: "Sensira" },
+    { id: 3, nombre: "Corporativo" }
 ];
 
-// 👇 AÑADIDO: Recibimos la prop 'name'
-const HotelSelect = ({ value, onChange, error, helperText, name, required = true }) => {
+const HotelSelect = ({ value, onChange, error, helperText, name, required = true, multiple = false }) => {
   return (
     <FormControl fullWidth error={!!error} required={required}>
-      <InputLabel id="hotel-select-label">Asignar a Hotel</InputLabel>
+      <InputLabel id="hotel-select-label">Asignar a Hotel(es)</InputLabel>
       <Select
         labelId="hotel-select-label"
-        value={value || ""}
-        label="Asignar a Hotel"
+        id="hotel-select"
+        multiple={multiple}
+        value={value || (multiple ? [] : "")}
+        label="Asignar a Hotel(es)"
         onChange={onChange}
-        name={name} // 👈 IMPORTANTE: Pasamos el name al componente Select
+        name={name}
+        renderValue={(selected) => {
+            if (multiple) {
+                if (!selected || selected.length === 0) return <em>Seleccione hoteles</em>;
+                return (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((val) => {
+                        const hotel = HOTELS_LIST.find(h => h.id === val);
+                        return <Chip key={val} label={hotel?.nombre || val} size="small" />;
+                    })}
+                  </Box>
+                );
+            }
+            const hotel = HOTELS_LIST.find(h => h.id === selected);
+            return hotel ? hotel.nombre : <em>Seleccione un hotel</em>;
+        }}
       >
-        <MenuItem value="">
-          <em>Seleccione un hotel</em>
-        </MenuItem>
+        {!multiple && (
+            <MenuItem value="">
+            <em>Ninguno</em>
+            </MenuItem>
+        )}
         {HOTELS_LIST.map((hotel) => (
           <MenuItem key={hotel.id} value={hotel.id}>
             {hotel.nombre}

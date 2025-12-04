@@ -4,7 +4,7 @@ import { Button, CircularProgress, Alert, Snackbar } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import api from "../api/axios";
 
-const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel" }) => {
+const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel", extraData = {} }) => {
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ open: false, msg: "", severity: "info" });
@@ -15,6 +15,13 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel" }) => {
 
     const formData = new FormData();
     formData.append("file", file);
+    
+    // 🔥 CORRECCIÓN: Agregamos datos extra (como hotelId) al FormData
+    Object.keys(extraData).forEach(key => {
+        if (extraData[key]) {
+            formData.append(key, extraData[key]);
+        }
+    });
 
     setLoading(true);
     try {
@@ -34,7 +41,9 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel" }) => {
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error(err);
-      setToast({ open: true, msg: "Error al importar el archivo.", severity: "error" });
+      // Mensaje más claro si falta el hotel
+      const errMsg = err.response?.data?.error || "Error al importar el archivo.";
+      setToast({ open: true, msg: errMsg, severity: "error" });
     } finally {
       setLoading(false);
       e.target.value = null; 
@@ -52,7 +61,7 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel" }) => {
       />
       <Button
         variant="outlined"
-        color="primary" // ✅ Aplicamos el tema
+        color="primary"
         startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadFileIcon />}
         onClick={() => fileInputRef.current.click()}
         disabled={loading}

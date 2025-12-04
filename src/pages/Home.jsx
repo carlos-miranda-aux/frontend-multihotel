@@ -1,151 +1,353 @@
 // src/pages/Home.jsx
 import React, { useEffect, useState, useContext } from "react";
-import { Grid, Paper, Typography, Box, CircularProgress, Alert, Card, CardContent, Chip } from "@mui/material";
+import { 
+  Grid, Paper, Typography, Box, CircularProgress, Alert, Card, CardContent, 
+  CardActionArea, Chip, Button, useTheme, alpha, Divider, Stack
+} from "@mui/material";
+import { 
+  Timeline, TimelineItem, TimelineSeparator, TimelineConnector, TimelineContent, 
+  TimelineOppositeContent, TimelineDot 
+} from "@mui/lab";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { AuthContext } from "../context/AuthContext";
+import { AlertContext } from "../context/AlertContext";
 import api from "../api/axios";
+import { useNavigate } from "react-router-dom";
 
 // Iconos
 import ComputerIcon from '@mui/icons-material/Computer';
 import SecurityIcon from '@mui/icons-material/Security';
 import GppBadIcon from '@mui/icons-material/GppBad';
 import DeleteIcon from '@mui/icons-material/Delete';
-import WarningIcon from '@mui/icons-material/Warning';
+import PeopleIcon from '@mui/icons-material/People';
+import BuildIcon from '@mui/icons-material/Build';
+import EventIcon from '@mui/icons-material/Event';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import PieChartIcon from '@mui/icons-material/PieChart';
+import CircleIcon from '@mui/icons-material/Circle';
 
 // Componente de Tarjeta KPI
-const KpiCard = ({ title, value, icon, color, subtitle }) => (
-  <Card sx={{ height: '100%', borderLeft: `5px solid`, borderColor: `${color}.main`, boxShadow: 2 }}>
-    <CardContent>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">{title}</Typography>
-          <Typography variant="h4" fontWeight="bold" sx={{ my: 1 }}>{value}</Typography>
-          {subtitle && <Typography variant="caption" color="text.secondary">{subtitle}</Typography>}
+const KpiCard = ({ title, value, icon, color, subtitle, onClick }) => (
+  <Card sx={{ height: '100%', borderLeft: `5px solid`, borderColor: `${color}.main`, boxShadow: 2, borderRadius: 3 }}>
+    <CardActionArea onClick={onClick} sx={{ height: '100%' }}> 
+      <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary" fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>{title}</Typography>
+            <Typography variant="h3" fontWeight={800} sx={{ my: 1, color: 'text.primary' }}>{value}</Typography>
+            {subtitle && <Typography variant="caption" fontWeight={500} color="text.secondary">{subtitle}</Typography>}
+          </Box>
+          <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: `${color}.50`, color: `${color}.main`, display: 'flex' }}>
+            {icon}
+          </Box>
         </Box>
-        <Box sx={{ p: 1, borderRadius: 2, bgcolor: `${color}.50`, color: `${color}.main` }}>
-          {icon}
-        </Box>
-      </Box>
-    </CardContent>
+      </CardContent>
+    </CardActionArea>
   </Card>
 );
 
+// WIDGET GRÁFICO DE GARANTÍAS (DISEÑO COMPACTO Y CENTRADO)
+const WarrantyChartWidget = ({ stats }) => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+
+  const total = (stats?.safe || 0) + (stats?.risk || 0) + (stats?.expired || 0);
+
+  const data = [
+    { name: 'Vigentes', value: stats?.safe || 0, color: theme.palette.success.main, filter: 'safe-warranty' },
+    { name: 'En Riesgo', value: stats?.risk || 0, color: theme.palette.warning.main, filter: 'warranty-risk' },
+    { name: 'Vencidas', value: stats?.expired ||  0, color: theme.palette.error.main, filter: 'expired-warranty' },
+  ].filter(item => item.value > 0);
+
+  const handleClick = (filter) => {
+     if (filter) navigate(`/inventory?filter=${filter}`);
+  };
+
+  if (total === 0) {
+      return (
+        <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary', height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography>No hay datos de garantías disponibles.</Typography>
+        </Box>
+      );
+  }
+
+  return (
+    <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', md: 'row' }, 
+        height: { md: 380 }, 
+        alignItems: 'center', 
+        justifyContent: 'center', // Centrado horizontal
+        px: 2, 
+        gap: 4 // Separación entre gráfico y leyenda
+    }}>
+        
+        {/* 1. GRÁFICO DONUT (Tamaño controlado) */}
+        <Box sx={{ width: 280, height: 280, position: 'relative', flexShrink: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                    <Pie
+                        data={data}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={80} 
+                        outerRadius={110}
+                        cornerRadius={8}
+                        paddingAngle={5}
+                        dataKey="value"
+                        onClick={(data) => handleClick(data.payload.filter)}
+                        cursor="pointer"
+                        stroke="none"
+                    >
+                        {data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                    </Pie>
+                    <RechartsTooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                        itemStyle={{ fontWeight: 'bold' }}
+                        formatter={(value) => [`${value} Equipos`, 'Cantidad']}
+                    />
+                </PieChart>
+            </ResponsiveContainer>
+            {/* Texto Central */}
+            <Box sx={{ 
+                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+                textAlign: 'center', pointerEvents: 'none' 
+            }}>
+                <Typography variant="h3" fontWeight={800} color="text.primary">
+                    {total}
+                </Typography>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                    TOTAL
+                </Typography>
+            </Box>
+        </Box>
+
+        {/* 2. LEYENDA (Ancho máximo limitado para no estirarse) */}
+        <Box sx={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Stack spacing={2}>
+                {data.map((item) => (
+                    <CardActionArea 
+                        key={item.name} 
+                        onClick={() => handleClick(item.filter)}
+                        sx={{ 
+                            borderRadius: 3, 
+                            p: 2, 
+                            backgroundColor: alpha(item.color, 0.04), 
+                            border: `1px solid ${alpha(item.color, 0.15)}`,
+                            transition: 'all 0.2s ease',
+                            '&:hover': { 
+                                transform: 'translateX(5px)', 
+                                backgroundColor: alpha(item.color, 0.1),
+                                boxShadow: `0 4px 12px ${alpha(item.color, 0.15)}`
+                            } 
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <CircleIcon sx={{ color: item.color, fontSize: 14, mr: 1.5 }} />
+                                <Typography variant="subtitle1" fontWeight={700} color="text.secondary">
+                                    {item.name}
+                                </Typography>
+                            </Box>
+                            <Typography variant="h5" fontWeight={800} sx={{ color: item.color }}>
+                                {item.value}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ mt: 1, height: 8, width: '100%', bgcolor: alpha(item.color, 0.2), borderRadius: '4px', overflow: 'hidden' }}>
+                            <Box sx={{ 
+                                height: '100%', 
+                                width: `${(item.value / total) * 100}%`, 
+                                bgcolor: item.color, 
+                                borderRadius: '4px'
+                            }} />
+                        </Box>
+                    </CardActionArea>
+                ))}
+            </Stack>
+        </Box>
+    </Box>
+  );
+};
+
+// WIDGET ACTIVIDADES (LÍNEA DE TIEMPO)
+const MaintenanceTimelineWidget = ({ maintenances, onViewAll }) => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+
+  if (!maintenances || maintenances.length === 0) {
+    return <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Typography variant="body1">No hay actividades próximas.</Typography></Box>;
+  }
+  
+  const displayList = [...maintenances]
+    .sort((a, b) => new Date(a.fecha_programada) - new Date(b.fecha_programada))
+    .slice(0, 5);
+
+  return (
+    <Box sx={{ p: 3, pt: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Timeline position="right" sx={{ p: 0, m: 0, flexGrow: 1, '& .MuiTimelineItem-root:before': { flex: 0, padding: 0 } }}>
+        {displayList.map((manto, index) => {
+           const scheduledDate = new Date(manto.fecha_programada);
+           const today = new Date(); today.setHours(0,0,0,0);
+           const isOverdue = scheduledDate < today;
+           const isCorrective = manto.tipo_mantenimiento === 'Correctivo';
+           const color = isCorrective ? 'error' : 'info';
+
+           return (
+            <TimelineItem key={manto.id}>
+                <TimelineSeparator>
+                    <TimelineDot color={color} variant={isOverdue ? 'outlined' : 'filled'} sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        <BuildIcon fontSize="small" />
+                    </TimelineDot>
+                    {index < displayList.length - 1 && <TimelineConnector sx={{ bgcolor: isOverdue ? theme.palette.error.light : theme.palette.grey[200], borderStyle: isOverdue ? 'dashed' : 'solid' }} />}
+                </TimelineSeparator>
+                <TimelineContent sx={{ py: '12px', px: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                            <Typography variant="caption" fontWeight={700} color={isOverdue ? 'error.main' : 'text.secondary'} sx={{ textTransform: 'uppercase' }}>
+                                {scheduledDate.toLocaleDateString([], { day: '2-digit', month: 'short' })} • {scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Typography>
+                            {isOverdue && <Chip label="Atrasado" size="small" color="error" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 'bold' }} />}
+                        </Box>
+                        <Paper 
+                            elevation={0}
+                            sx={{ 
+                                p: 2, 
+                                bgcolor: alpha(theme.palette[color].main, 0.04),
+                                border: `1px solid ${alpha(theme.palette[color].main, 0.1)}`,
+                                borderRadius: 3,
+                                cursor: 'pointer',
+                                transition: '0.2s',
+                                '&:hover': { bgcolor: alpha(theme.palette[color].main, 0.08), borderColor: theme.palette[color].main, transform: 'translateX(4px)' }
+                            }}
+                            onClick={() => navigate(`/maintenances/edit/${manto.id}`)}
+                        >
+                            <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+                                {manto.device?.nombre_equipo || 'Equipo'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 280 }}>
+                                {manto.descripcion}
+                            </Typography>
+                        </Paper>
+                    </Box>
+                </TimelineContent>
+            </TimelineItem>
+           );
+        })}
+      </Timeline>
+      <Box sx={{ mt: 2, textAlign: 'center' }}>
+        <Button variant="outlined" size="small" endIcon={<ArrowForwardIcon fontSize="small" />} onClick={onViewAll} sx={{ borderRadius: 5, textTransform: 'none', fontWeight: 600, px: 3 }}>
+            Ver calendario completo
+        </Button>
+    </Box>
+    </Box>
+  );
+};
+
 const Home = () => {
   const { user } = useContext(AuthContext);
+  const { pendingMaintenancesList, loading: loadingAlerts } = useContext(AlertContext);
+  const navigate = useNavigate();
+  const theme = useTheme();
+  
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       try {
-        // La API ya usa req.user internamente para filtrar por hotel
-        const res = await api.get("/devices/get/dashboard-stats"); 
-        setStats(res.data);
+        setLoading(true);
+        const statsRes = await api.get("/devices/get/dashboard-stats"); 
+        setStats(statsRes.data);
       } catch (err) {
         console.error(err);
-        setError("No se pudieron cargar las estadísticas.");
+        setError("No se pudieron cargar los datos.");
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
+  if (loading || loadingAlerts) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
   if (error) return <Box sx={{ p: 3 }}><Alert severity="error">{error}</Alert></Box>;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" color="primary">
-          Bienvenido, {user?.nombre || "Usuario"}
+    <Box sx={{ p: 3, maxWidth: 1600, margin: '0 auto' }}>
+      <Box sx={{ mb: 5 }}>
+        <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ letterSpacing: -0.5 }}>
+          Hola, {user?.nombre?.split(" ")[0] || "Usuario"} 👋
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Panel de Control - {user?.hotelId ? "Vista Local" : "Vista Global Corporativa"}
+        <Typography variant="subtitle1" color="text.secondary" fontWeight={500}>
+          Aquí tienes el resumen de {user?.hotelId ? "tu operación local" : "la operación global"}.
         </Typography>
       </Box>
 
-      {/* KPI CARDS */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard 
-            title="Total Activos" 
-            value={stats?.kpis?.totalActiveDevices || 0} 
-            icon={<ComputerIcon fontSize="large" />} 
-            color="primary"
-            subtitle="Equipos en inventario"
-          />
+      {/* --- SECCIÓN 1: TARJETAS KPI --- */}
+      <Grid container spacing={2.5} sx={{ mb: 5 }}>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KpiCard title="Activos" value={stats?.kpis?.totalActiveDevices || 0} icon={<ComputerIcon />} color="primary" subtitle="En inventario" onClick={() => navigate('/inventory')} />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard 
-            title="Protegidos (Panda)" 
-            value={stats?.kpis?.devicesWithPanda || 0} 
-            icon={<SecurityIcon fontSize="large" />} 
-            color="success"
-            subtitle={`${stats?.kpis?.devicesWithoutPanda || 0} sin protección`}
-          />
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KpiCard title="Staff" value={stats?.kpis?.totalStaff || 0} icon={<PeopleIcon />} color="info" subtitle="Usuarios totales" onClick={() => navigate('/users')} />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard 
-            title="Garantías Vencidas" 
-            value={stats?.warrantyStats?.expired || 0} 
-            icon={<GppBadIcon fontSize="large" />} 
-            color="error"
-            subtitle={`${stats?.warrantyStats?.risk || 0} por vencer pronto`}
-          />
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KpiCard title="Protegidos" value={stats?.kpis?.devicesWithPanda || 0} icon={<SecurityIcon />} color="success" subtitle="Antivirus activo" onClick={() => navigate('/inventory?filter=no-panda')} />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <KpiCard 
-            title="Bajas del Mes" 
-            value={stats?.kpis?.monthlyDisposals || 0} 
-            icon={<DeleteIcon fontSize="large" />} 
-            color="warning"
-            subtitle="Equipos desincorporados"
-          />
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KpiCard title="Vencidas" value={stats?.warrantyStats?.expired || 0} icon={<GppBadIcon />} color="error" subtitle="Garantías expiradas" onClick={() => navigate('/inventory?filter=expired-warranty')} />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KpiCard title="Bajas Mes" value={stats?.kpis?.monthlyDisposals || 0} icon={<DeleteIcon />} color="warning" subtitle="Equipos retirados" onClick={() => navigate('/disposals')} />
         </Grid>
       </Grid>
 
-      {/* ALERTA DE GARANTÍAS */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <WarningIcon color="warning" />
-                <Typography variant="h6" fontWeight="bold">Alertas de Garantía (Próximos 90 días)</Typography>
-            </Box>
-            {stats?.warrantyAlertsList?.length > 0 ? (
-                <Box>
-                    {stats.warrantyAlertsList.map(item => (
-                        <Box key={item.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5, pb: 1.5, borderBottom: '1px solid #eee' }}>
-                            <Box>
-                                <Typography variant="body2" fontWeight="bold">{item.nombre_equipo}</Typography>
-                                <Typography variant="caption" color="text.secondary">{item.etiqueta}</Typography>
-                            </Box>
-                            <Chip 
-                                label={new Date(item.garantia_fin).toLocaleDateString()} 
-                                size="small" 
-                                color={new Date(item.garantia_fin) < new Date() ? "error" : "warning"} 
-                                variant="outlined"
-                            />
-                        </Box>
-                    ))}
-                </Box>
-            ) : (
-                <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-                    No hay garantías próximas a vencer.
-                </Typography>
-            )}
-          </Paper>
-        </Grid>
+      {/* --- SECCIÓN 2: WIDGETS INDEPENDIENTES --- */}
+      <Grid container spacing={3} sx={{ alignItems: 'flex-start' }}>
         
-        {/* Espacio para otra gráfica o tabla en el futuro */}
-        <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'primary.50' }}>
-                <Typography variant="body1" color="primary.main" fontWeight="bold">
-                    Más reportes en la sección "Reportes"
-                </Typography>
+        {/* WIDGET GARANTÍAS (8 COLUMNAS = 66%) */}
+        <Grid item xs={12} md={8}>
+            <Paper sx={{ height: 'auto', borderRadius: 4, overflow: 'hidden', boxShadow: theme.shadows[3], display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ p: 3, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                        <Typography variant="h6" fontWeight={800}>Estado de Garantías</Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={500}>Resumen de pólizas de equipos</Typography>
+                    </Box>
+                    <PieChartIcon color="action" />
+                </Box>
+                <Divider sx={{ mx: 3, opacity: 0.6 }} />
+                <Box sx={{ flexGrow: 1 }}>
+                    <WarrantyChartWidget stats={stats?.warrantyStats} />
+                </Box>
             </Paper>
         </Grid>
+
+        {/* WIDGET ACTIVIDADES (4 COLUMNAS = 33%) */}
+        <Grid item xs={12} md={4}>
+            <Paper sx={{ height: 'auto', minHeight: 400, borderRadius: 4, overflow: 'hidden', boxShadow: theme.shadows[3], display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ p: 3, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'primary.50' }}>
+                     <Box>
+                        <Typography variant="h6" fontWeight={800} color="primary.main">Agenda Próxima</Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={500}>Mantenimientos programados</Typography>
+                    </Box>
+                    <Chip 
+                        icon={<EventIcon sx={{ '&&': { color: theme.palette.primary.main } }} />} 
+                        label={`${pendingMaintenancesList.length}`} 
+                        sx={{ fontWeight: 800, bgcolor: '#fff', color: theme.palette.primary.main }} 
+                    />
+                </Box>
+                 <Divider sx={{ mx: 0, opacity: 1, borderColor: 'primary.100' }} />
+                <Box sx={{ flexGrow: 1 }}>
+                    <MaintenanceTimelineWidget 
+                        maintenances={pendingMaintenancesList} 
+                        onViewAll={() => navigate('/maintenances')}
+                    />
+                </Box>
+            </Paper>
+        </Grid>
+
       </Grid>
     </Box>
   );

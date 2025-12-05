@@ -31,7 +31,6 @@ const AreasTable = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
-  // 👇 CONTEXTO Y LÓGICA VISUAL
   const { user, selectedHotelId } = useContext(AuthContext);
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
@@ -56,7 +55,7 @@ const AreasTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, sortConfig, selectedHotelId]); // 🔄 Dependencia
+  }, [page, rowsPerPage, sortConfig, selectedHotelId]);
 
   useEffect(() => { fetchAreas(); }, [fetchAreas]);
 
@@ -103,8 +102,17 @@ const AreasTable = () => {
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
                 
-                {/* 👇 HEADER CONDICIONAL */}
-                {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                {showHotelColumn && (
+                    <TableCell sx={headerStyle}>
+                        <TableSortLabel 
+                            active={sortConfig.key === 'hotel.nombre'} 
+                            direction={sortConfig.direction} 
+                            onClick={() => handleRequestSort('hotel.nombre')}
+                        >
+                            Hotel
+                        </TableSortLabel>
+                    </TableCell>
+                )}
                 
                 <TableCell sx={headerStyle}>
                     <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>
@@ -126,10 +134,13 @@ const AreasTable = () => {
                 areas.map((area) => (
                   <TableRow key={area.id}>
                     
-                    {/* 👇 CELDA CONDICIONAL */}
                     {showHotelColumn && (
                         <TableCell>
-                             <Chip label={area.hotelId === 1 ? "Cancún" : area.hotelId === 2 ? "Sensira" : "ID:"+area.hotelId} size="small" variant="outlined" />
+                             <Chip 
+                                label={area.hotel?.nombre || area.hotel?.codigo || `ID:${area.hotelId}`} 
+                                size="small" 
+                                variant="outlined" 
+                             />
                         </TableCell>
                     )}
 

@@ -4,26 +4,18 @@ import {
   Box, Typography, TextField, Button, Alert, 
   Stack, Divider, Avatar, Container, Paper, Link
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-
-// Iconos
-import SaveIcon from '@mui/icons-material/Save';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
-import ContactSupportIcon from '@mui/icons-material/ContactSupport';
-
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
 import PageHeader from "../components/common/PageHeader";
-import { ROLES } from "../config/constants"; // 👈 Importar Roles
+
+// Iconos
+import SaveIcon from '@mui/icons-material/Save';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 
 const Settings = () => {
   const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
-
-  // 👇 Verificamos si tiene permisos administrativos
-  const canAccessAdminPanel = user?.rol === ROLES.ROOT || user?.rol === ROLES.HOTEL_ADMIN;
-
+  
   const [formData, setFormData] = useState({
     password: "", newPassword: "", confirmPassword: ""
   });
@@ -64,22 +56,9 @@ const Settings = () => {
     <Box sx={{ pb: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
       
       <PageHeader 
-        title="Configuración"
-        subtitle="Gestiona tu perfil y seguridad"
-        actions={
-          // 👇 Botón condicional actualizado
-          canAccessAdminPanel && (
-            <Button 
-              variant="outlined" 
-              color="primary"
-              startIcon={<AdminPanelSettingsIcon />}
-              onClick={() => navigate("/admin-settings")}
-              sx={{ bgcolor: 'background.paper' }}
-            >
-              Panel de Administración
-            </Button>
-          )
-        }
+        title="Mi Perfil"
+        subtitle="Gestión de cuenta y seguridad"
+        // Eliminamos el botón de AdminPanelSettingsIcon de aquí
       />
 
       <Container maxWidth="md" sx={{ mt: -2 }}>
@@ -87,7 +66,7 @@ const Settings = () => {
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
         <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            
+            {/* ... (Resto del contenido del perfil igual: Avatar, Nombre, Formulario Password) ... */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 3, mb: 4 }}>
                 <Avatar sx={{ width: 80, height: 80, bgcolor: 'primary.main', fontSize: '2.5rem' }}>
                     {user?.nombre?.charAt(0) || user?.username?.charAt(0)}
@@ -103,12 +82,6 @@ const Settings = () => {
                         <Typography variant="caption" sx={{ bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', color: 'text.secondary', border: '1px solid', borderColor: 'divider' }}>
                             ROL: {user?.rol}
                         </Typography>
-                        {/* Mostramos el Hotel si existe */}
-                        {user?.hotelId && (
-                             <Typography variant="caption" sx={{ bgcolor: 'primary.50', color: 'primary.main', px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold', border: '1px solid', borderColor: 'primary.200' }}>
-                                ID HOTEL: {user.hotelId}
-                             </Typography>
-                        )}
                     </Box>
                 </Box>
             </Box>
@@ -119,15 +92,12 @@ const Settings = () => {
                 <Typography variant="h6" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <VpnKeyIcon color="action" /> Cambiar Contraseña
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Actualiza tu contraseña periódicamente para mantener tu cuenta segura.
-                </Typography>
-
+                
                 <Stack spacing={2}>
                     <TextField label="Contraseña Actual" type="password" name="password" value={formData.password} onChange={handleChange} fullWidth required />
                     <Box sx={{ height: 8 }} />
                     <TextField label="Nueva Contraseña" type="password" name="newPassword" value={formData.newPassword} onChange={handleChange} fullWidth required helperText="Mínimo 6 caracteres" />
-                    <TextField label="Confirmar Nueva Contraseña" type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} fullWidth placeholder="Repite la nueva contraseña" />
+                    <TextField label="Confirmar Nueva Contraseña" type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} fullWidth />
                 </Stack>
 
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
@@ -137,36 +107,6 @@ const Settings = () => {
                 </Box>
             </Box>
         </Paper>
-
-        <Box sx={{ mt: 4 }}>
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'info.main', bgcolor: 'info.50' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                    <ContactSupportIcon color="info" fontSize="large" />
-                    <Typography variant="h6" fontWeight="bold" color="text.primary">Soporte del Sistema</Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ ml: { sm: 6 } }}>
-                    Si encuentras algún problema técnico o requieres mantenimiento del sistema, contacta al desarrollador.
-                </Typography>
-                <Divider sx={{ my: 2, ml: { sm: 6 }, borderColor: 'info.200' }} />
-                <Box sx={{ ml: { sm: 6 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3 }}>
-                    <Box>
-                        <Typography variant="caption" fontWeight="bold" color="text.secondary">DESARROLLADOR</Typography>
-                        <Typography variant="body1">Carlos Miranda</Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="caption" fontWeight="bold" color="text.secondary">CONTACTO</Typography>
-                        <Typography variant="body1">
-                            <Link href="mailto:miranda.c4rlos@outlook.com" underline="hover" color="primary">miranda.c4rlos@outlook.com</Link>
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="caption" fontWeight="bold" color="text.secondary">VERSIÓN</Typography>
-                        <Typography variant="body1">v2.0.0</Typography>
-                    </Box>
-                </Box>
-            </Paper>
-        </Box>
-
       </Container>
     </Box>
   );

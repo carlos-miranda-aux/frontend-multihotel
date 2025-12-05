@@ -7,11 +7,13 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import PersonIcon from '@mui/icons-material/Person';
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 import CreateSystemUserForm from "../CreateSystemUserForm";
-import { ROLES } from "../../config/constants"; 
+import { ROLES, ROLE_LABELS } from "../../config/constants"; // 👈 IMPORTAMOS LABELS
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -31,11 +33,8 @@ const UsersSystemTable = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
   const navigate = useNavigate();
-  // 👇 CONTEXTO
   const { user, selectedHotelId } = useContext(AuthContext);
   
-  // 👇 LÓGICA VISUAL
-  // Mostrar ubicación solo si es global y NO hay filtro activo
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
   const showLocationColumn = isGlobalUser && !selectedHotelId;
 
@@ -44,7 +43,6 @@ const UsersSystemTable = () => {
     setError("");
     try {
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
-      // El backend ahora filtrará automáticamente si hay selectedHotelId en el header
       const response = await api.get(`/auth/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`);
       
       if (response.data.data) {
@@ -60,7 +58,7 @@ const UsersSystemTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, sortConfig, selectedHotelId]); // 🔄 Dependencia
+  }, [page, rowsPerPage, sortConfig, selectedHotelId]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -93,6 +91,20 @@ const UsersSystemTable = () => {
       return <Tooltip title={hotelNames} arrow><Chip label="Múltiple" size="small" color="secondary" variant="outlined" /></Tooltip>;
   };
 
+  // Helper para renderizar rol bonito
+  const getRoleChip = (rol) => {
+      const label = ROLE_LABELS[rol] || rol;
+      let color = "default";
+      let icon = <PersonIcon fontSize="small" />;
+
+      if (rol === ROLES.ROOT) { color = "error"; icon = <AdminPanelSettingsIcon fontSize="small" />; }
+      else if (rol === ROLES.HOTEL_ADMIN) { color = "primary"; icon = <AdminPanelSettingsIcon fontSize="small" />; }
+      else if (rol === ROLES.HOTEL_AUX) { color = "info"; }
+      else if (rol === ROLES.CORP_VIEWER) { color = "warning"; }
+
+      return <Chip icon={icon} label={label} size="small" color={color} variant="outlined" sx={{ fontWeight: 500 }} />;
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -107,7 +119,6 @@ const UsersSystemTable = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                {/* 👇 HEADER CONDICIONAL */}
                 {showLocationColumn && <TableCell sx={headerStyle}>Ubicación</TableCell>}
                 
                 <TableCell sx={headerStyle}>
@@ -115,7 +126,9 @@ const UsersSystemTable = () => {
                 </TableCell>
                 <TableCell sx={headerStyle}>Usuario</TableCell>
                 <TableCell sx={headerStyle}>Correo</TableCell>
-                <TableCell sx={headerStyle}>Rol</TableCell>
+                <TableCell sx={headerStyle}>
+                    <TableSortLabel active={sortConfig.key === 'rol'} direction={sortConfig.direction} onClick={() => handleRequestSort('rol')}>Rol</TableSortLabel>
+                </TableCell>
                 <TableCell sx={headerStyle}>Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -125,14 +138,13 @@ const UsersSystemTable = () => {
               ) : (
                 users.map((u) => (
                   <TableRow key={u.id}>
-                    {/* 👇 CELDA CONDICIONAL */}
                     {showLocationColumn && (
                         <TableCell>{getLocationLabel(u)}</TableCell>
                     )}
                     <TableCell>{u.nombre}</TableCell>
                     <TableCell>{u.username}</TableCell>
                     <TableCell>{u.email}</TableCell>
-                    <TableCell>{u.rol}</TableCell>
+                    <TableCell>{getRoleChip(u.rol)}</TableCell>
                     <TableCell>
                       <IconButton color="primary" onClick={() => handleEditUser(u.id)} disabled={user.id === u.id}><EditIcon /></IconButton>
                       <IconButton color="error" onClick={() => handleDelete(u.id)} disabled={user.id === u.id}><DeleteIcon /></IconButton>

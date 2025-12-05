@@ -2,7 +2,7 @@
 import React, { useState, useContext } from "react";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
-  Button, Divider
+  Button, Divider, Alert
 } from "@mui/material";
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
@@ -10,8 +10,10 @@ import { ROLES } from "../config/constants";
 import HotelSelect from "./common/HotelSelect"; 
 
 const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
-  const { user } = useContext(AuthContext);
+  // 👇 1. OBTENER CONTEXTO
+  const { user, selectedHotelId: contextHotelId } = useContext(AuthContext);
   const isRoot = user?.rol === ROLES.ROOT;
+  const isContextActive = !!contextHotelId;
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -19,7 +21,8 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     email: "",
     password: "",
     rol: "",
-    hotelIds: [] // 🔥 Ahora es un array para soportar múltiples
+    // 👇 2. PRE-LLENAR SI HAY CONTEXTO
+    hotelIds: isContextActive ? [Number(contextHotelId)] : [] 
   });
 
   const handleChange = (e) => {
@@ -41,7 +44,6 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     const payload = { ...formData };
     
     // El backend espera 'hotelIds' como array de números
-    // El componente Select ya nos da un array de números en 'value' si es multiple
     if (!payload.hotelIds || payload.hotelIds.length === 0) {
         delete payload.hotelIds;
     }
@@ -62,6 +64,13 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
         Crear nuevo usuario del sistema
       </Typography>
 
+      {/* Mensaje visual si hay contexto fijo */}
+      {isContextActive && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+              Creando usuario para el <b>Hotel Activo</b>. (Para asignar múltiples hoteles, usa la Vista Global).
+          </Alert>
+      )}
+
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         
         {/* Selector de Hotel Múltiple (Solo para ROOT) */}
@@ -70,9 +79,10 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
                 value={formData.hotelIds} 
                 onChange={handleChange} 
                 name="hotelIds"
-                multiple={true} // 🔥 Activamos modo múltiple
+                multiple={true}
                 required={![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)}
-                helperText="Puedes seleccionar varios hoteles"
+                disabled={isContextActive} // 🔒 3. BLOQUEAR SI HAY CONTEXTO
+                helperText={isContextActive ? "Ubicación fijada por el contexto actual" : "Puedes seleccionar varios hoteles"}
             />
         )}
 

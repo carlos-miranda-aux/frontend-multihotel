@@ -1,17 +1,16 @@
-// src/components/common/HotelSelect.jsx
 import React from 'react';
 import { FormControl, InputLabel, Select, MenuItem, FormHelperText, Box, Chip } from '@mui/material';
 
-// 💡 Idealmente, esta lista debería venir de un endpoint /api/hotels/get
+// Lista de hoteles (Hardcoded por ahora para asegurar funcionalidad)
 const HOTELS_LIST = [
     { id: 1, nombre: "Crown Paradise Cancún" },
     { id: 2, nombre: "Sensira" },
     { id: 3, nombre: "Corporativo" }
 ];
 
-const HotelSelect = ({ value, onChange, error, helperText, name, required = true, multiple = false }) => {
+const HotelSelect = ({ value, onChange, error, helperText, name, required = true, multiple = false, disabled = false }) => {
   return (
-    <FormControl fullWidth error={!!error} required={required}>
+    <FormControl fullWidth error={!!error} required={required} disabled={disabled}>
       <InputLabel id="hotel-select-label">Asignar a Hotel(es)</InputLabel>
       <Select
         labelId="hotel-select-label"

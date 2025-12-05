@@ -11,13 +11,17 @@ import { ROLES } from "../config/constants";
 import HotelSelect from "./common/HotelSelect";
 
 const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
-  const { user } = useContext(AuthContext); 
-  const isRoot = user?.rol === ROLES.ROOT;
+  // 👇 Obtenemos el contexto
+  const { user, selectedHotelId: contextHotelId } = useContext(AuthContext); 
+  
+  const isRoot = user?.rol === ROLES.ROOT; // O regional
+  const isContextActive = !!contextHotelId;
 
   const { control, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: { 
         nombre: "", correo: "", areaId: "", usuario_login: "", isManager: false, 
-        hotelId: "" // 👈 Campo extra para Root
+        // 👇 Inicializamos con contexto si existe
+        hotelId: contextHotelId ? Number(contextHotelId) : "" 
     }
   });
   
@@ -48,7 +52,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
       es_jefe_de_area: data.isManager
     };
 
-    // 🛡️ Lógica Root
+    // 🛡️ Lógica Root/MultiHotel
     if (isRoot) {
         if (!data.hotelId) {
              if (setError) setError("Selecciona un hotel."); return;
@@ -70,7 +74,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
     const options = [];
     let lastDept = null;
 
-    // Filtro de áreas para ROOT
+    // Filtro de áreas según hotel seleccionado
     let filteredAreas = areas;
     if (isRoot && selectedHotelId) {
         filteredAreas = areas.filter(a => a.hotelId === Number(selectedHotelId));
@@ -103,11 +107,19 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
 
       <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         
-        {/* 👇 SELECTOR PARA ROOT */}
+        {/* 👇 SELECTOR PARA ROOT/MULTI, BLOQUEADO SI HAY CONTEXTO */}
         {isRoot && (
              <Controller
                 name="hotelId" control={control}
-                render={({ field }) => <HotelSelect value={field.value} onChange={field.onChange} error={!!errors.hotelId} />}
+                render={({ field }) => (
+                    <HotelSelect 
+                        value={field.value} 
+                        onChange={field.onChange} 
+                        error={!!errors.hotelId}
+                        disabled={isContextActive} // 🔒 Bloqueado si hay contexto activo
+                        helperText={isContextActive ? "Hotel definido por la vista actual" : "Selecciona el hotel"}
+                    />
+                )}
             />
         )}
 

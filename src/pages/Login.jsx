@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Box, TextField, Button, Typography, Paper, Alert } from "@mui/material";
 
 import Logo from "../assets/logo_s.png";
-import ArrivaLogo from "../assets/arriva.png";
+import ArrivaLogo from "../assets/arriva_png.png";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -61,10 +61,10 @@ const Login = () => {
     >
       <Paper elevation={4} sx={{ p: 4, borderRadius: 2, maxWidth: 400, width: "100%", textAlign: "center" }}>
         <Box sx={{ mb: 0.5, display: "flex", justifyContent: "center" }}>
-          <img src={ArrivaLogo} alt="Arriva Hospitality Group" style={{ maxWidth: "40%", height: "auto" }} />
+          <img src={ArrivaLogo} alt="Arriva Hospitality Group" style={{ maxWidth: "100%", height: "auto" }} />
         </Box>
-        <Box sx={{ mb: 5 }}>
-          <img src={Logo} alt="SIMET Logo" style={{ width: "90px", height: "auto", opacity: 1 }} />
+        <Box sx={{ mb: 3 }}>
+          <img src={Logo} alt="SIMET Logo" style={{ width: "35%", height: "auto", opacity: 1 }} />
         </Box>
 
         <Typography variant="subtitle1" sx={{ mb: 3, color: "text.secondary" }}>

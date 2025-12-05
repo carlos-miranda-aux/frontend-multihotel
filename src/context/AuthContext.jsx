@@ -11,24 +11,26 @@ export const AuthProvider = ({ children }) => {
       return name[0].toUpperCase();
   }
 
-  // Inicializar user desde localStorage, con avatar por defecto
+  // Inicializar user desde localStorage
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
-    const parsedUser = savedUser
-      ? JSON.parse(savedUser) 
-      : null;
+    const parsedUser = savedUser ? JSON.parse(savedUser) : null;
     
-    // Almacenamos el path de la imagen como 'avatarUrl' y la inicial calculada
     return parsedUser
       ? { 
           ...parsedUser, 
-          avatarUrl: DefaultAvatar, // Usamos DefaultAvatar como URL para el tag <img>
+          avatarUrl: DefaultAvatar, 
           initials: getAvatarInitials(parsedUser)
         }
       : null;
   });
 
   const [token, setToken] = useState(localStorage.getItem("token") || null);
+
+  // Inicializar hotel seleccionado desde localStorage
+  const [selectedHotelId, setSelectedHotelId] = useState(() => {
+      return localStorage.getItem("selectedHotelId") || "";
+  });
 
   // Guardar en localStorage cada vez que user cambie
   useEffect(() => {
@@ -48,25 +50,46 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+  // Función para cambiar de hotel manualmente
+  const changeHotelContext = (hotelId) => {
+      const val = hotelId ? String(hotelId) : ""; // "" significa Vista Global
+      setSelectedHotelId(val);
+      localStorage.setItem("selectedHotelId", val);
+      
+      // Forzar recarga para que React Query y otros componentes refetcheen con el nuevo header
+      window.location.reload();
+  };
+
   const login = (token, userData) => {
     setToken(token);
-    // Guardamos el path de la imagen y las iniciales calculadas
     setUser({ 
         ...userData, 
         avatarUrl: DefaultAvatar, 
         initials: getAvatarInitials(userData)
     });
+
+    // Lógica inteligente: Si el usuario tiene SOLO 1 hotel, lo preseleccionamos
+    if (userData.hotels && userData.hotels.length === 1) {
+        const uniqueHotelId = String(userData.hotels[0].id);
+        localStorage.setItem("selectedHotelId", uniqueHotelId);
+        setSelectedHotelId(uniqueHotelId);
+    } else {
+        // Si tiene varios o es global (Root), por defecto iniciamos en Vista Global
+        localStorage.setItem("selectedHotelId", "");
+        setSelectedHotelId("");
+    }
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    setSelectedHotelId("");
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("selectedHotelId");
   };
 
   const updateUser = (updatedUser) => {
-    // Cuando se actualiza el usuario, volvemos a calcular las propiedades
     setUser({ 
         ...updatedUser, 
         avatarUrl: DefaultAvatar, 
@@ -75,7 +98,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser: updateUser, token, setToken, login, logout }}>
+    <AuthContext.Provider 
+        value={{ 
+            user, 
+            setUser: updateUser, 
+            token, 
+            setToken, 
+            login, 
+            logout,
+            selectedHotelId,
+            changeHotelContext 
+        }}
+    >
       {children}
     </AuthContext.Provider>
   );

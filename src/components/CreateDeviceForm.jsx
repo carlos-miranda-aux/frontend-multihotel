@@ -4,7 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
   Button, Divider, Stack, ListSubheader, OutlinedInput, Chip, Checkbox, ListItemText,
-  FormControlLabel, Switch, Fade, FormHelperText
+  FormControlLabel, Switch, Fade, FormHelperText, Grid, Alert // 👈 AHORA SÍ ESTÁ GRID
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
@@ -19,25 +19,38 @@ const MenuProps = {
 };
 
 const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) => {
-  const { user } = useContext(AuthContext);
+  // 👇 Obtenemos contexto de forma segura
+  const auth = useContext(AuthContext);
+  const user = auth?.user;
+  const contextHotelId = auth?.selectedHotelId;
   
-  // Detectar si es usuario Multihotel (Root, Corp, o Regional con >1 hotel)
   const isMultiHotelUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
+  const isContextActive = !!contextHotelId; 
 
-  const { control, handleSubmit, watch, setError: setFormError, setValue, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
+      // General
       etiqueta: "", nombre_equipo: "", descripcion: "", comentarios: "", ip_equipo: "",
-      usuarioId: "", perfiles_usuario: [], tipoId: "", marca: "", modelo: "", numero_serie: "",
+      marca: "", modelo: "", numero_serie: "",
+      
+      // Asignación
+      usuarioId: "", perfiles_usuario: [], tipoId: "", areaId: "", 
+      
+      // Software
       sistemaOperativoId: "", licencia_so: "", office_version: "", office_tipo_licencia: "",
-      office_serial: "", office_key: "", es_panda: false, garantia_numero_producto: "",
-      garantia_numero_reporte: "", garantia_notes: "", garantia_inicio: "", garantia_fin: "",
-      areaId: "", fecha_proxima_revision: "", isWarrantyApplied: false,
-      hotelId: "" // Campo para Hotel (solo visible para MultiHotel)
+      office_serial: "", office_key: "", es_panda: false, 
+      
+      // Garantía
+      garantia_numero_producto: "", garantia_numero_reporte: "", garantia_notes: "", 
+      garantia_inicio: "", garantia_fin: "", fecha_proxima_revision: "", isWarrantyApplied: false,
+      
+      // Multi-tenant
+      hotelId: contextHotelId ? Number(contextHotelId) : "" 
     }
   });
 
   const isWarrantyApplied = watch("isWarrantyApplied");
-  const selectedHotelId = watch("hotelId"); 
+  const formHotelId = watch("hotelId"); 
 
   const [users, setUsers] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
@@ -68,23 +81,22 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     fetchFormData();
   }, [setError]);
 
-  // Si cambia el hotel, limpiamos área y usuario
+  // Si cambia el hotel (y no estamos en modo contexto fijo), limpiamos área y usuario
   useEffect(() => {
-      if (isMultiHotelUser) {
+      if (isMultiHotelUser && !isContextActive) {
           setValue("areaId", "");
           setValue("usuarioId", "");
       }
-  }, [selectedHotelId, isMultiHotelUser, setValue]);
+  }, [formHotelId, isMultiHotelUser, setValue, isContextActive]);
 
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
     
-    // Filtro de áreas
     let filteredAreas = areas;
     if (isMultiHotelUser) {
-        if (selectedHotelId) {
-            filteredAreas = areas.filter(a => a.hotelId === Number(selectedHotelId));
+        if (formHotelId) {
+            filteredAreas = areas.filter(a => a.hotelId === Number(formHotelId));
         } else {
             filteredAreas = []; 
         }
@@ -100,7 +112,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
       options.push(<MenuItem key={area.id} value={area.id} sx={{ pl: 4 }}>{area.nombre}</MenuItem>);
     });
     
-    if (isMultiHotelUser && !selectedHotelId) {
+    if (isMultiHotelUser && !formHotelId) {
         options.push(<MenuItem key="no-hotel" disabled>Primero selecciona un Hotel</MenuItem>);
     }
     
@@ -113,6 +125,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
     const payload = { ...data };
     
+    // Convertir IDs
     if (payload.areaId) payload.areaId = Number(payload.areaId); else payload.areaId = null;
     if (payload.usuarioId) payload.usuarioId = Number(payload.usuarioId); else payload.usuarioId = null;
     if (payload.tipoId) payload.tipoId = Number(payload.tipoId);
@@ -126,19 +139,22 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         }
         payload.hotelId = Number(payload.hotelId);
     } else {
-        delete payload.hotelId; // Admin local: el backend lo inyecta
+        delete payload.hotelId; 
     }
 
+    // Perfiles
     if (Array.isArray(payload.perfiles_usuario)) {
         payload.perfiles_usuario = payload.perfiles_usuario.length > 0 ? payload.perfiles_usuario.join(", ") : null;
     }
 
+    // Garantía aplicada
     if (!payload.isWarrantyApplied) {
         payload.garantia_numero_reporte = null;
         payload.garantia_notes = null;
     }
     delete payload.isWarrantyApplied; 
 
+    // Fechas
     ['garantia_inicio', 'garantia_fin', 'fecha_proxima_revision'].forEach(key => {
         if (!payload[key]) payload[key] = null;
         else payload[key] = new Date(payload[key]).toISOString();
@@ -147,7 +163,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     try {
       await api.post("/devices/post", payload);
       if (setMessage) setMessage("Equipo creado exitosamente.");
-      refreshAlerts();
+      if (refreshAlerts) refreshAlerts();
       if (onDeviceCreated) onDeviceCreated();
       onClose();
     } catch (err) {
@@ -167,9 +183,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         
-        {/* 👇 SELECCIÓN DE HOTEL (Para usuarios Multi-Hotel) */}
+        {/* SECCIÓN 0: HOTEL (Multi-Tenant) */}
         {isMultiHotelUser && (
-            <Box sx={{ mb: 3, p: 2, bgcolor: 'primary.50', borderRadius: 2, border: '1px dashed', borderColor: 'primary.main' }}>
+            <Box sx={{ mb: 3, p: 2, bgcolor: isContextActive ? 'action.hover' : 'primary.50', borderRadius: 2, border: '1px dashed', borderColor: 'primary.main' }}>
                 <Typography variant="subtitle2" color="primary.main" fontWeight="bold" mb={1}>
                     Ubicación del Activo
                 </Typography>
@@ -181,14 +197,16 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                             value={field.value} 
                             onChange={field.onChange} 
                             error={!!errors.hotelId}
-                            helperText="Selecciona la propiedad donde se asignará el equipo"
-                            multiple={false} // Creación manual es de uno en uno
+                            helperText={isContextActive ? "Hotel fijado por la vista actual" : "Selecciona la propiedad"}
+                            multiple={false}
+                            disabled={isContextActive} 
                         />
                     )}
                 />
             </Box>
         )}
         
+        {/* SECCIÓN 1: INFORMACIÓN GENERAL */}
         <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }} color="text.secondary" fontWeight="bold">Información General</Typography>
         <Divider sx={{ mb: 2 }} />
         
@@ -217,9 +235,9 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             </Stack>
             <Controller
                 name="comentarios" control={control}
-                render={({ field }) => <TextField {...field} label="Comentarios" fullWidth multiline rows={2} />}
+                render={({ field }) => <TextField {...field} label="Comentarios / Observaciones" fullWidth multiline rows={2} />}
             />
-            {/* Resto de campos (IP, Marca, Modelo) igual que antes... */}
+            
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Controller name="ip_equipo" control={control} render={({ field }) => <TextField {...field} label="Dirección IP" fullWidth />} />
                 <Controller name="marca" control={control} rules={{ required: "Requerido" }} render={({ field }) => <TextField {...field} label="Marca" fullWidth required error={!!errors.marca} />} />
@@ -231,6 +249,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
             </Stack>
         </Stack>
 
+        {/* SECCIÓN 2: ASIGNACIÓN */}
         <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} color="text.secondary" fontWeight="bold">Asignación y Ubicación</Typography>
         <Divider sx={{ mb: 2 }} />
         <Stack spacing={2}>
@@ -258,8 +277,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                                 <Select {...field} label="Responsable">
                                     <MenuItem value=""><em>Ninguno</em></MenuItem>
                                     {users
-                                      // Filtrar usuarios por el hotel seleccionado si es MultiHotel
-                                      .filter(u => !isMultiHotelUser || (selectedHotelId && u.hotelId === Number(selectedHotelId)))
+                                      .filter(u => !isMultiHotelUser || (formHotelId && u.hotelId === Number(formHotelId)))
                                       .map((user) => (<MenuItem key={user.id} value={user.id}>{user.nombre}</MenuItem>))
                                     }
                                 </Select>
@@ -269,27 +287,128 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                 </Box>
             </Stack>
             
-            <Box sx={{ width: '100%' }}>
-                <FormControl fullWidth>
-                    <InputLabel>Tipo *</InputLabel>
-                    <Controller
-                        name="tipoId" control={control}
-                        rules={{ required: "El tipo es obligatorio" }}
-                        render={({ field }) => (
-                            <Select {...field} label="Tipo *">
-                                <MenuItem value=""><em>Ninguno</em></MenuItem>
-                                {deviceTypes.map((type) => (<MenuItem key={type.id} value={type.id}>{type.nombre}</MenuItem>))}
-                            </Select>
-                        )}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <Box sx={{ width: '100%' }}>
+                    <FormControl fullWidth error={!!errors.tipoId}>
+                        <InputLabel>Tipo *</InputLabel>
+                        <Controller
+                            name="tipoId" control={control}
+                            rules={{ required: "El tipo es obligatorio" }}
+                            render={({ field }) => (
+                                <Select {...field} label="Tipo *">
+                                    <MenuItem value=""><em>Ninguno</em></MenuItem>
+                                    {deviceTypes.map((type) => (<MenuItem key={type.id} value={type.id}>{type.nombre}</MenuItem>))}
+                                </Select>
+                            )}
+                        />
+                        <FormHelperText>{errors.tipoId?.message}</FormHelperText>
+                    </FormControl>
+                </Box>
+                <Box sx={{ width: '100%' }}>
+                    <FormControl fullWidth>
+                        <InputLabel>Perfiles de Usuario</InputLabel>
+                        <Controller
+                            name="perfiles_usuario"
+                            control={control}
+                            render={({ field }) => (
+                                <Select
+                                    {...field}
+                                    multiple
+                                    input={<OutlinedInput label="Perfiles de Usuario" />}
+                                    renderValue={(selected) => (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {selected.map((value) => <Chip key={value} label={value} size="small" />)}
+                                        </Box>
+                                    )}
+                                    MenuProps={MenuProps}
+                                >
+                                    {users
+                                        .filter(u => !isMultiHotelUser || (formHotelId && u.hotelId === Number(formHotelId)))
+                                        .map((user) => (
+                                        <MenuItem key={user.id} value={user.nombre}>
+                                            <Checkbox checked={field.value.indexOf(user.nombre) > -1} />
+                                            <ListItemText primary={user.nombre} />
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            )}
+                        />
+                    </FormControl>
+                </Box>
+            </Stack>
+        </Stack>
+
+        {/* SECCIÓN 3: SOFTWARE */}
+        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} color="text.secondary" fontWeight="bold">Software y Red</Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Stack spacing={2}>
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                        <InputLabel>Sistema Operativo</InputLabel>
+                        <Controller
+                            name="sistemaOperativoId" control={control}
+                            render={({ field }) => (
+                                <Select {...field} label="Sistema Operativo">
+                                    <MenuItem value=""><em>Ninguno</em></MenuItem>
+                                    {operatingSystems.map((os) => (<MenuItem key={os.id} value={os.id}>{os.nombre}</MenuItem>))}
+                                </Select>
+                            )}
+                        />
+                    </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <Controller name="licencia_so" control={control} render={({ field }) => <TextField {...field} label="Licencia Windows" fullWidth />} />
+                </Grid>
+            </Grid>
+            
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}><Controller name="office_version" control={control} render={({ field }) => <TextField {...field} label="Versión Office" fullWidth />} /></Grid>
+                <Grid item xs={12} sm={4}><Controller name="office_serial" control={control} render={({ field }) => <TextField {...field} label="Serial Office" fullWidth />} /></Grid>
+                <Grid item xs={12} sm={4}><Controller name="office_key" control={control} render={({ field }) => <TextField {...field} label="Key Office" fullWidth />} /></Grid>
+            </Grid>
+
+            <Controller
+                name="es_panda" control={control}
+                render={({ field: { onChange, value } }) => (
+                    <FormControlLabel 
+                        control={<Switch checked={value} onChange={onChange} color="success" />} 
+                        label="¿Tiene Antivirus Panda Instalado?" 
                     />
-                    <FormHelperText>{errors.tipoId?.message}</FormHelperText>
-                </FormControl>
-            </Box>
+                )}
+            />
+        </Stack>
+
+        {/* SECCIÓN 4: GARANTÍA */}
+        <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }} color="text.secondary" fontWeight="bold">Garantía y Mantenimiento</Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Stack spacing={2}>
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}><Controller name="garantia_numero_producto" control={control} render={({ field }) => <TextField {...field} label="N° Producto / Servicio" fullWidth />} /></Grid>
+                <Grid item xs={12} sm={6}><Controller name="fecha_proxima_revision" control={control} render={({ field }) => <TextField {...field} label="Próxima Revisión" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
+            </Grid>
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}><Controller name="garantia_inicio" control={control} render={({ field }) => <TextField {...field} label="Inicio Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
+                <Grid item xs={12} sm={6}><Controller name="garantia_fin" control={control} render={({ field }) => <TextField {...field} label="Fin Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
+            </Grid>
+
+            <Controller
+                name="isWarrantyApplied" control={control}
+                render={({ field: { onChange, value } }) => (
+                    <FormControlLabel control={<Switch checked={value} onChange={onChange} />} label="¿Se ha aplicado garantía anteriormente?" />
+                )}
+            />
+            
+            <Fade in={isWarrantyApplied} unmountOnExit>
+                <Stack spacing={2} sx={{ pl: 2, borderLeft: '3px solid #ddd' }}>
+                    <Controller name="garantia_numero_reporte" control={control} render={({ field }) => <TextField {...field} label="Número de Reporte" fullWidth />} />
+                    <Controller name="garantia_notes" control={control} render={({ field }) => <TextField {...field} label="Notas de Garantía" fullWidth multiline rows={2} />} />
+                </Stack>
+            </Fade>
         </Stack>
         
-        {/* Resto del formulario (Software, Garantía) se mantiene igual... */}
-        
         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 4 }}>
+          <Button onClick={onClose} sx={{ mr: 2 }}>Cancelar</Button>
           <Button type="submit" variant="contained" color="primary">Crear Equipo</Button>
         </Stack>
       </form>

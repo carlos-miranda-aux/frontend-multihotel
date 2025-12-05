@@ -29,6 +29,7 @@ import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
 import { useNavigate } from "react-router-dom";
 import Logo from "../assets/arriva.png";
+import HotelSwitcher from "./common/HotelSwitcher"; // 👈 IMPORTAR EL SWITCHER
 
 const TopBar = ({ onMenuClick }) => { 
   const { user, logout } = useContext(AuthContext);
@@ -78,7 +79,7 @@ const TopBar = ({ onMenuClick }) => {
         type: 'Mantenimiento Crítico',
         primary: m.device?.nombre_equipo || 'Equipo Desconocido',
         secondary: `Fecha: ${formatDate(m.fecha_programada)}`,
-        icon: <BuildIcon color="warning" />, // Usa color del tema
+        icon: <BuildIcon color="warning" />, 
         path: `/maintenances/edit/${m.id}`
     })),
     ...warrantyAlertsList.map(d => ({
@@ -86,7 +87,7 @@ const TopBar = ({ onMenuClick }) => {
         type: 'Garantía por Vencer',
         primary: d.nombre_equipo || 'N/A',
         secondary: `Vence: ${formatDate(d.garantia_fin)}`,
-        icon: <WarningIcon color="error" />, // Usa color del tema
+        icon: <WarningIcon color="error" />, 
         path: `/inventory/edit/${d.id}`
     }))
   ];
@@ -124,7 +125,7 @@ const TopBar = ({ onMenuClick }) => {
 
   return (
     <AppBar
-      position="static" // O 'fixed' si prefieres que se quede arriba al hacer scroll
+      position="static" 
       elevation={0}
       sx={{
         backgroundColor: 'background.paper',
@@ -143,13 +144,17 @@ const TopBar = ({ onMenuClick }) => {
             sx={{ display: "flex", alignItems: "center", cursor: "pointer", ml: 1 }}
             onClick={handleLogoClick}
           >
-            <img src={Logo} alt="Logo" style={{ height: "32px", width: "auto" }} />
+            <img src={Logo} alt="Logo" style={{ height: "50px", width: "auto" }} />
           </Box>
         </Box>
 
         {/* Derecha */}
         {user && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            
+            {/* 🔥 SWITCHER DE HOTELES AQUÍ */}
+            <HotelSwitcher />
+
             <IconButton color="inherit" onClick={handleAlertsClick}>
               <Badge badgeContent={totalAlertCount} color="error">
                 <NotificationsIcon />

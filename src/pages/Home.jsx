@@ -25,6 +25,7 @@ import EventIcon from '@mui/icons-material/Event';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PieChartIcon from '@mui/icons-material/PieChart';
 import CircleIcon from '@mui/icons-material/Circle';
+import DomainIcon from '@mui/icons-material/Domain'; // Nuevo icono
 
 // Componente de Tarjeta KPI
 const KpiCard = ({ title, value, icon, color, subtitle, onClick }) => (
@@ -46,7 +47,7 @@ const KpiCard = ({ title, value, icon, color, subtitle, onClick }) => (
   </Card>
 );
 
-// WIDGET GRÁFICO DE GARANTÍAS (DISEÑO COMPACTO Y CENTRADO)
+// WIDGET GRÁFICO DE GARANTÍAS
 const WarrantyChartWidget = ({ stats }) => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -77,12 +78,11 @@ const WarrantyChartWidget = ({ stats }) => {
         flexDirection: { xs: 'column', md: 'row' }, 
         height: { md: 380 }, 
         alignItems: 'center', 
-        justifyContent: 'center', // Centrado horizontal
+        justifyContent: 'center', 
         px: 2, 
-        gap: 4 // Separación entre gráfico y leyenda
+        gap: 4 
     }}>
-        
-        {/* 1. GRÁFICO DONUT (Tamaño controlado) */}
+        {/* GRÁFICO DONUT */}
         <Box sx={{ width: 280, height: 280, position: 'relative', flexShrink: 0 }}>
             <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -110,7 +110,6 @@ const WarrantyChartWidget = ({ stats }) => {
                     />
                 </PieChart>
             </ResponsiveContainer>
-            {/* Texto Central */}
             <Box sx={{ 
                 position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
                 textAlign: 'center', pointerEvents: 'none' 
@@ -124,7 +123,7 @@ const WarrantyChartWidget = ({ stats }) => {
             </Box>
         </Box>
 
-        {/* 2. LEYENDA (Ancho máximo limitado para no estirarse) */}
+        {/* LEYENDA */}
         <Box sx={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <Stack spacing={2}>
                 {data.map((item) => (
@@ -171,7 +170,7 @@ const WarrantyChartWidget = ({ stats }) => {
   );
 };
 
-// WIDGET ACTIVIDADES (LÍNEA DE TIEMPO)
+// WIDGET ACTIVIDADES
 const MaintenanceTimelineWidget = ({ maintenances, onViewAll }) => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -246,7 +245,8 @@ const MaintenanceTimelineWidget = ({ maintenances, onViewAll }) => {
 };
 
 const Home = () => {
-  const { user } = useContext(AuthContext);
+  // 👇 1. OBTENEMOS EL CONTEXTO
+  const { user, selectedHotelId } = useContext(AuthContext);
   const { pendingMaintenancesList, loading: loadingAlerts } = useContext(AlertContext);
   const navigate = useNavigate();
   const theme = useTheme();
@@ -255,10 +255,21 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // 👇 2. LÓGICA DE TEXTO DINÁMICO
+  let welcomeSubtitle = "Resumen de la operación global.";
+  if (selectedHotelId) {
+      // Nota: Idealmente podríamos buscar el nombre del hotel en una lista, pero "Hotel Seleccionado" es seguro.
+      welcomeSubtitle = "Resumen del Hotel activo.";
+  } else if (user?.hotels && user.hotels.length === 1) {
+      welcomeSubtitle = `Operación local: ${user.hotels[0].nombre}`;
+  }
+
+  // 👇 3. EFECTO: RECARGAR SI CAMBIA EL HOTEL
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        // El interceptor de Axios ya inyecta el header 'x-hotel-id' si existe
         const statsRes = await api.get("/devices/get/dashboard-stats"); 
         setStats(statsRes.data);
       } catch (err) {
@@ -269,7 +280,7 @@ const Home = () => {
       }
     };
     fetchDashboardData();
-  }, []);
+  }, [selectedHotelId]); // 🔥 Dependencia clave
 
   if (loading || loadingAlerts) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
   if (error) return <Box sx={{ p: 3 }}><Alert severity="error">{error}</Alert></Box>;
@@ -278,11 +289,16 @@ const Home = () => {
     <Box sx={{ p: 3, maxWidth: 1600, margin: '0 auto' }}>
       <Box sx={{ mb: 5 }}>
         <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ letterSpacing: -0.5 }}>
-          Hola, {user?.nombre?.split(" ")[0] || "Usuario"} 👋
+          Panel de Control
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary" fontWeight={500}>
-          Aquí tienes el resumen de {user?.hotelId ? "tu operación local" : "la operación global"}.
-        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="subtitle1" color="text.secondary" fontWeight={500}>
+            {welcomeSubtitle}
+            </Typography>
+            {/* Chip visual para confirmar contexto */}
+            {selectedHotelId && <Chip label="Filtrado" size="small" color="primary" variant="outlined" icon={<DomainIcon />} />}
+        </Box>
       </Box>
 
       {/* --- SECCIÓN 1: TARJETAS KPI --- */}

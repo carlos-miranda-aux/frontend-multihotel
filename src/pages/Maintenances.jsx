@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import CreateMaintenanceForm from "../components/CreateMaintenanceForm.jsx";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { AlertContext } from "../context/AlertContext.jsx";
-import { ROLES } from "../config/constants.js"; // 👈 Roles
+import { ROLES } from "../config/constants.js"; 
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -25,7 +25,6 @@ const modalStyle = {
 
 const Maintenances = () => {
   const [maintenances, setMaintenances] = useState([]);
-  // ... estados ...
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
@@ -38,9 +37,11 @@ const Maintenances = () => {
   const [search, setSearch] = useState(""); 
   const [sortConfig, setSortConfig] = useState({ key: 'fecha_programada', direction: 'desc' });
 
-  // 👈 LOGICA ROOT
-  const { user } = useContext(AuthContext);
-  const isRoot = user?.rol === ROLES.ROOT;
+  // 👈 CONTEXTO HOTEL
+  const { user, selectedHotelId } = useContext(AuthContext);
+  
+  const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
+  const showHotelColumn = isGlobalUser && !selectedHotelId; // Solo mostrar si no hay hotel fijo
 
   const { refreshAlerts } = useContext(AlertContext);
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ const Maintenances = () => {
     setError("");
     try {
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
+      // El backend ya filtra por 'x-hotel-id' automáticamente
       const res = await api.get(`/maintenances/get?page=${page + 1}&limit=${rowsPerPage}&status=${activeTab}&search=${search}${sortParam}`);
       setMaintenances(res.data.data);
       setTotalMaintenances(res.data.totalCount);
@@ -59,16 +61,21 @@ const Maintenances = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, activeTab, search, sortConfig]); 
+  }, [page, rowsPerPage, activeTab, search, sortConfig, selectedHotelId]); // Recargar si cambia hotel
 
   useEffect(() => { fetchMaintenances(); }, [fetchMaintenances]);
 
-  // ... Handlers (handleSearchChange, handleRequestSort, handleDelete, etc.) iguales ...
   const handleSearchChange = (e) => { setSearch(e.target.value); setPage(0); };
   const handleRequestSort = (key) => { setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' }); };
   const handleDeleteMaintenance = async (id) => { if(window.confirm("¿Borrar?")){ try { await api.delete(`/maintenances/delete/${id}`); setMessage("Borrado."); fetchMaintenances(); } catch(e){ setError("Error."); } } };
   const handleEditMaintenance = (id) => navigate(`/maintenances/edit/${id}`);
-  const handleExport = async (id) => { /* ... logica export ... */ };
+  const handleExport = async (id) => { 
+      // Lógica de exportación individual (si aplica)
+      try {
+          // Trigger browser download via direct URL (or fetch blob)
+          window.open(`${api.defaults.baseURL}/maintenances/export/individual/${id}`, '_blank');
+      } catch(e) { console.error(e); }
+  };
   
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
@@ -79,6 +86,9 @@ const Maintenances = () => {
   const formatDate = (date) => date ? new Date(date).toLocaleDateString() : "N/A";
   const getTypeChipColor = (type) => type === 'Correctivo' ? 'error' : 'info';
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
+
+  // Helper hotel name
+  const getHotelName = (id) => id === 1 ? "Cancún" : id === 2 ? "Sensira" : id === 3 ? "Corp" : "N/A";
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
@@ -106,8 +116,8 @@ const Maintenances = () => {
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
                 
-                {/* 👇 COLUMNA ROOT */}
-                {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                {/* 👇 COLUMNA CONDICIONAL */}
+                {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
 
                 <TableCell sx={headerStyle}>Equipo</TableCell>
                 <TableCell sx={headerStyle}>Tipo</TableCell>
@@ -120,15 +130,15 @@ const Maintenances = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isRoot ? 8 : 7} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={showHotelColumn ? 8 : 7} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 maintenances.map((m) => (
                   <TableRow key={m.id}>
                     
-                    {/* 👇 DATA ROOT */}
-                    {isRoot && (
+                    {/* 👇 CELDA CONDICIONAL */}
+                    {showHotelColumn && (
                         <TableCell>
-                            <Chip label={m.hotelId === 1 ? "Cancún" : m.hotelId === 2 ? "Sensira" : "N/A"} size="small" variant="outlined" />
+                            <Chip label={getHotelName(m.hotelId)} size="small" variant="outlined" />
                         </TableCell>
                     )}
 
@@ -144,7 +154,6 @@ const Maintenances = () => {
                     <TableCell>
                       {activeTab === 'historial' && <IconButton color="secondary" onClick={() => handleExport(m.id)}><DownloadIcon /></IconButton>}
                       <IconButton color="primary" onClick={() => handleEditMaintenance(m.id)}><EditIcon /></IconButton>
-                      {/* Solo admin local o root borran pendientes */}
                       {(user?.rol === ROLES.ROOT || user?.rol === ROLES.HOTEL_ADMIN) && m.estado === 'pendiente' && (
                         <IconButton color="error" onClick={() => handleDeleteMaintenance(m.id)}><DeleteIcon /></IconButton>
                       )}

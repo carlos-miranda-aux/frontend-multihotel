@@ -1,9 +1,8 @@
-// src/pages/AuditLog.jsx
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Chip, IconButton, TablePagination, CircularProgress, Alert, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Grid, Divider, Stack, FormControl, InputLabel, Select, MenuItem
+  DialogContent, DialogActions, Grid, Divider, Stack
 } from "@mui/material";
 
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -20,6 +19,8 @@ import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext"; 
 import { ROLES } from "../config/constants";
 
+// --- HELPERS Y COMPONENTES AUXILIARES ---
+
 // Helper para fechas
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -29,7 +30,7 @@ const formatDate = (dateString) => {
   });
 };
 
-// Diccionario de campos
+// Diccionario de campos para traducción
 const FIELD_LABELS = {
     nombre_equipo: "Nombre del Equipo",
     etiqueta: "Etiqueta",
@@ -67,6 +68,7 @@ const FIELD_LABELS = {
     hotelId: "ID del Hotel"
 };
 
+// Helper para formatear valores según catálogos
 const formatValueHelper = (key, value, catalogs) => {
     if (value === null || value === undefined || value === "") return <em style={{opacity:0.5}}>(Vacío)</em>;
     if (typeof value === 'boolean') return value ? "Sí" : "No";
@@ -96,6 +98,7 @@ const formatValueHelper = (key, value, catalogs) => {
     return String(value);
 };
 
+// Tabla de Detalle (Para Creación/Eliminación)
 const DetailTable = ({ data, catalogs, type }) => {
     if (!data) return <Typography variant="caption">Sin datos registrados.</Typography>;
     const keys = Object.keys(data).filter(key => !['updated_at', 'updatedAt', 'created_at', 'createdAt', 'password', 'id', 'deletedAt', 'area', 'departamento'].includes(key));
@@ -118,6 +121,7 @@ const DetailTable = ({ data, catalogs, type }) => {
     );
 };
 
+// Tabla de Diferencias (Para Edición)
 const DiffTable = ({ oldData, newData, catalogs }) => {
   const allKeys = new Set([...Object.keys(oldData || {}), ...Object.keys(newData || {})]);
   const ignoredKeys = ['updated_at', 'updatedAt', 'created_at', 'createdAt', 'password', 'id', 'deletedAt'];
@@ -146,9 +150,15 @@ const DiffTable = ({ oldData, newData, catalogs }) => {
   );
 };
 
+// --- COMPONENTE PRINCIPAL ---
+
 const AuditLog = () => {
-  const { user } = useContext(AuthContext);
-  const isRoot = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
+  // 👇 CONTEXTO Y LÓGICA DE VISTAS
+  const { user, selectedHotelId } = useContext(AuthContext);
+  
+  // Si es Root o Corp, y NO ha seleccionado un hotel específico, mostramos la columna Hotel
+  const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
+  const showHotelColumn = isGlobalUser && !selectedHotelId;
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -161,17 +171,15 @@ const AuditLog = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [filterType, setFilterType] = useState('ALL');
   
-  // 👇 Filtro Hotel
-  const [selectedHotel, setSelectedHotel] = useState("");
-
   const [selectedLog, setSelectedLog] = useState(null);
   const [openModal, setOpenModal] = useState(false);
 
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
+      // 🔄 El parámetro hotelId ya no se envía manualmente en la query string.
+      // El interceptor de Axios inyecta el header 'x-hotel-id' si existe selectedHotelId.
       let url = `/audit?page=${page + 1}&limit=${rowsPerPage}`;
-      if (isRoot && selectedHotel) url += `&hotelId=${selectedHotel}`;
 
       const logsRes = await api.get(url);
       
@@ -197,11 +205,12 @@ const AuditLog = () => {
       setTotalCount(logsRes.data.totalCount);
 
     } catch (err) {
-      setError("Error de conexión.");
+      setError("Error de conexión al cargar la auditoría.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, selectedHotel, isRoot]);
+  }, [page, rowsPerPage, selectedHotelId]); // 🔄 Se recarga si cambias de hotel
 
   useEffect(() => { fetchInitialData(); }, [fetchInitialData]);
 
@@ -218,30 +227,25 @@ const AuditLog = () => {
     return { label: action, color:'default', icon: <HistoryIcon/> };
   };
 
+  // Helper simple para mostrar nombre del hotel
+  const getHotelLabel = (id) => {
+      if (id === 1) return "CPC";
+      if (id === 2) return "SEN";
+      if (id === 3) return "CORP";
+      return "GLO";
+  };
+
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
         <Box>
             <Typography variant="h4" fontWeight="bold" color="text.primary">Bitácora de Movimientos</Typography>
-            <Typography variant="subtitle1" color="text.secondary">Registro de actividad.</Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+                Registro de actividad {selectedHotelId ? "(Filtrado por Hotel Activo)" : "(Vista Global)"}.
+            </Typography>
         </Box>
-
-        {/* 👇 FILTRO DE HOTEL (SOLO ROOT) */}
-        {isRoot && (
-            <FormControl sx={{ minWidth: 200 }} size="small">
-                <InputLabel>Filtrar por Hotel</InputLabel>
-                <Select
-                    value={selectedHotel}
-                    label="Filtrar por Hotel"
-                    onChange={(e) => { setSelectedHotel(e.target.value); setPage(0); }}
-                >
-                    <MenuItem value=""><em>Todos los Hoteles</em></MenuItem>
-                    <MenuItem value={1}>Crown Paradise Cancún</MenuItem>
-                    <MenuItem value={2}>Sensira</MenuItem>
-                    <MenuItem value={3}>Corporativo</MenuItem>
-                </Select>
-            </FormControl>
-        )}
+        
+        {/* Ya no necesitamos el selector manual aquí, se usa el Topbar */}
       </Box>
 
       <Stack direction="row" spacing={1} sx={{ mb: 3, overflowX: 'auto', pb: 1 }}>
@@ -259,7 +263,9 @@ const AuditLog = () => {
           <Table size="medium">
             <TableHead sx={{ bgcolor: 'background.paper' }}>
               <TableRow>
-                {isRoot && <TableCell sx={{ fontWeight: 'bold' }}>Hotel</TableCell>}
+                {/* 👇 Header Condicional */}
+                {showHotelColumn && <TableCell sx={{ fontWeight: 'bold' }}>Hotel</TableCell>}
+                
                 <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Responsable</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Acción</TableCell>
@@ -270,16 +276,18 @@ const AuditLog = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isRoot ? 7 : 6} align="center" sx={{ py: 5 }}><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={showHotelColumn ? 7 : 6} align="center" sx={{ py: 5 }}><CircularProgress /></TableCell></TableRow>
               ) : filteredLogs.map((log) => {
                 const config = getActionConfig(log.action);
                 return (
                   <TableRow key={log.id} hover>
-                    {isRoot && (
+                    {/* 👇 Celda Condicional */}
+                    {showHotelColumn && (
                         <TableCell>
-                            <Chip label={log.hotelId === 1 ? "CPC" : log.hotelId === 2 ? "SEN" : log.hotelId === 3 ? "CORP" : "GLO"} size="small" variant="outlined" />
+                            <Chip label={getHotelLabel(log.hotelId)} size="small" variant="outlined" />
                         </TableCell>
                     )}
+                    
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(log.createdAt)}</TableCell>
                     <TableCell>
                       <Box>

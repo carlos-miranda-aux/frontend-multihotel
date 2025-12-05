@@ -13,17 +13,18 @@ import GroupIcon from '@mui/icons-material/Group';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DownloadIcon from '@mui/icons-material/Download';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 
 import { AuthContext } from "../context/AuthContext";
 import { ROLES } from "../config/constants";
 
 const Reportes = () => {
   const theme = useTheme();
-  const { user } = useContext(AuthContext);
+  const { user, selectedHotelId } = useContext(AuthContext); // 👈 CONTEXTO
   const isRoot = user?.rol === ROLES.ROOT;
 
   // URL Base de la API (Ajustar si usas variables de entorno)
-  const apiBaseUrl = "http://localhost:3000/api"; 
+  const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api"; 
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -33,7 +34,6 @@ const Reportes = () => {
     setReportError('');
     let finalUrl = url;
     
-    // Si requiere fechas, las adjuntamos
     if (isFiltered) {
         if (!startDate || !endDate) {
             setReportError("⚠️ Para este reporte es obligatorio seleccionar un rango de fechas.");
@@ -43,11 +43,12 @@ const Reportes = () => {
     }
     
     const token = localStorage.getItem("token");
+    
+    // 👇 Headers incluyen x-hotel-id automáticamente vía el fetch manual
+    const headers = { 'Authorization': `Bearer ${token}` };
+    if (selectedHotelId) headers['x-hotel-id'] = selectedHotelId;
 
-    fetch(finalUrl, {
-      method: 'GET',
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
+    fetch(finalUrl, { method: 'GET', headers })
     .then(res => {
         if (!res.ok) {
             return res.json().then(error => { throw new Error(error.error || "Error desconocido."); }).catch(() => { throw new Error(`Error ${res.status}`); });
@@ -77,6 +78,7 @@ const Reportes = () => {
       color: theme.palette.primary.main,
       isFiltered: false
     },
+    // ... resto de reportes (sin cambios)
     { 
       name: "Bajas de Equipos", 
       description: "Histórico de equipos dados de baja definitiva.", 
@@ -109,7 +111,6 @@ const Reportes = () => {
       color: theme.palette.success.main,
       isFiltered: false
     },
-    // Este reporte solo es visible para Admin o Root
     ...(user?.rol === ROLES.ROOT || user?.rol === "HOTEL_ADMIN" ? [{ 
       name: "Usuarios del Sistema", 
       description: "Administradores y editores con acceso a SIMET.", 
@@ -127,43 +128,29 @@ const Reportes = () => {
         <Typography variant="h4" fontWeight="bold" gutterBottom color="text.primary">
           Centro de Reportes
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Descarga información clave en formato Excel para tu análisis.
-          {isRoot && <Chip label="Modo Global" size="small" color="secondary" sx={{ ml: 2 }} />}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="subtitle1" color="text.secondary">
+            Descarga información clave en formato Excel.
+            </Typography>
+            {/* 👇 Feedback Visual del Contexto */}
+            {selectedHotelId ? (
+                <Chip icon={<FilterAltIcon />} label="Filtrado por Hotel Activo" size="small" color="primary" variant="outlined" />
+            ) : isRoot && (
+                <Chip label="Vista Global (Todos los Hoteles)" size="small" color="secondary" />
+            )}
+        </Box>
       </Box>
 
-      {/* Panel de Filtros */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 3, mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider',
-          bgcolor: 'background.paper'
-        }}
-      >
+      {/* Panel de Filtros ... (sin cambios) */}
+      <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'primary.main' }}>
             <AccessTimeIcon sx={{ mr: 1 }} />
             <Typography variant="h6" fontWeight="bold">Filtro por Fechas</Typography>
           </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Selecciona un rango de fechas si vas a descargar el reporte de <b>Análisis de Garantías</b>.
-          </Typography>
-          
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Selecciona un rango de fechas si vas a descargar el reporte de <b>Análisis de Garantías</b>.</Typography>
           <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={4}>
-                  <TextField 
-                      label="Fecha Inicio" type="date" fullWidth size="small"
-                      InputLabelProps={{ shrink: true }}
-                      value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                  />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                  <TextField 
-                      label="Fecha Fin" type="date" fullWidth size="small"
-                      InputLabelProps={{ shrink: true }}
-                      value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                  />
-              </Grid>
+              <Grid item xs={12} sm={6} md={4}><TextField label="Fecha Inicio" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Grid>
+              <Grid item xs={12} sm={6} md={4}><TextField label="Fecha Fin" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Grid>
           </Grid>
       </Paper>
 
@@ -172,19 +159,10 @@ const Reportes = () => {
       <Grid container spacing={3}>
         {reportList.map((report) => (
           <Grid item xs={12} sm={6} md={4} key={report.name}>
-            <Card 
-              elevation={2}
-              sx={{ 
-                height: '100%', borderRadius: 3,
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 }
-              }}
-            >
+            <Card elevation={2} sx={{ height: '100%', borderRadius: 3, transition: 'transform 0.2s, box-shadow 0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 } }}>
               <CardActionArea onClick={() => handleExport(report.url, report.isFiltered)} sx={{ height: '100%', p: 2 }}>
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  <Avatar sx={{ bgcolor: report.color + '22', color: report.color, width: 64, height: 64, mb: 2 }}>
-                    {report.icon}
-                  </Avatar>
+                  <Avatar sx={{ bgcolor: report.color + '22', color: report.color, width: 64, height: 64, mb: 2 }}>{report.icon}</Avatar>
                   <Typography variant="h6" fontWeight="bold" gutterBottom>{report.name}</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>{report.description}</Typography>
                   <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>

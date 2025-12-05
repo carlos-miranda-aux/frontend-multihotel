@@ -1,9 +1,8 @@
-// src/pages/Users_Crown.jsx
 import React, { useState, useEffect, useCallback, useContext } from "react"; 
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   IconButton, Button, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress,
-  TableSortLabel, TextField, Chip, Tooltip
+  TableSortLabel, TextField, Chip
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -28,10 +27,12 @@ const UsersCrownP = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   
-  const { user } = useContext(AuthContext);
-  const isRoot = user?.rol === ROLES.ROOT;
-
-  // 🔒 REGLA: Solo el ADMIN local (con exactamente 1 hotel) puede importar
+  // 👇 CONTEXTO
+  const { user, selectedHotelId } = useContext(AuthContext);
+  
+  // 👇 LOGICA CONDICIONAL
+  const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
+  const showHotelColumn = isGlobalUser && !selectedHotelId;
   const canImport = user?.rol === ROLES.HOTEL_ADMIN && user?.hotels?.length === 1;
 
   const [page, setPage] = useState(0);
@@ -55,26 +56,13 @@ const UsersCrownP = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, search, sortConfig]);
+  }, [page, rowsPerPage, search, sortConfig, selectedHotelId]); // 🔄 Dependencia
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const handleSearchChange = (e) => { setSearch(e.target.value); setPage(0); };
-  const handleRequestSort = (key) => {
-    const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
-    setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
-  };
-  const handleDelete = async (id) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este usuario?")) {
-      try {
-        await api.delete(`/users/delete/${id}`);
-        setMessage("Usuario eliminado.");
-        fetchUsers();
-      } catch (err) {
-        setError(err.response?.data?.error || "Error al eliminar.");
-      }
-    }
-  };
+  const handleRequestSort = (key) => { setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' }); };
+  const handleDelete = async (id) => { if (window.confirm("¿Estás seguro de que quieres eliminar este usuario?")) { try { await api.delete(`/users/delete/${id}`); setMessage("Usuario eliminado."); fetchUsers(); } catch (err) { setError(err.response?.data?.error || "Error al eliminar."); } } };
   const handleEdit = (id) => navigate(`/users/edit/${id}`);
   const handleChangePage = (e, n) => setPage(n);
   const handleChangeRowsPerPage = (e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); };
@@ -89,7 +77,6 @@ const UsersCrownP = () => {
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField label="Buscar usuario..." variant="outlined" size="small" value={search} onChange={handleSearchChange} />
           
-          {/* 🔥 Botón de importar visible SOLO para Admin Local */}
           {canImport && (
               <ImportButton 
                 endpoint="/users/import" 
@@ -102,8 +89,6 @@ const UsersCrownP = () => {
         </Box>
       </Box>
 
-      {/* Si es Root y no ve el botón, un mensaje opcional podría ir aquí, pero mejor mantener la UI limpia */}
-
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -112,7 +97,9 @@ const UsersCrownP = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                
+                {/* 👇 HEADER CONDICIONAL */}
+                {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
                 
                 <TableCell sx={headerStyle}>
                   <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre</TableSortLabel>
@@ -124,15 +111,18 @@ const UsersCrownP = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isRoot ? 5 : 4} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={showHotelColumn ? 5 : 4} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 users.map((u) => (
                   <TableRow key={u.id}>
-                    {isRoot && (
+                    
+                    {/* 👇 CELDA CONDICIONAL */}
+                    {showHotelColumn && (
                         <TableCell>
                             <Chip label={u.hotelId === 1 ? "Cancún" : u.hotelId === 2 ? "Sensira" : "ID: "+u.hotelId} size="small" variant="outlined" />
                         </TableCell>
                     )}
+
                     <TableCell>{u.nombre}</TableCell>
                     <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>

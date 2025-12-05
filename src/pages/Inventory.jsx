@@ -39,12 +39,18 @@ const Inventory = () => {
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  const { user } = useContext(AuthContext);
+  
+  // 👇 Obtenemos el contexto del hotel seleccionado
+  const { user, selectedHotelId } = useContext(AuthContext);
   
   // Lógica de Vistas y Permisos
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
-  // 🔒 SOLO Admin Local (1 hotel) puede importar
+  
+  // 🔒 SOLO Admin Local (1 hotel) puede importar (Regla de negocio actual)
   const canImport = user?.rol === ROLES.HOTEL_ADMIN && user?.hotels?.length === 1;
+
+  // 👁️ Lógica Visual: Mostrar columna Hotel solo si es usuario global Y NO ha seleccionado un hotel específico
+  const showHotelColumn = isGlobalUser && !selectedHotelId;
 
   const fetchDevices = useCallback(async (filterToUse, pageToUse, sortKey, sortDir) => {
     setLoading(true);
@@ -53,6 +59,7 @@ const Inventory = () => {
       const filterParam = filterToUse ? `&filter=${filterToUse}` : ""; 
       const sortParam = `&sortBy=${sortKey}&order=${sortDir}`;
       
+      // Nota: El backend ya filtra por 'x-hotel-id' header si existe selectedHotelId
       const res = await api.get(`/devices/get?page=${pageToUse + 1}&limit=${rowsPerPage}&search=${search}${filterParam}${sortParam}`);
       setDevices(res.data.data);
       setTotalDevices(res.data.totalCount);
@@ -76,7 +83,7 @@ const Inventory = () => {
       pageToUse = 0;
     }
     fetchDevices(filterToUse, pageToUse, sortConfig.key, sortConfig.direction);
-  }, [searchParams, page, rowsPerPage, search, sortConfig, fetchDevices]); 
+  }, [searchParams, page, rowsPerPage, search, sortConfig, fetchDevices, selectedHotelId]); // Agregamos selectedHotelId para recargar al cambiar
   
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -131,6 +138,14 @@ const Inventory = () => {
 
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
+  // Helper para nombre de hotel (simple)
+  const getHotelLabel = (id) => {
+      if (id === 1) return "Cancún";
+      if (id === 2) return "Sensira";
+      if (id === 3) return "Corporativo";
+      return `ID: ${id}`;
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -149,7 +164,7 @@ const Inventory = () => {
             </Button>
           )}
           
-          {/* 🔥 Botón Importar: SOLO visible para Admin Local */}
+          {/* Botón Importar: SOLO visible para Admin Local (o lógica futura para Root con contexto) */}
           {canImport && (
               <ImportButton 
                 endpoint="/devices/import" 
@@ -169,10 +184,9 @@ const Inventory = () => {
         </Box>
       </Box>
 
-      {/* Mensaje para usuarios Globales/Regionales */}
       {(isGlobalUser && !canImport) && (
           <Alert severity="info" sx={{ mb: 2 }}>
-              Vista Global/Regional: Puedes ver y gestionar equipos, pero la <b>importación masiva</b> está restringida al administrador local de cada propiedad.
+              Vista Global/Regional: Puedes ver y gestionar equipos. Para importar masivamente, contacta al administrador local o usa el perfil local.
           </Alert>
       )}
 
@@ -185,8 +199,8 @@ const Inventory = () => {
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}> 
                 
-                {/* 👇 Columna Hotel para usuarios globales/regionales */}
-                {isGlobalUser && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                {/* 👇 COLUMNA CONDICIONAL */}
+                {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
 
                 <TableCell sx={headerStyle}>
                   <TableSortLabel active={sortConfig.key === 'nombre_equipo'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre_equipo')}>
@@ -216,16 +230,15 @@ const Inventory = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isGlobalUser ? 9 : 8} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={showHotelColumn ? 9 : 8} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 devices.map((device) => (
                   <TableRow key={device.id}>
                     
-                    {/* 👇 Chip de Hotel para usuarios globales */}
-                    {isGlobalUser && (
+                    {/* 👇 CELDA CONDICIONAL */}
+                    {showHotelColumn && (
                         <TableCell>
-                            {/* Aquí usamos el ID temporalmente, idealmente el backend debe enviar el nombre del hotel en el include */}
-                            <Chip label={`Hotel ID: ${device.hotelId}`} size="small" variant="outlined" color="default"/>
+                            <Chip label={getHotelLabel(device.hotelId)} size="small" variant="outlined" />
                         </TableCell>
                     )}
 
@@ -248,7 +261,7 @@ const Inventory = () => {
                       <IconButton color="primary" onClick={() => handleEdit(device.id)}>
                         <EditIcon />
                       </IconButton>
-                      {(user?.rol === "ADMIN" || isGlobalUser) && (
+                      {(user?.rol === "HOTEL_ADMIN" || isGlobalUser) && (
                         <IconButton color="error" onClick={() => handleDelete(device.id)}>
                           <DeleteIcon />
                         </IconButton>

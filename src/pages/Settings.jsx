@@ -161,7 +161,7 @@ const Settings = () => {
                     </Box>
                     <Box>
                         <Typography variant="caption" fontWeight="bold" color="text.secondary">VERSIÓN</Typography>
-                        <Typography variant="body1">v2.0.0 (Multi-Hotel)</Typography>
+                        <Typography variant="body1">v2.0.0</Typography>
                     </Box>
                 </Box>
             </Paper>

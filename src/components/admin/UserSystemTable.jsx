@@ -1,4 +1,3 @@
-// src/components/admin/UserSystemTable.jsx
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Box, Typography, Button, Table, TableBody, TableCell,
@@ -32,16 +31,20 @@ const UsersSystemTable = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  // 👇 CONTEXTO
+  const { user, selectedHotelId } = useContext(AuthContext);
   
-  // Root y Corp Viewer ven la ubicación para contexto
-  const canViewLocation = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
+  // 👇 LÓGICA VISUAL
+  // Mostrar ubicación solo si es global y NO hay filtro activo
+  const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
+  const showLocationColumn = isGlobalUser && !selectedHotelId;
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
+      // El backend ahora filtrará automáticamente si hay selectedHotelId en el header
       const response = await api.get(`/auth/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`);
       
       if (response.data.data) {
@@ -57,7 +60,7 @@ const UsersSystemTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, sortConfig]);
+  }, [page, rowsPerPage, sortConfig, selectedHotelId]); // 🔄 Dependencia
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -82,25 +85,12 @@ const UsersSystemTable = () => {
   
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
-  // 🏷️ LÓGICA DE ETIQUETAS DE UBICACIÓN
   const getLocationLabel = (userData) => {
       const hotels = userData.hotels || [];
-      
-      if (hotels.length === 0) {
-          return <Chip label="Global" size="small" color="primary" variant="filled" />;
-      }
-      
-      if (hotels.length === 1) {
-          return <Chip label={hotels[0].nombre} size="small" variant="outlined" />;
-      }
-      
-      // Caso Regional / Compartido
+      if (hotels.length === 0) return <Chip label="Global" size="small" color="primary" variant="filled" />;
+      if (hotels.length === 1) return <Chip label={hotels[0].nombre} size="small" variant="outlined" />;
       const hotelNames = hotels.map(h => h.nombre).join(", ");
-      return (
-        <Tooltip title={hotelNames} arrow>
-            <Chip label="Regional / Compartido" size="small" color="secondary" variant="outlined" />
-        </Tooltip>
-      );
+      return <Tooltip title={hotelNames} arrow><Chip label="Múltiple" size="small" color="secondary" variant="outlined" /></Tooltip>;
   };
 
   return (
@@ -117,7 +107,8 @@ const UsersSystemTable = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                {canViewLocation && <TableCell sx={headerStyle}>Ubicación</TableCell>}
+                {/* 👇 HEADER CONDICIONAL */}
+                {showLocationColumn && <TableCell sx={headerStyle}>Ubicación</TableCell>}
                 
                 <TableCell sx={headerStyle}>
                     <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre</TableSortLabel>
@@ -130,14 +121,13 @@ const UsersSystemTable = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={canViewLocation ? 6 : 5} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={showLocationColumn ? 6 : 5} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 users.map((u) => (
                   <TableRow key={u.id}>
-                    {canViewLocation && (
-                        <TableCell>
-                            {getLocationLabel(u)}
-                        </TableCell>
+                    {/* 👇 CELDA CONDICIONAL */}
+                    {showLocationColumn && (
+                        <TableCell>{getLocationLabel(u)}</TableCell>
                     )}
                     <TableCell>{u.nombre}</TableCell>
                     <TableCell>{u.username}</TableCell>

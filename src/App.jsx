@@ -16,8 +16,11 @@ import UsersCrownP from "./pages/Users_Crown";
 import EditCrownUser from "./pages/EditCrownUser";
 import Reportes from "./pages/Reportes";
 
-// --- 👇 NUEVAS PÁGINAS (Verifica que estos archivos existan) ---
-// Si la pantalla sigue blanca, comenta estas 4 líneas y prueba de nuevo.
+// --- Páginas de Configuración (Faltaban estas importaciones) ---
+import Settings from "./pages/Settings"; // 👈 IMPORTANTE
+import AdminSettings from "./pages/AdminSettings"; // 👈 IMPORTANTE
+
+// --- Páginas Administrativas ---
 import AreasTable from "./components/admin/AreasTable"; 
 import UsersSystemTable from "./components/admin/UserSystemTable"; 
 import EditUser from "./pages/EditUser"; 
@@ -52,7 +55,11 @@ function App() {
         
         <Route path="/reports" element={<Reportes />} />
 
-        {/* 👇 NUEVAS RUTAS ADMINISTRATIVAS */}
+        {/* 👇 RUTAS DE CONFIGURACIÓN AGREGADAS */}
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/admin-settings" element={<AdminSettings />} />
+
+        {/* Rutas Administrativas */}
         <Route path="/areas" element={<AreasTable />} />
         <Route path="/user-manager" element={<UsersSystemTable />} />
         <Route path="/user-manager/edit/:id" element={<EditUser />} />

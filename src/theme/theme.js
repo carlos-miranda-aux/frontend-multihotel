@@ -3,13 +3,11 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#A73698', // Morado Crown Paradise
-      light: '#ba5eac',
-      dark: '#75266a', 
+      main: '#4A6274', // Nuevo color corporativo (Slate Blue)
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#9D3194', // Color secundario (login)
+      main: '#34495e', // Tono oscuro complementario
       contrastText: '#ffffff',
     },
     error: {
@@ -25,8 +23,8 @@ const theme = createTheme({
       main: '#2e7d32',
     },
     background: {
-      default: '#f4f6f8', // Fondo general de la app
-      paper: '#ffffff',   // Fondo de tarjetas y modales
+      default: '#f4f6f8', // Fondo general gris muy suave
+      paper: '#ffffff',   // Fondo de tarjetas blanco
     },
     text: {
       primary: '#333333',
@@ -54,11 +52,7 @@ const theme = createTheme({
           textTransform: 'none',
           fontWeight: 500,
         },
-        containedPrimary: {
-          '&:hover': {
-            backgroundColor: '#8a2b7b', // Hover personalizado
-          },
-        },
+        // Eliminamos el 'hover' hardcoded anterior para que MUI use el nuevo primary automáticamente
       },
     },
     MuiAppBar: {

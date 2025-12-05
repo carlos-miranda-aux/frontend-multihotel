@@ -1,4 +1,3 @@
-// src/components/admin/AreasTable.jsx
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Box, Typography, Button, Table, TableBody, TableCell,
@@ -10,8 +9,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import api from "../../api/axios";
 import CreateAreaForm from "../CreateAreaForm";
-import { AuthContext } from "../../context/AuthContext"; // 👈 Contexto
-import { ROLES } from "../../config/constants"; // 👈 Roles
+import { AuthContext } from "../../context/AuthContext"; 
+import { ROLES } from "../../config/constants"; 
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -32,8 +31,10 @@ const AreasTable = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
-  const { user } = useContext(AuthContext);
-  const isRoot = user?.rol === ROLES.ROOT; // 👈 Check Root
+  // 👇 CONTEXTO Y LÓGICA VISUAL
+  const { user, selectedHotelId } = useContext(AuthContext);
+  const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
+  const showHotelColumn = isGlobalUser && !selectedHotelId;
 
   const fetchAreas = useCallback(async () => {
     setLoading(true);
@@ -55,7 +56,7 @@ const AreasTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, sortConfig]);
+  }, [page, rowsPerPage, sortConfig, selectedHotelId]); // 🔄 Dependencia
 
   useEffect(() => { fetchAreas(); }, [fetchAreas]);
 
@@ -101,8 +102,9 @@ const AreasTable = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                {/* 👇 Columna Root */}
-                {isRoot && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                
+                {/* 👇 HEADER CONDICIONAL */}
+                {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
                 
                 <TableCell sx={headerStyle}>
                     <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>
@@ -119,16 +121,18 @@ const AreasTable = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={isRoot ? 4 : 3} align="center"><CircularProgress /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={showHotelColumn ? 4 : 3} align="center"><CircularProgress /></TableCell></TableRow>
               ) : (
                 areas.map((area) => (
                   <TableRow key={area.id}>
-                    {/* 👇 Chip Hotel */}
-                    {isRoot && (
+                    
+                    {/* 👇 CELDA CONDICIONAL */}
+                    {showHotelColumn && (
                         <TableCell>
-                             <Chip label={area.hotelId === 1 ? "Cancún" : area.hotelId === 2 ? "Sensira" : area.hotelId === 3 ? "Corp" : "Global"} size="small" variant="outlined" />
+                             <Chip label={area.hotelId === 1 ? "Cancún" : area.hotelId === 2 ? "Sensira" : "ID:"+area.hotelId} size="small" variant="outlined" />
                         </TableCell>
                     )}
+
                     <TableCell>{area.nombre}</TableCell>
                     <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
                     <TableCell>

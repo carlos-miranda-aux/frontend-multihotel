@@ -43,7 +43,7 @@ const Sidebar = () => {
     {
       title: "PRINCIPAL",
       items: [
-        { text: "Dashboard", icon: <DashboardIcon />, path: "/home", show: true },
+        { text: "Inicio", icon: <DashboardIcon />, path: "/home", show: true },
       ]
     },
     {

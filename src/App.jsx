@@ -25,6 +25,7 @@ import AreasTable from "./components/admin/AreasTable";
 import UsersSystemTable from "./components/admin/UserSystemTable"; 
 import EditUser from "./pages/EditUser"; 
 import AuditLog from "./pages/AuditLog"; 
+import DepartmentsTable from "./components/admin/DepartmentsTable";
 
 function App() {
   return (
@@ -64,6 +65,7 @@ function App() {
         <Route path="/user-manager" element={<UsersSystemTable />} />
         <Route path="/user-manager/edit/:id" element={<EditUser />} />
         <Route path="/audit" element={<AuditLog />} />
+        <Route path="/departments" element={<DepartmentsTable />} />
 
       </Route>
 

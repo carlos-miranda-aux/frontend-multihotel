@@ -23,7 +23,7 @@ const CrudTable = ({ title, apiUrl }) => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false); // 🔥
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -56,14 +56,14 @@ const CrudTable = ({ title, apiUrl }) => {
 
   const confirmDelete = async () => {
     if(!itemToDelete) return;
-    setActionLoading(true); // 🔥
+    setActionLoading(true);
     try { 
         await api.delete(`${apiUrl}/delete/${itemToDelete.id}`); 
         setMessage("Eliminado."); 
         fetchData(); 
-        setDeleteDialogOpen(false); // 🔥
+        setDeleteDialogOpen(false);
     } catch(e) { setError("Error al eliminar."); } 
-    finally { setActionLoading(false); setItemToDelete(null); } // 🔥
+    finally { setActionLoading(false); setItemToDelete(null); }
   };
 
   const openEditModal = (item) => { setItemName(item.nombre); setCurrentId(item.id); setIsEdit(true); setOpenModal(true); };
@@ -132,7 +132,7 @@ const CrudTable = ({ title, apiUrl }) => {
         onConfirm={confirmDelete}
         title="¿Eliminar Registro?"
         content={`¿Seguro que deseas eliminar "${itemToDelete?.nombre}"?`}
-        isLoading={actionLoading} // 🔥
+        isLoading={actionLoading}
       />
     </Box>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import SearchOffIcon from '@mui/icons-material/SearchOff'; // O InboxIcon
+import SearchOffIcon from '@mui/icons-material/SearchOff';
 
 const EmptyState = ({ title = "No se encontraron datos", description = "Intenta ajustar tus filtros o agrega un nuevo registro." }) => {
   return (

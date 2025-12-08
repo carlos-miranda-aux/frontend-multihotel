@@ -10,7 +10,6 @@ import { ROLES } from "../config/constants";
 import { useNavigate } from "react-router-dom";
 import { useSortableData } from "../hooks/useSortableData";
 
-// 👇 Nuevos componentes UX
 import EmptyState from "../components/common/EmptyState";
 
 const Disposals = () => {
@@ -77,7 +76,6 @@ const Disposals = () => {
         <TextField label="Buscar..." variant="outlined" size="small" value={search} onChange={handleSearchChange} placeholder="Serie, nombre o motivo..." />
       </Box>
 
-      {/* No necesitamos un Alert de éxito/error aquí si solo es lectura, pero dejamos el de error general */}
       {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
 
       <Paper>

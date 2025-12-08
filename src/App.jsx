@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
@@ -27,7 +26,6 @@ import EditUser from "./pages/EditUser";
 import AuditLog from "./pages/AuditLog"; 
 import DepartmentsTable from "./components/admin/DepartmentsTable";
 
-// 👇 Importar página 404
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -71,8 +69,6 @@ function App() {
         <Route path="/departments" element={<DepartmentsTable />} />
 
       </Route>
-
-      {/* 👇 Ruta 404: Captura cualquier ruta no definida */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -1,4 +1,3 @@
-// src/components/CreateDeviceForm.jsx
 import React, { useEffect, useState, useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
@@ -19,7 +18,6 @@ const MenuProps = {
 };
 
 const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) => {
-  // 👇 Obtenemos contexto de forma segura
   const auth = useContext(AuthContext);
   const user = auth?.user;
   const contextHotelId = auth?.selectedHotelId;

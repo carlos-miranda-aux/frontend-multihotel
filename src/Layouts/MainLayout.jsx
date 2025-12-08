@@ -1,4 +1,3 @@
-// src/Layouts/MainLayout.jsx
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { Box } from "@mui/material";
@@ -32,8 +31,8 @@ const MainLayout = () => {
           component="main"
           sx={{ 
             flex: 1,
-            overflow: "auto", // El scroll ocurre solo aquí
-            p: 0 // El padding lo manejan las páginas individualmente
+            overflow: "auto",
+            p: 0
           }}
         >
           <Outlet />

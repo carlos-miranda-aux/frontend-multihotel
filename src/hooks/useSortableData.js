@@ -1,4 +1,3 @@
-// src/hooks/useSortableData.js
 import { useState, useMemo } from 'react';
 
 /**

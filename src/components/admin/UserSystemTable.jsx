@@ -31,7 +31,7 @@ const UsersSystemTable = () => {
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false); // 🔥
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -61,14 +61,14 @@ const UsersSystemTable = () => {
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
-    setActionLoading(true); // 🔥
+    setActionLoading(true);
     try {
       await api.delete(`/auth/delete/${userToDelete.id}`);
       setMessage("Usuario eliminado.");
       fetchUsers();
-      setDeleteDialogOpen(false); // 🔥
+      setDeleteDialogOpen(false);
     } catch (err) { setError(err.response?.data?.error || "Error al eliminar."); } 
-    finally { setActionLoading(false); setUserToDelete(null); } // 🔥
+    finally { setActionLoading(false); setUserToDelete(null); }
   };
 
   const handleRequestSort = (key) => {
@@ -163,7 +163,7 @@ const UsersSystemTable = () => {
         onConfirm={confirmDelete}
         title="¿Eliminar Usuario?"
         content={`Estás a punto de eliminar a "${userToDelete?.username}". Esta acción es irreversible.`}
-        isLoading={actionLoading} // 🔥
+        isLoading={actionLoading}
       />
     </Box>
   );

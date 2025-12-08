@@ -14,8 +14,6 @@ import api from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 import CreateSystemUserForm from "../CreateSystemUserForm";
 import { ROLES, ROLE_LABELS } from "../../config/constants"; 
-
-// Nuevos componentes UX
 import ConfirmDialog from "../common/ConfirmDialog";
 import EmptyState from "../common/EmptyState";
 
@@ -31,9 +29,9 @@ const UsersSystemTable = () => {
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   
-  // Estado Delete
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false); // 🔥
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -47,45 +45,30 @@ const UsersSystemTable = () => {
   const showLocationColumn = isGlobalUser && !selectedHotelId;
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     try {
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
       const response = await api.get(`/auth/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`);
-      if (response.data.data) {
-          setUsers(response.data.data);
-          setTotalCount(response.data.totalCount);
-      } else {
-          setUsers(response.data);
-          setTotalCount(response.data.length);
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Error al cargar usuarios.");
-    } finally {
-      setLoading(false);
-    }
+      if (response.data.data) { setUsers(response.data.data); setTotalCount(response.data.totalCount); } 
+      else { setUsers(response.data); setTotalCount(response.data.length); }
+    } catch (err) { console.error(err); setError("Error al cargar usuarios."); } 
+    finally { setLoading(false); }
   }, [page, rowsPerPage, sortConfig, selectedHotelId]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const handleOpenDelete = (u) => {
-      setUserToDelete(u);
-      setDeleteDialogOpen(true);
-  };
+  const handleOpenDelete = (u) => { setUserToDelete(u); setDeleteDialogOpen(true); };
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
+    setActionLoading(true); // 🔥
     try {
       await api.delete(`/auth/delete/${userToDelete.id}`);
       setMessage("Usuario eliminado.");
       fetchUsers();
-    } catch (err) {
-      setError(err.response?.data?.error || "Error al eliminar.");
-    } finally {
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
-    }
+      setDeleteDialogOpen(false); // 🔥
+    } catch (err) { setError(err.response?.data?.error || "Error al eliminar."); } 
+    finally { setActionLoading(false); setUserToDelete(null); } // 🔥
   };
 
   const handleRequestSort = (key) => {
@@ -140,8 +123,7 @@ const UsersSystemTable = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                Array.from(new Array(5)).map((_, i) => (
+              {loading ? Array.from(new Array(5)).map((_, i) => (
                     <TableRow key={i}>
                         {showLocationColumn && <TableCell><Skeleton variant="text" /></TableCell>}
                         <TableCell><Skeleton variant="text" /></TableCell>
@@ -150,8 +132,7 @@ const UsersSystemTable = () => {
                         <TableCell><Skeleton variant="text" width={80} /></TableCell>
                         <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
                     </TableRow>
-                ))
-              ) : users.length === 0 ? (
+                )) : users.length === 0 ? (
                 <TableRow><TableCell colSpan={showLocationColumn ? 6 : 5}><EmptyState title="Sin usuarios" description="No hay usuarios del sistema registrados." /></TableCell></TableRow>
               ) : (
                 users.map((u) => (
@@ -174,9 +155,7 @@ const UsersSystemTable = () => {
         <TablePagination rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
       </Paper>
 
-      <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
-        <Fade in={openModal}><Box sx={modalStyle}><CreateSystemUserForm onClose={() => setOpenModal(false)} onUserCreated={fetchUsers} setMessage={setMessage} setError={setError} /></Box></Fade>
-      </Modal>
+      <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}><Fade in={openModal}><Box sx={modalStyle}><CreateSystemUserForm onClose={() => setOpenModal(false)} onUserCreated={fetchUsers} setMessage={setMessage} setError={setError} /></Box></Fade></Modal>
 
       <ConfirmDialog 
         open={deleteDialogOpen}
@@ -184,6 +163,7 @@ const UsersSystemTable = () => {
         onConfirm={confirmDelete}
         title="¿Eliminar Usuario?"
         content={`Estás a punto de eliminar a "${userToDelete?.username}". Esta acción es irreversible.`}
+        isLoading={actionLoading} // 🔥
       />
     </Box>
   );

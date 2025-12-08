@@ -11,8 +11,6 @@ import api from "../../api/axios";
 import CreateAreaForm from "../CreateAreaForm";
 import { AuthContext } from "../../context/AuthContext"; 
 import { ROLES } from "../../config/constants"; 
-
-// 👇 Nuevos componentes UX
 import ConfirmDialog from "../common/ConfirmDialog";
 import EmptyState from "../common/EmptyState";
 
@@ -26,13 +24,12 @@ const AreasTable = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  
   const [openModal, setOpenModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
-  // Estados para ConfirmDialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false); // 🔥
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -44,69 +41,44 @@ const AreasTable = () => {
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
   const fetchAreas = useCallback(async () => {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     try {
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
       const response = await api.get(`/areas/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`);
-      if (response.data.data) {
-          setAreas(response.data.data);
-          setTotalCount(response.data.totalCount);
-      } else {
-          setAreas(response.data);
-          setTotalCount(response.data.length);
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Error al cargar las áreas.");
-    } finally {
-      setLoading(false);
-    }
+      if (response.data.data) { setAreas(response.data.data); setTotalCount(response.data.totalCount); } 
+      else { setAreas(response.data); setTotalCount(response.data.length); }
+    } catch (err) { console.error(err); setError("Error al cargar las áreas."); } 
+    finally { setLoading(false); }
   }, [page, rowsPerPage, sortConfig, selectedHotelId]);
 
   useEffect(() => { fetchAreas(); }, [fetchAreas]);
 
-  // Lógica de eliminación profesional
-  const handleOpenDelete = (item) => {
-      setItemToDelete(item);
-      setDeleteDialogOpen(true);
-  };
+  const handleOpenDelete = (item) => { setItemToDelete(item); setDeleteDialogOpen(true); };
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    setActionLoading(true); // 🔥
     try {
         await api.delete(`/areas/delete/${itemToDelete.id}`);
         setMessage("Área eliminada correctamente.");
         fetchAreas();
-    } catch (err) {
-      setError(err.response?.data?.error || "Error al eliminar. Verifique si tiene usuarios o equipos asignados.");
-    } finally {
-        setDeleteDialogOpen(false);
-        setItemToDelete(null);
-    }
+        setDeleteDialogOpen(false); // 🔥
+    } catch (err) { setError(err.response?.data?.error || "Error al eliminar."); } 
+    finally { setActionLoading(false); setItemToDelete(null); } // 🔥
   };
 
   const handleCreateClick = () => { setEditingItem(null); setOpenModal(true); };
   const handleEditClick = (item) => { setEditingItem(item); setOpenModal(true); };
   const handleCloseModal = () => { setOpenModal(false); setEditingItem(null); };
-
-  const handleRequestSort = (key) => {
-    const isAsc = sortConfig.key === key && sortConfig.direction === 'asc';
-    setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
-  };
-
+  const handleRequestSort = (key) => { setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' }); };
   const handleChangePage = (event, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
-
-  const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5" color="primary" fontWeight="bold">Gestión de Áreas</Typography>
-        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleCreateClick}>
-            Nueva Área
-        </Button>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleCreateClick}>Nueva Área</Button>
       </Box>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
@@ -117,32 +89,26 @@ const AreasTable = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
-                <TableCell sx={headerStyle}><TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre Área</TableSortLabel></TableCell>
-                <TableCell sx={headerStyle}><TableSortLabel active={sortConfig.key === 'departamento.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('departamento.nombre')}>Departamento</TableSortLabel></TableCell>
-                <TableCell sx={headerStyle}>Acciones</TableCell>
+                {showHotelColumn && <TableCell>Hotel</TableCell>}
+                <TableCell><TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre Área</TableSortLabel></TableCell>
+                <TableCell><TableSortLabel active={sortConfig.key === 'departamento.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('departamento.nombre')}>Departamento</TableSortLabel></TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                Array.from(new Array(5)).map((_, i) => (
+              {loading ? Array.from(new Array(5)).map((_, i) => (
                     <TableRow key={i}>
                         {showHotelColumn && <TableCell><Skeleton variant="text" /></TableCell>}
                         <TableCell><Skeleton variant="text" width="60%" /></TableCell>
                         <TableCell><Skeleton variant="text" /></TableCell>
                         <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
                     </TableRow>
-                ))
-              ) : areas.length === 0 ? (
-                <TableRow><TableCell colSpan={showHotelColumn ? 4 : 3}>
-                    <EmptyState title="Sin áreas" description="No hay áreas registradas. Crea una nueva para comenzar." />
-                </TableCell></TableRow>
+                )) : areas.length === 0 ? (
+                <TableRow><TableCell colSpan={showHotelColumn ? 4 : 3}><EmptyState title="Sin áreas" description="No hay áreas registradas. Crea una nueva para comenzar." /></TableCell></TableRow>
               ) : (
                 areas.map((area) => (
                   <TableRow key={area.id} hover>
-                    {showHotelColumn && (
-                        <TableCell><Chip label={area.hotel?.nombre || `ID:${area.hotelId}`} size="small" variant="outlined" /></TableCell>
-                    )}
+                    {showHotelColumn && <TableCell><Chip label={area.hotel?.nombre || area.hotel?.codigo || `ID:${area.hotelId}`} size="small" variant="outlined" /></TableCell>}
                     <TableCell>{area.nombre}</TableCell>
                     <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
                     <TableCell>
@@ -155,24 +121,10 @@ const AreasTable = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        <TablePagination
-           rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount} 
-           rowsPerPage={rowsPerPage} page={page}
-           onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
-        />
+        <TablePagination rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
       </Paper>
 
-      <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
-        <Fade in={openModal}>
-          <Box sx={modalStyle}>
-            <CreateAreaForm 
-                onClose={handleCloseModal} 
-                onSuccess={() => { fetchAreas(); setMessage(editingItem ? "Actualizado." : "Creado."); }} 
-                initialData={editingItem} 
-            />
-          </Box>
-        </Fade>
-      </Modal>
+      <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}><Fade in={openModal}><Box sx={modalStyle}><CreateAreaForm onClose={handleCloseModal} onSuccess={() => { fetchAreas(); setMessage(editingItem ? "Actualizado." : "Creado."); }} initialData={editingItem} /></Box></Fade></Modal>
 
       <ConfirmDialog 
         open={deleteDialogOpen}
@@ -180,6 +132,7 @@ const AreasTable = () => {
         onConfirm={confirmDelete}
         title="¿Eliminar Área?"
         content={`¿Estás seguro de eliminar el área "${itemToDelete?.nombre}"?`}
+        isLoading={actionLoading} // 🔥
       />
     </Box>
   );

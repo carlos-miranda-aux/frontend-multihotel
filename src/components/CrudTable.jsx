@@ -1,4 +1,3 @@
-// src/components/CrudTable.jsx
 import React, { useState, useEffect } from "react";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
@@ -9,8 +8,6 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
-
-// 👇 Nuevos componentes
 import ConfirmDialog from "./common/ConfirmDialog";
 import EmptyState from "./common/EmptyState";
 
@@ -24,9 +21,9 @@ const CrudTable = ({ title, apiUrl }) => {
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Estado para Delete
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false); // 🔥
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -34,9 +31,7 @@ const CrudTable = ({ title, apiUrl }) => {
   
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
-  useEffect(() => {
-    fetchData();
-  }, [apiUrl, page, rowsPerPage, sortConfig]);
+  useEffect(() => { fetchData(); }, [apiUrl, page, rowsPerPage, sortConfig]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -45,12 +40,8 @@ const CrudTable = ({ title, apiUrl }) => {
       const response = await api.get(`${apiUrl}/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`);
       setData(response.data.data || response.data);
       setTotalCount(response.data.totalCount || response.data.length);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Error al cargar los datos.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("Error fetching data:", err); setError("Error al cargar los datos."); } 
+    finally { setLoading(false); }
   };
 
   const handleRequestSort = (key) => {
@@ -58,31 +49,21 @@ const CrudTable = ({ title, apiUrl }) => {
     setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
   };
 
-  const handleCreate = async () => {
-    try { await api.post(`${apiUrl}/post`, { nombre: itemName }); setMessage("Creado."); setPage(0); fetchData(); setItemName(""); setOpenModal(false); } catch(e) { setError("Error."); }
-  };
-  const handleEdit = async () => {
-    try { await api.put(`${apiUrl}/put/${currentId}`, { nombre: itemName }); setMessage("Actualizado."); fetchData(); setItemName(""); setOpenModal(false); setIsEdit(false); } catch(e) { setError("Error."); }
-  };
+  const handleCreate = async () => { try { await api.post(`${apiUrl}/post`, { nombre: itemName }); setMessage("Creado."); setPage(0); fetchData(); setItemName(""); setOpenModal(false); } catch(e) { setError("Error."); } };
+  const handleEdit = async () => { try { await api.put(`${apiUrl}/put/${currentId}`, { nombre: itemName }); setMessage("Actualizado."); fetchData(); setItemName(""); setOpenModal(false); setIsEdit(false); } catch(e) { setError("Error."); } };
 
-  // 👇 Lógica Delete Actualizada
-  const handleOpenDelete = (item) => {
-      setItemToDelete(item);
-      setDeleteDialogOpen(true);
-  };
+  const handleOpenDelete = (item) => { setItemToDelete(item); setDeleteDialogOpen(true); };
 
   const confirmDelete = async () => {
     if(!itemToDelete) return;
+    setActionLoading(true); // 🔥
     try { 
         await api.delete(`${apiUrl}/delete/${itemToDelete.id}`); 
         setMessage("Eliminado."); 
         fetchData(); 
-    } catch(e) { 
-        setError("Error al eliminar."); 
-    } finally {
-        setDeleteDialogOpen(false);
-        setItemToDelete(null);
-    }
+        setDeleteDialogOpen(false); // 🔥
+    } catch(e) { setError("Error al eliminar."); } 
+    finally { setActionLoading(false); setItemToDelete(null); } // 🔥
   };
 
   const openEditModal = (item) => { setItemName(item.nombre); setCurrentId(item.id); setIsEdit(true); setOpenModal(true); };
@@ -90,8 +71,6 @@ const CrudTable = ({ title, apiUrl }) => {
   const handleCloseModal = () => { setOpenModal(false); };
   const handleChangePage = (e, n) => setPage(n);
   const handleChangeRowsPerPage = (e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); };
-
-  const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
   return (
     <Box>
@@ -108,32 +87,18 @@ const CrudTable = ({ title, apiUrl }) => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                <TableCell sx={headerStyle}>
-                  <TableSortLabel
-                    active={sortConfig.key === 'nombre'}
-                    direction={sortConfig.key === 'nombre' ? sortConfig.direction : 'asc'}
-                    onClick={() => handleRequestSort('nombre')}
-                  >
-                    Nombre
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={headerStyle} align="right">Acciones</TableCell>
+                <TableCell><TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.key === 'nombre' ? sortConfig.direction : 'asc'} onClick={() => handleRequestSort('nombre')}>Nombre</TableSortLabel></TableCell>
+                <TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                 // 👇 SKELETONS
-                 Array.from(new Array(5)).map((_, i) => (
+              {loading ? Array.from(new Array(5)).map((_, i) => (
                     <TableRow key={i}>
                         <TableCell><Skeleton variant="text" width="60%" /></TableCell>
                         <TableCell align="right"><Skeleton variant="circular" width={30} height={30} sx={{ display:'inline-block' }} /></TableCell>
                     </TableRow>
-                 ))
-              ) : data.length === 0 ? (
-                 // 👇 EMPTY STATE
-                 <TableRow><TableCell colSpan={2}>
-                    <EmptyState title="Catálogo vacío" description="No hay elementos registrados aún."/>
-                 </TableCell></TableRow>
+                 )) : data.length === 0 ? (
+                 <TableRow><TableCell colSpan={2}><EmptyState title="Catálogo vacío" description="No hay elementos registrados aún."/></TableCell></TableRow>
               ) : (
                 data.map((item) => ( 
                   <TableRow key={item.id} hover>
@@ -148,10 +113,7 @@ const CrudTable = ({ title, apiUrl }) => {
             </TableBody>
           </Table>
         </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount}
-          rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage}
-        />
+        <TablePagination rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
       </Paper>
 
       <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
@@ -164,13 +126,13 @@ const CrudTable = ({ title, apiUrl }) => {
         </Fade>
       </Modal>
 
-      {/* 👇 DIÁLOGO */}
       <ConfirmDialog 
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
         title="¿Eliminar Registro?"
-        content={`¿Seguro que deseas eliminar "${itemToDelete?.nombre}"? Esta acción podría afectar a los equipos que usen este valor.`}
+        content={`¿Seguro que deseas eliminar "${itemToDelete?.nombre}"?`}
+        isLoading={actionLoading} // 🔥
       />
     </Box>
   );

@@ -17,10 +17,7 @@ import { ROLES } from "../config/constants";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import EmptyState from "../components/common/EmptyState";
 
-const modalStyle = {
-  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-  width: 800, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
-};
+const modalStyle = { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 800, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2 };
 
 const Inventory = () => {
   const [devices, setDevices] = useState([]);
@@ -28,58 +25,43 @@ const Inventory = () => {
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // Estados para Confirmación y Loading Action
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deviceToDelete, setDeviceToDelete] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false); // 🔥 Nuevo
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalDevices, setTotalDevices] = useState(0);
   const [search, setSearch] = useState(""); 
-
   const [activeFilter, setActiveFilter] = useState(""); 
   const [searchParams, setSearchParams] = useSearchParams(); 
   const [sortConfig, setSortConfig] = useState({ key: 'nombre_equipo', direction: 'asc' });
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  const { user, selectedHotelId } = useContext(AuthContext);
+  // 👇 Usamos getHotelName del contexto
+  const { user, selectedHotelId, getHotelName } = useContext(AuthContext);
   
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const canImport = user?.rol === ROLES.HOTEL_ADMIN && user?.hotels?.length === 1;
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
   const fetchDevices = useCallback(async (filterToUse, pageToUse, sortKey, sortDir) => {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     try {
       const filterParam = filterToUse ? `&filter=${filterToUse}` : ""; 
       const sortParam = `&sortBy=${sortKey}&order=${sortDir}`;
       const res = await api.get(`/devices/get?page=${pageToUse + 1}&limit=${rowsPerPage}&search=${search}${filterParam}${sortParam}`);
       setDevices(res.data.data);
       setTotalDevices(res.data.totalCount);
-    } catch (err) {
-      console.error("Error al obtener dispositivos:", err);
-      setError("Error al cargar el inventario.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("Error al obtener dispositivos:", err); setError("Error al cargar el inventario."); } 
+    finally { setLoading(false); }
   }, [rowsPerPage, search]);
 
   useEffect(() => {
     const filterFromUrl = searchParams.get('filter') || "";
-    let filterToUse = activeFilter;
-    let pageToUse = page;
-
-    if (filterFromUrl !== activeFilter) {
-      setActiveFilter(filterFromUrl);
-      setPage(0);
-      filterToUse = filterFromUrl; 
-      pageToUse = 0;
-    }
-    fetchDevices(filterToUse, pageToUse, sortConfig.key, sortConfig.direction);
+    if (filterFromUrl !== activeFilter) { setActiveFilter(filterFromUrl); setPage(0); }
+    fetchDevices(filterFromUrl, page, sortConfig.key, sortConfig.direction);
   }, [searchParams, page, rowsPerPage, search, sortConfig, fetchDevices, selectedHotelId]);
   
   const handleSearchChange = (e) => { setSearch(e.target.value); setPage(0); setSearchParams({}); setActiveFilter(""); };
@@ -92,28 +74,21 @@ const Inventory = () => {
 
   const confirmDelete = async () => {
     if (!deviceToDelete) return;
-    setActionLoading(true); // 🔥 Bloquear
-    setMessage(""); setError("");
+    setActionLoading(true); setMessage(""); setError("");
     try {
       await api.delete(`/devices/delete/${deviceToDelete.id}`); 
       setMessage("Equipo eliminado correctamente.");
       fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); 
       refreshAlerts(); 
-      setDeleteDialogOpen(false); // 🔥 Cerrar solo si éxito
-    } catch (err) {
-      setError(err.response?.data?.error || "Error al eliminar el equipo.");
-    } finally {
-      setActionLoading(false); // 🔥 Desbloquear
-      if (!error) setDeviceToDelete(null);
-    }
+      setDeleteDialogOpen(false);
+    } catch (err) { setError(err.response?.data?.error || "Error al eliminar el equipo."); } 
+    finally { setActionLoading(false); if (!error) setDeviceToDelete(null); }
   };
 
   const handleEdit = (id) => navigate(`/inventory/edit/${id}`);
-  const handleOpenModal = () => setOpenModal(true);
-  const handleCloseModal = () => setOpenModal(false);
+  const handleClearFilter = () => { setSearch(""); setPage(0); setActiveFilter(""); setSearchParams({}); }
   const handleChangePage = (event, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
-  const handleClearFilter = () => { setSearch(""); setPage(0); setActiveFilter(""); setSearchParams({}); }
 
   const getFilterLabel = () => {
     if (activeFilter === 'no-panda') return 'Mostrando: Sin Panda (X)';
@@ -123,8 +98,6 @@ const Inventory = () => {
     return '';
   }
 
-  const getHotelLabel = (id) => (id === 1 ? "Cancún" : id === 2 ? "Sensira" : id === 3 ? "Corporativo" : `ID: ${id}`);
-
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -133,7 +106,7 @@ const Inventory = () => {
           <TextField label="Buscar equipo..." variant="outlined" size="small" value={search} onChange={handleSearchChange} />
           {activeFilter && <Button variant="outlined" color="error" onClick={handleClearFilter} sx={{ ml: 1 }}>{getFilterLabel()}</Button>}
           {canImport && <ImportButton endpoint="/devices/import" onSuccess={() => { fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); refreshAlerts(); }} label="Importar" />}
-          <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpenModal}>Crear Equipo</Button>
+          <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => setOpenModal(true)}>Crear Equipo</Button>
         </Box>
       </Box>
 
@@ -175,7 +148,12 @@ const Inventory = () => {
               ) : (
                 devices.map((device) => (
                   <TableRow key={device.id} hover>
-                    {showHotelColumn && <TableCell><Chip label={getHotelLabel(device.hotelId)} size="small" variant="outlined" /></TableCell>}
+                    {showHotelColumn && (
+                        <TableCell>
+                            {/* 👇 AQUI ESTA LA CORRECCION */}
+                            <Chip label={getHotelName(device.hotelId)} size="small" variant="outlined" />
+                        </TableCell>
+                    )}
                     <TableCell>
                         <Typography variant="body2" fontWeight="bold">{device.nombre_equipo}</Typography>
                         <Typography variant="caption" color="text.secondary">{device.etiqueta}</Typography>
@@ -199,22 +177,9 @@ const Inventory = () => {
         <TablePagination rowsPerPageOptions={[5, 10, 25]} component="div" count={totalDevices} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} labelRowsPerPage="Filas:" />
       </Paper>
 
-      <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
-        <Fade in={openModal}>
-          <Box sx={modalStyle}>
-            <CreateDeviceForm onClose={handleCloseModal} onDeviceCreated={() => { fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); refreshAlerts(); }} setMessage={setMessage} setError={setError} />
-          </Box>
-        </Fade>
-      </Modal>
+      <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}><Fade in={openModal}><Box sx={modalStyle}><CreateDeviceForm onClose={() => setOpenModal(false)} onDeviceCreated={() => { fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); refreshAlerts(); }} setMessage={setMessage} setError={setError} /></Box></Fade></Modal>
 
-      <ConfirmDialog 
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-        title="¿Eliminar Equipo?"
-        content={`Estás a punto de eliminar "${deviceToDelete?.nombre_equipo}". Esta acción moverá el equipo a la papelera (Soft Delete).`}
-        isLoading={actionLoading} // 🔥 Pasamos el loading
-      />
+      <ConfirmDialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} onConfirm={confirmDelete} title="¿Eliminar Equipo?" content={`Estás a punto de eliminar "${deviceToDelete?.nombre_equipo}". Esta acción moverá el equipo a la papelera (Soft Delete).`} isLoading={actionLoading} />
     </Box>
   );
 };

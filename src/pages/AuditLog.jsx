@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Chip, Button, TablePagination, Alert, Dialog, DialogTitle,
-  DialogContent, DialogActions, Grid, Divider, Stack, Skeleton // 👈 Importamos Skeleton
+  DialogContent, DialogActions, Grid, Divider, Stack, Skeleton
 } from "@mui/material";
-
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import HistoryIcon from '@mui/icons-material/History';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
@@ -14,21 +13,14 @@ import SecurityIcon from '@mui/icons-material/Security';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-
 import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext"; 
 import { ROLES } from "../config/constants";
-
-// 👇 Nuevo componente UX
 import EmptyState from "../components/common/EmptyState";
 
-// --- HELPERS (Sin cambios) ---
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleString('es-MX', { 
-    day: '2-digit', month: 'short', year: 'numeric', 
-    hour: '2-digit', minute: '2-digit' 
-  });
+  return new Date(dateString).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
 const FIELD_LABELS = {
@@ -53,12 +45,10 @@ const formatValueHelper = (key, value, catalogs) => {
     return String(value);
 };
 
-// Tabla de Detalle (Read-only)
 const DetailTable = ({ data, catalogs, type }) => {
     if (!data) return <Typography variant="caption">Sin datos registrados.</Typography>;
     const keys = Object.keys(data).filter(key => !['updated_at', 'updatedAt', 'created_at', 'createdAt', 'password', 'id', 'deletedAt', 'area', 'departamento'].includes(key));
     const rowBgColor = type === 'DELETE' ? '#fff5f5' : '#f8f9fa';
-
     return (
         <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
             <Table size="small">
@@ -83,9 +73,7 @@ const DiffTable = ({ oldData, newData, catalogs }) => {
     if (ignoredKeys.includes(key)) return false;
     return JSON.stringify(oldData?.[key]) !== JSON.stringify(newData?.[key]);
   });
-
   if (changedKeys.length === 0) return <Alert severity="info" sx={{ mt: 2 }}>No se detectaron cambios visibles.</Alert>;
-
   return (
     <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
       <Table size="small">
@@ -105,7 +93,7 @@ const DiffTable = ({ oldData, newData, catalogs }) => {
 };
 
 const AuditLog = () => {
-  const { user, selectedHotelId } = useContext(AuthContext);
+  const { user, selectedHotelId, getHotelName } = useContext(AuthContext); // 👇
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
@@ -124,8 +112,6 @@ const AuditLog = () => {
     setLoading(true);
     try {
       const logsRes = await api.get(`/audit?page=${page + 1}&limit=${rowsPerPage}`);
-      
-      // Cargar catálogos solo una vez si están vacíos
       if (catalogs.areas.length === 0) {
           const [areasRes, typesRes, statusRes, osRes, usersRes] = await Promise.allSettled([
               api.get("/areas/get?limit=0"),
@@ -144,11 +130,8 @@ const AuditLog = () => {
       }
       setLogs(logsRes.data.data);
       setTotalCount(logsRes.data.totalCount);
-    } catch (err) {
-      setError("Error de conexión al cargar la auditoría.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError("Error de conexión al cargar la auditoría."); } 
+    finally { setLoading(false); }
   }, [page, rowsPerPage, selectedHotelId]);
 
   useEffect(() => { fetchInitialData(); }, [fetchInitialData]);
@@ -165,8 +148,6 @@ const AuditLog = () => {
     if(action==='UNAUTHORIZED_ACCESS') return { label:'Seguridad', color:'warning', icon: <SecurityIcon/> };
     return { label: action, color:'default', icon: <HistoryIcon/> };
   };
-
-  const getHotelLabel = (id) => (id === 1 ? "CPC" : id === 2 ? "SEN" : id === 3 ? "CORP" : "GLO");
 
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
@@ -200,9 +181,7 @@ const AuditLog = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                // 👇 UX: Skeletons
-                Array.from(new Array(10)).map((_, i) => (
+              {loading ? Array.from(new Array(10)).map((_, i) => (
                     <TableRow key={i}>
                         {showHotelColumn && <TableCell><Skeleton variant="text" width={40} /></TableCell>}
                         <TableCell><Skeleton variant="text" width={100} /></TableCell>
@@ -212,20 +191,15 @@ const AuditLog = () => {
                         <TableCell><Skeleton variant="text" /></TableCell>
                         <TableCell><Skeleton variant="circular" width={30} height={30} sx={{ mx: 'auto' }} /></TableCell>
                     </TableRow>
-                ))
-              ) : filteredLogs.length === 0 ? (
-                // 👇 UX: Empty State
-                <TableRow>
-                    <TableCell colSpan={showHotelColumn ? 7 : 6}>
-                        <EmptyState title="Sin movimientos" description="No se encontraron registros de auditoría con los filtros actuales." />
-                    </TableCell>
-                </TableRow>
+                )) : filteredLogs.length === 0 ? (
+                <TableRow><TableCell colSpan={showHotelColumn ? 7 : 6}><EmptyState title="Sin movimientos" description="No se encontraron registros de auditoría con los filtros actuales." /></TableCell></TableRow>
               ) : (
                 filteredLogs.map((log) => {
                   const config = getActionConfig(log.action);
                   return (
                     <TableRow key={log.id} hover>
-                      {showHotelColumn && <TableCell><Chip label={getHotelLabel(log.hotelId)} size="small" variant="outlined" /></TableCell>}
+                      {/* 👇 CORRECCIÓN */}
+                      {showHotelColumn && <TableCell><Chip label={getHotelName(log.hotelId)} size="small" variant="outlined" /></TableCell>}
                       <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(log.createdAt)}</TableCell>
                       <TableCell>
                         <Box>
@@ -249,39 +223,19 @@ const AuditLog = () => {
         <TablePagination rowsPerPageOptions={[20, 50]} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} labelRowsPerPage="Filas:" />
       </Paper>
 
-      {/* Modal Detalle (Read-only) */}
       <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {selectedLog && getActionConfig(selectedLog.action).icon} 
-            <Typography variant="h6">Detalle del Movimiento</Typography>
-        </DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{selectedLog && getActionConfig(selectedLog.action).icon} <Typography variant="h6">Detalle del Movimiento</Typography></DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
             {selectedLog && (
                 <Box>
                     <Paper variant="outlined" sx={{ p: 2, mb: 3, bgcolor: 'background.paper' }}>
                         <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6}>
-                                <Typography variant="caption" color="text.secondary">FECHA</Typography>
-                                <Typography variant="body1" fontWeight="bold">{formatDate(selectedLog.createdAt)}</Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <Typography variant="caption" color="text.secondary">RESPONSABLE</Typography>
-                                <Typography variant="body1" fontWeight="bold">{selectedLog.user?.nombre || "Sistema"}</Typography>
-                            </Grid>
-                            <Grid item xs={12}>
-                                <Divider sx={{ my: 1 }} />
-                                <Typography variant="caption" color="text.secondary">DESCRIPCIÓN</Typography>
-                                <Typography variant="body1">{selectedLog.details}</Typography>
-                            </Grid>
+                            <Grid item xs={12} sm={6}><Typography variant="caption" color="text.secondary">FECHA</Typography><Typography variant="body1" fontWeight="bold">{formatDate(selectedLog.createdAt)}</Typography></Grid>
+                            <Grid item xs={12} sm={6}><Typography variant="caption" color="text.secondary">RESPONSABLE</Typography><Typography variant="body1" fontWeight="bold">{selectedLog.user?.nombre || "Sistema"}</Typography></Grid>
+                            <Grid item xs={12}><Divider sx={{ my: 1 }} /><Typography variant="caption" color="text.secondary">DESCRIPCIÓN</Typography><Typography variant="body1">{selectedLog.details}</Typography></Grid>
                         </Grid>
                     </Paper>
-                    {selectedLog.action === 'UNAUTHORIZED_ACCESS' ? (
-                        <Alert severity="warning" icon={<WarningAmberIcon />}>{selectedLog.details}</Alert>
-                    ) : selectedLog.action === 'UPDATE' ? (
-                        <Box><Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary', fontWeight: 'bold' }}>CAMBIOS REALIZADOS</Typography><DiffTable oldData={selectedLog.oldData} newData={selectedLog.newData} catalogs={catalogs} /></Box>
-                    ) : (
-                        <Box><Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary', fontWeight: 'bold' }}>DATOS REGISTRADOS</Typography><DetailTable data={selectedLog.newData || selectedLog.oldData} catalogs={catalogs} type={selectedLog.action} /></Box>
-                    )}
+                    {selectedLog.action === 'UNAUTHORIZED_ACCESS' ? <Alert severity="warning" icon={<WarningAmberIcon />}>{selectedLog.details}</Alert> : selectedLog.action === 'UPDATE' ? <Box><Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary', fontWeight: 'bold' }}>CAMBIOS REALIZADOS</Typography><DiffTable oldData={selectedLog.oldData} newData={selectedLog.newData} catalogs={catalogs} /></Box> : <Box><Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary', fontWeight: 'bold' }}>DATOS REGISTRADOS</Typography><DetailTable data={selectedLog.newData || selectedLog.oldData} catalogs={catalogs} type={selectedLog.action} /></Box>}
                 </Box>
             )}
         </DialogContent>

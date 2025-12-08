@@ -2,7 +2,7 @@
 import React, { useState, useContext } from "react";
 import {
   Box, Typography, TextField, Button, Alert, 
-  Stack, Divider, Avatar, Container, Paper, Link
+  Stack, Divider, Avatar, Container, Paper
 } from "@mui/material";
 import { AuthContext } from "../context/AuthContext";
 import api from "../api/axios";
@@ -11,10 +11,9 @@ import PageHeader from "../components/common/PageHeader";
 // Iconos
 import SaveIcon from '@mui/icons-material/Save';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
-import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 
 const Settings = () => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext); // 👇 Importar logout
   
   const [formData, setFormData] = useState({
     password: "", newPassword: "", confirmPassword: ""
@@ -45,8 +44,14 @@ const Settings = () => {
 
     try {
       await api.put(`/auth/put/${user.id}/password`, { password: formData.newPassword });
-      setMessage("Tu contraseña ha sido actualizada exitosamente.");
+      setMessage("Tu contraseña ha sido actualizada. Cerrando sesión...");
       setFormData({ password: "", newPassword: "", confirmPassword: "" });
+      
+      // 👇 Logout automático tras 1.5 seg
+      setTimeout(() => {
+          logout();
+      }, 1500);
+
     } catch (err) {
       setError(err.response?.data?.error || "Error al cambiar la contraseña.");
     }
@@ -58,7 +63,6 @@ const Settings = () => {
       <PageHeader 
         title="Mi Perfil"
         subtitle="Gestión de cuenta y seguridad"
-        // Eliminamos el botón de AdminPanelSettingsIcon de aquí
       />
 
       <Container maxWidth="md" sx={{ mt: -2 }}>
@@ -66,7 +70,6 @@ const Settings = () => {
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
         <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            {/* ... (Resto del contenido del perfil igual: Avatar, Nombre, Formulario Password) ... */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 3, mb: 4 }}>
                 <Avatar sx={{ width: 80, height: 80, bgcolor: 'primary.main', fontSize: '2.5rem' }}>
                     {user?.nombre?.charAt(0) || user?.username?.charAt(0)}

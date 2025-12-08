@@ -17,10 +17,7 @@ import { ROLES } from "../config/constants.js";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import EmptyState from "../components/common/EmptyState";
 
-const modalStyle = {
-  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-  width: 950, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
-};
+const modalStyle = { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 950, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2 };
 
 const Maintenances = () => {
   const [maintenances, setMaintenances] = useState([]);
@@ -29,10 +26,9 @@ const Maintenances = () => {
   const [openModal, setOpenModal] = useState(false);
   const [activeTab, setActiveTab] = useState('pendiente');
   const [loading, setLoading] = useState(true);
-  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mantoToDelete, setMantoToDelete] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false); // 🔥 Nuevo
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -40,7 +36,8 @@ const Maintenances = () => {
   const [search, setSearch] = useState(""); 
   const [sortConfig, setSortConfig] = useState({ key: 'fecha_programada', direction: 'desc' });
 
-  const { user, selectedHotelId } = useContext(AuthContext);
+  // 👇 Usamos getHotelName
+  const { user, selectedHotelId, getHotelName } = useContext(AuthContext);
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
@@ -62,20 +59,17 @@ const Maintenances = () => {
 
   const handleSearchChange = (e) => { setSearch(e.target.value); setPage(0); };
   const handleRequestSort = (key) => { setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' }); };
-  
   const handleOpenDelete = (manto) => { setMantoToDelete(manto); setDeleteDialogOpen(true); };
 
   const confirmDelete = async () => {
       if(!mantoToDelete) return;
-      setActionLoading(true); // 🔥
+      setActionLoading(true);
       try { 
           await api.delete(`/maintenances/delete/${mantoToDelete.id}`); 
           setMessage("Mantenimiento eliminado correctamente."); 
-          fetchMaintenances(); 
-          refreshAlerts();
-          setDeleteDialogOpen(false); // 🔥
+          fetchMaintenances(); refreshAlerts(); setDeleteDialogOpen(false);
       } catch(e){ setError("Error al eliminar."); } 
-      finally { setActionLoading(false); setMantoToDelete(null); } // 🔥
+      finally { setActionLoading(false); setMantoToDelete(null); }
   };
 
   const handleEditMaintenance = (id) => navigate(`/maintenances/edit/${id}`);
@@ -88,7 +82,6 @@ const Maintenances = () => {
 
   const formatDate = (date) => date ? new Date(date).toLocaleDateString() : "N/A";
   const getTypeChipColor = (type) => type === 'Correctivo' ? 'error' : 'info';
-  const getHotelName = (id) => id === 1 ? "Cancún" : id === 2 ? "Sensira" : id === 3 ? "Corp" : "N/A";
 
   return (
     <Box sx={{ p: 3, width: '100%' }}>
@@ -142,7 +135,12 @@ const Maintenances = () => {
               ) : (
                 maintenances.map((m) => (
                   <TableRow key={m.id} hover>
-                    {showHotelColumn && <TableCell><Chip label={getHotelName(m.hotelId)} size="small" variant="outlined" /></TableCell>}
+                    {showHotelColumn && (
+                        <TableCell>
+                            {/* 👇 CORRECCIÓN */}
+                            <Chip label={getHotelName(m.hotelId)} size="small" variant="outlined" />
+                        </TableCell>
+                    )}
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold">{m.device?.nombre_equipo || 'N/A'}</Typography>
                       <Typography variant="caption" color="textSecondary">{m.device?.etiqueta}</Typography>
@@ -168,14 +166,7 @@ const Maintenances = () => {
 
       <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}><Fade in={openModal}><Box sx={modalStyle}><CreateMaintenanceForm onClose={handleCloseModal} onMaintenanceCreated={() => { setMessage("Creado."); fetchMaintenances(); refreshAlerts(); }} setMessage={setMessage} setError={setError} /></Box></Fade></Modal>
 
-      <ConfirmDialog 
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-        title="¿Eliminar Mantenimiento?"
-        content="Estás a punto de eliminar este registro de mantenimiento. Esta acción no se puede deshacer."
-        isLoading={actionLoading} // 🔥
-      />
+      <ConfirmDialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} onConfirm={confirmDelete} title="¿Eliminar Mantenimiento?" content="Estás a punto de eliminar este registro de mantenimiento. Esta acción no se puede deshacer." isLoading={actionLoading} />
     </Box>
   );
 };

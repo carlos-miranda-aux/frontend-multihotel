@@ -16,9 +16,9 @@ import UsersCrownP from "./pages/Users_Crown";
 import EditCrownUser from "./pages/EditCrownUser";
 import Reportes from "./pages/Reportes";
 
-// --- Páginas de Configuración (Faltaban estas importaciones) ---
-import Settings from "./pages/Settings"; // 👈 IMPORTANTE
-import AdminSettings from "./pages/AdminSettings"; // 👈 IMPORTANTE
+// --- Páginas de Configuración ---
+import Settings from "./pages/Settings"; 
+import AdminSettings from "./pages/AdminSettings"; 
 
 // --- Páginas Administrativas ---
 import AreasTable from "./components/admin/AreasTable"; 
@@ -26,6 +26,9 @@ import UsersSystemTable from "./components/admin/UserSystemTable";
 import EditUser from "./pages/EditUser"; 
 import AuditLog from "./pages/AuditLog"; 
 import DepartmentsTable from "./components/admin/DepartmentsTable";
+
+// 👇 Importar página 404
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -56,7 +59,7 @@ function App() {
         
         <Route path="/reports" element={<Reportes />} />
 
-        {/* 👇 RUTAS DE CONFIGURACIÓN AGREGADAS */}
+        {/* Rutas de Configuración */}
         <Route path="/settings" element={<Settings />} />
         <Route path="/admin-settings" element={<AdminSettings />} />
 
@@ -69,8 +72,8 @@ function App() {
 
       </Route>
 
-      {/* Cualquier ruta desconocida redirige al login */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* 👇 Ruta 404: Captura cualquier ruta no definida */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

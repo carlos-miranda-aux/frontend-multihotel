@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
-import { Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Modal, Fade, Backdrop, TablePagination, TableSortLabel, Chip, Skeleton, Alert } from "@mui/material";
+import { Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Modal, Fade, Backdrop, TablePagination, CircularProgress, Chip, TableSortLabel, Skeleton, Alert } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import api from "../../api/axios";
 import CreateDepartmentForm from "../CreateDepartmentForm";
 import { AuthContext } from "../../context/AuthContext";
 import { ROLES } from "../../config/constants";
-
-// Nuevos componentes UX
 import ConfirmDialog from "../common/ConfirmDialog";
 import EmptyState from "../common/EmptyState";
 
@@ -21,11 +19,11 @@ const DepartmentsTable = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
-  const [error, setError] = useState(""); // Estado de error
+  const [error, setError] = useState("");
 
-  // Estados Delete
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false); // 🔥
 
   const { user, selectedHotelId } = useContext(AuthContext);
   const showHotelColumn = (user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER) && !selectedHotelId;
@@ -42,23 +40,18 @@ const DepartmentsTable = () => {
 
   useEffect(() => { fetchDepts(); }, [fetchDepts]);
 
-  const handleOpenDelete = (item) => {
-      setItemToDelete(item);
-      setDeleteDialogOpen(true);
-  };
+  const handleOpenDelete = (item) => { setItemToDelete(item); setDeleteDialogOpen(true); };
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    setActionLoading(true); // 🔥
     try { 
         await api.delete(`/departments/delete/${itemToDelete.id}`); 
         fetchDepts(); 
+        setDeleteDialogOpen(false); // 🔥
     } catch (e) { 
-        setError("Error al eliminar. Verifique dependencias."); 
-        setTimeout(() => setError(""), 4000);
-    } finally {
-        setDeleteDialogOpen(false);
-        setItemToDelete(null);
-    }
+        setError("Error al eliminar. Verifique dependencias."); setTimeout(() => setError(""), 4000);
+    } finally { setActionLoading(false); setItemToDelete(null); } // 🔥
   };
 
   const handleSort = (key) => setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' });
@@ -93,7 +86,7 @@ const DepartmentsTable = () => {
                 <TableRow><TableCell colSpan={showHotelColumn ? 3 : 2}><EmptyState title="Sin departamentos" description="No hay registros." /></TableCell></TableRow>
               ) : depts.map((d) => (
                 <TableRow key={d.id} hover>
-                  {showHotelColumn && <TableCell><Chip label={d.hotel?.nombre || `ID:${d.hotelId}`} size="small" variant="outlined" /></TableCell>}
+                  {showHotelColumn && <TableCell><Chip label={d.hotel?.nombre || d.hotel?.codigo || `ID:${d.hotelId}`} size="small" variant="outlined" /></TableCell>}
                   <TableCell>{d.nombre}</TableCell>
                   <TableCell>
                     <IconButton color="primary" onClick={() => { setEditingItem(d); setOpenModal(true); }}><EditIcon /></IconButton>
@@ -107,9 +100,7 @@ const DepartmentsTable = () => {
         <TablePagination component="div" count={totalCount} page={page} onPageChange={(e, p) => setPage(p)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }} />
       </Paper>
       
-      <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
-        <Fade in={openModal}><Box sx={modalStyle}><CreateDepartmentForm onClose={() => setOpenModal(false)} onSuccess={fetchDepts} initialData={editingItem} /></Box></Fade>
-      </Modal>
+      <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}><Fade in={openModal}><Box sx={modalStyle}><CreateDepartmentForm onClose={() => setOpenModal(false)} onSuccess={fetchDepts} initialData={editingItem} /></Box></Fade></Modal>
 
       <ConfirmDialog 
         open={deleteDialogOpen}
@@ -117,6 +108,7 @@ const DepartmentsTable = () => {
         onConfirm={confirmDelete}
         title="¿Eliminar Departamento?"
         content={`¿Seguro que deseas eliminar "${itemToDelete?.nombre}"?`}
+        isLoading={actionLoading} // 🔥
       />
     </Box>
   );

@@ -1,26 +1,19 @@
 import React from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Button,
-  Typography,
-  Box
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
+  Button, Box, CircularProgress // 👈 Importar CircularProgress
 } from '@mui/material';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 
-const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delete" }) => {
+// 👇 Agregamos prop 'isLoading'
+const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delete", isLoading = false }) => {
   const isDelete = type === "delete";
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: { borderRadius: 3, padding: 1, maxWidth: 450 }
-      }}
+      onClose={!isLoading ? onClose : undefined} // 👈 Evitar cerrar si está cargando
+      PaperProps={{ sx: { borderRadius: 3, padding: 1, maxWidth: 450 } }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 2 }}>
         {isDelete && (
@@ -28,15 +21,11 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delet
             <WarningAmberRoundedIcon fontSize="large" />
           </Box>
         )}
-        <DialogTitle sx={{ fontWeight: 'bold', textAlign: 'center', pt: 1 }}>
-          {title}
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 'bold', textAlign: 'center', pt: 1 }}>{title}</DialogTitle>
       </Box>
 
       <DialogContent>
-        <DialogContentText sx={{ textAlign: 'center', color: 'text.secondary' }}>
-          {content}
-        </DialogContentText>
+        <DialogContentText sx={{ textAlign: 'center', color: 'text.secondary' }}>{content}</DialogContentText>
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: 'center', pb: 2, gap: 2 }}>
@@ -44,6 +33,7 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delet
             onClick={onClose} 
             variant="outlined" 
             color="inherit" 
+            disabled={isLoading} // 👈 Deshabilitar
             sx={{ borderRadius: 2, px: 3 }}
         >
           Cancelar
@@ -53,9 +43,11 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delet
           variant="contained"
           color={isDelete ? "error" : "primary"}
           disableElevation
+          disabled={isLoading} // 👈 Deshabilitar
+          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null} // 👈 Mostrar Spinner
           sx={{ borderRadius: 2, px: 3 }}
         >
-          {isDelete ? "Sí, Eliminar" : "Confirmar"}
+          {isLoading ? "Procesando..." : (isDelete ? "Sí, Eliminar" : "Confirmar")}
         </Button>
       </DialogActions>
     </Dialog>

@@ -21,7 +21,7 @@ const EditUser = () => {
     email: "",
     rol: "",
     password: "",
-    hotelIds: [] // 🔥 Array para edición múltiple
+    hotelIds: [] 
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -32,7 +32,6 @@ const EditUser = () => {
         const response = await api.get(`/auth/get/${id}`);
         const userData = response.data;
         
-        // Extraemos los IDs de los hoteles asignados
         const assignedHotelIds = userData.hotels ? userData.hotels.map(h => h.id) : [];
 
         setFormData({
@@ -40,7 +39,7 @@ const EditUser = () => {
           username: userData.username || "",
           email: userData.email || "",
           rol: userData.rol || ROLES.HOTEL_GUEST,
-          hotelIds: assignedHotelIds, // 🔥 Cargamos los IDs
+          hotelIds: assignedHotelIds, 
           password: "",
         });
       } catch (err) {
@@ -52,7 +51,14 @@ const EditUser = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+
+    // 🔥 VALIDACIÓN EN TIEMPO REAL
+    if (name === "username") {
+        const cleanValue = value.toLowerCase().replace(/\s/g, "");
+        setFormData({ ...formData, [name]: cleanValue });
+    } else {
+        setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleUpdateUser = async (e) => {
@@ -66,13 +72,12 @@ const EditUser = () => {
     
     const payload = { ...formData };
     
-    // Limpieza de contraseña si está vacía
     if (!payload.password) delete payload.password; 
 
     try {
       await api.put(`/auth/put/${id}`, payload);
       setMessage("Usuario actualizado correctamente.");
-      setTimeout(() => navigate("/user-manager"), 1500); // Redirige a la tabla
+      setTimeout(() => navigate("/user-manager"), 1500); 
     } catch (err) {
       setError(err.response?.data?.error || "Error al actualizar.");
     }
@@ -90,19 +95,29 @@ const EditUser = () => {
       <Paper sx={{ p: 3, maxWidth: 600 }}>
         <Box component="form" onSubmit={handleUpdateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           
-          {/* Selector de Hotel Múltiple (Solo Root) */}
           {isRoot && (
             <HotelSelect 
                 value={formData.hotelIds} 
                 onChange={handleChange} 
                 name="hotelIds"
-                multiple={true} // 🔥 Edición múltiple
+                multiple={true} 
                 required={![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)}
                 helperText="Selecciona los hoteles a los que tendrá acceso"
             />
           )}
 
           <TextField label="Nombre" name="nombre" value={formData.nombre} onChange={handleChange} fullWidth />
+          
+          {/* Validación de Username */}
+          <TextField 
+            label="Nombre de usuario" 
+            name="username" 
+            value={formData.username} 
+            onChange={handleChange} 
+            fullWidth 
+            helperText="Sin espacios, minúsculas automáticas."
+          />
+
           <TextField label="Correo electrónico" name="email" type="email" value={formData.email} onChange={handleChange} fullWidth />
           
           <FormControl fullWidth disabled={formData.username === "root"}>

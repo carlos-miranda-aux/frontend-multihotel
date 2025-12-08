@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  Chip, IconButton, TablePagination, CircularProgress, Alert, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Grid, Divider, Stack
+  Chip, Button, TablePagination, Alert, Dialog, DialogTitle,
+  DialogContent, DialogActions, Grid, Divider, Stack, Skeleton // 👈 Importamos Skeleton
 } from "@mui/material";
 
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -19,9 +19,10 @@ import api from "../api/axios";
 import { AuthContext } from "../context/AuthContext"; 
 import { ROLES } from "../config/constants";
 
-// --- HELPERS Y COMPONENTES AUXILIARES ---
+// 👇 Nuevo componente UX
+import EmptyState from "../components/common/EmptyState";
 
-// Helper para fechas
+// --- HELPERS (Sin cambios) ---
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
   return new Date(dateString).toLocaleString('es-MX', { 
@@ -30,75 +31,29 @@ const formatDate = (dateString) => {
   });
 };
 
-// Diccionario de campos para traducción
 const FIELD_LABELS = {
-    nombre_equipo: "Nombre del Equipo",
-    etiqueta: "Etiqueta",
-    descripcion: "Descripción",
-    comentarios: "Comentarios",
-    numero_serie: "N° Serie",
-    ip_equipo: "Dirección IP",
-    marca: "Marca",
-    modelo: "Modelo",
-    areaId: "Área Asignada",
-    usuarioId: "Usuario Asignado (Staff)",
-    tipoId: "Tipo de Dispositivo",
-    estadoId: "Estado Actual",
-    sistemaOperativoId: "Sistema Operativo",
-    es_panda: "Antivirus Panda",
-    motivo_baja: "Motivo de Baja",
-    observaciones_baja: "Observaciones Finales",
-    fecha_baja: "Fecha de Baja",
-    garantia_fin: "Fin de Garantía",
-    garantia_inicio: "Inicio de Garantía",
-    perfiles_usuario: "Perfiles (Sesiones)",
-    nombre: "Nombre Completo",
-    correo: "Correo Electrónico",
-    usuario_login: "Usuario de Dominio",
-    es_jefe_de_area: "Es Jefe de Área",
-    rol: "Rol de Sistema",
-    email: "Email de Acceso",
-    username: "Usuario de Sistema",
-    fecha_programada: "Fecha Programada",
-    fecha_realizacion: "Fecha Realización",
-    tipo_mantenimiento: "Tipo Mantenimiento",
-    diagnostico: "Diagnóstico Técnico",
-    acciones_realizadas: "Acciones Realizadas",
-    deviceId: "Equipo Afectado",
-    hotelId: "ID del Hotel"
+    nombre_equipo: "Nombre del Equipo", etiqueta: "Etiqueta", descripcion: "Descripción",
+    comentarios: "Comentarios", numero_serie: "N° Serie", ip_equipo: "Dirección IP",
+    marca: "Marca", modelo: "Modelo", areaId: "Área Asignada", usuarioId: "Usuario Asignado",
+    tipoId: "Tipo", estadoId: "Estado", sistemaOperativoId: "SO", es_panda: "Antivirus",
+    motivo_baja: "Motivo Baja", observaciones_baja: "Observaciones", fecha_baja: "Fecha Baja",
+    nombre: "Nombre", correo: "Correo", usuario_login: "Usuario Dominio", rol: "Rol",
+    fecha_programada: "Programada", fecha_realizacion: "Realizada", tipo_mantenimiento: "Tipo Manto",
+    diagnostico: "Diagnóstico", acciones_realizadas: "Acciones", hotelId: "Hotel ID"
 };
 
-// Helper para formatear valores según catálogos
 const formatValueHelper = (key, value, catalogs) => {
     if (value === null || value === undefined || value === "") return <em style={{opacity:0.5}}>(Vacío)</em>;
     if (typeof value === 'boolean') return value ? "Sí" : "No";
-    if ((key.includes('fecha') || key.includes('garantia') || key.includes('At')) && typeof value === 'string') {
-        if (value.match(/^\d{4}-\d{2}-\d{2}/)) return formatDate(value);
-    }
-    if (key === 'areaId' && catalogs.areas) {
-        const item = catalogs.areas.find(x => x.id === value);
-        return item ? item.nombre : value;
-    }
-    if (key === 'tipoId' && catalogs.types) {
-        const item = catalogs.types.find(x => x.id === value);
-        return item ? item.nombre : value;
-    }
-    if (key === 'estadoId' && catalogs.statuses) {
-        const item = catalogs.statuses.find(x => x.id === value);
-        return item ? <Chip label={item.nombre} size="small" variant="outlined" /> : value;
-    }
-    if (key === 'sistemaOperativoId' && catalogs.os) {
-        const item = catalogs.os.find(x => x.id === value);
-        return item ? item.nombre : value;
-    }
-    if (key === 'usuarioId' && catalogs.users) {
-        const item = catalogs.users.find(x => x.id === value);
-        return item ? item.nombre : value;
-    }
+    if (key === 'areaId') return catalogs.areas.find(x => x.id === value)?.nombre || value;
+    if (key === 'tipoId') return catalogs.types.find(x => x.id === value)?.nombre || value;
+    if (key === 'estadoId') return catalogs.statuses.find(x => x.id === value)?.nombre || value;
+    if (key === 'sistemaOperativoId') return catalogs.os.find(x => x.id === value)?.nombre || value;
+    if (key === 'usuarioId') return catalogs.users.find(x => x.id === value)?.nombre || value;
     return String(value);
 };
 
-// Tabla de Detalle (Para Creación/Eliminación)
+// Tabla de Detalle (Read-only)
 const DetailTable = ({ data, catalogs, type }) => {
     if (!data) return <Typography variant="caption">Sin datos registrados.</Typography>;
     const keys = Object.keys(data).filter(key => !['updated_at', 'updatedAt', 'created_at', 'createdAt', 'password', 'id', 'deletedAt', 'area', 'departamento'].includes(key));
@@ -111,7 +66,7 @@ const DetailTable = ({ data, catalogs, type }) => {
                 <TableBody>
                     {keys.map((key) => (
                         <TableRow key={key}>
-                            <TableCell sx={{ fontWeight: 'bold', color: 'text.primary', textTransform: 'capitalize' }}>{FIELD_LABELS[key] || key.replace(/_/g, ' ')}</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold', textTransform: 'capitalize' }}>{FIELD_LABELS[key] || key}</TableCell>
                             <TableCell sx={{ bgcolor: rowBgColor }}>{formatValueHelper(key, data[key], catalogs)}</TableCell>
                         </TableRow>
                     ))}
@@ -121,7 +76,6 @@ const DetailTable = ({ data, catalogs, type }) => {
     );
 };
 
-// Tabla de Diferencias (Para Edición)
 const DiffTable = ({ oldData, newData, catalogs }) => {
   const allKeys = new Set([...Object.keys(oldData || {}), ...Object.keys(newData || {})]);
   const ignoredKeys = ['updated_at', 'updatedAt', 'created_at', 'createdAt', 'password', 'id', 'deletedAt'];
@@ -150,40 +104,28 @@ const DiffTable = ({ oldData, newData, catalogs }) => {
   );
 };
 
-// --- COMPONENTE PRINCIPAL ---
-
 const AuditLog = () => {
-  // 👇 CONTEXTO Y LÓGICA DE VISTAS
   const { user, selectedHotelId } = useContext(AuthContext);
-  
-  // Si es Root o Corp, y NO ha seleccionado un hotel específico, mostramos la columna Hotel
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
   const [catalogs, setCatalogs] = useState({ areas: [], types: [], statuses: [], os: [], users: [] });
-
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
   const [filterType, setFilterType] = useState('ALL');
-  
   const [selectedLog, setSelectedLog] = useState(null);
   const [openModal, setOpenModal] = useState(false);
 
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
-      // 🔄 El parámetro hotelId ya no se envía manualmente en la query string.
-      // El interceptor de Axios inyecta el header 'x-hotel-id' si existe selectedHotelId.
-      let url = `/audit?page=${page + 1}&limit=${rowsPerPage}`;
-
-      const logsRes = await api.get(url);
+      const logsRes = await api.get(`/audit?page=${page + 1}&limit=${rowsPerPage}`);
       
-      // Cargar catálogos para traducción (Solo si no están cargados)
+      // Cargar catálogos solo una vez si están vacíos
       if (catalogs.areas.length === 0) {
           const [areasRes, typesRes, statusRes, osRes, usersRes] = await Promise.allSettled([
               api.get("/areas/get?limit=0"),
@@ -200,17 +142,14 @@ const AuditLog = () => {
               users: usersRes.status === 'fulfilled' ? usersRes.value.data : []
           });
       }
-
       setLogs(logsRes.data.data);
       setTotalCount(logsRes.data.totalCount);
-
     } catch (err) {
       setError("Error de conexión al cargar la auditoría.");
-      console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, selectedHotelId]); // 🔄 Se recarga si cambias de hotel
+  }, [page, rowsPerPage, selectedHotelId]);
 
   useEffect(() => { fetchInitialData(); }, [fetchInitialData]);
 
@@ -227,25 +166,13 @@ const AuditLog = () => {
     return { label: action, color:'default', icon: <HistoryIcon/> };
   };
 
-  // Helper simple para mostrar nombre del hotel
-  const getHotelLabel = (id) => {
-      if (id === 1) return "CPC";
-      if (id === 2) return "SEN";
-      if (id === 3) return "CORP";
-      return "GLO";
-  };
+  const getHotelLabel = (id) => (id === 1 ? "CPC" : id === 2 ? "SEN" : id === 3 ? "CORP" : "GLO");
 
   return (
     <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-            <Typography variant="h4" fontWeight="bold" color="text.primary">Bitácora de Movimientos</Typography>
-            <Typography variant="subtitle1" color="text.secondary">
-                Registro de actividad {selectedHotelId ? "(Filtrado por Hotel Activo)" : "(Vista Global)"}.
-            </Typography>
-        </Box>
-        
-        {/* Ya no necesitamos el selector manual aquí, se usa el Topbar */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold" color="text.primary">Bitácora de Movimientos</Typography>
+        <Typography variant="subtitle1" color="text.secondary">Registro de actividad {selectedHotelId ? "(Filtrado)" : "(Global)"}.</Typography>
       </Box>
 
       <Stack direction="row" spacing={1} sx={{ mb: 3, overflowX: 'auto', pb: 1 }}>
@@ -263,9 +190,7 @@ const AuditLog = () => {
           <Table size="medium">
             <TableHead sx={{ bgcolor: 'background.paper' }}>
               <TableRow>
-                {/* 👇 Header Condicional */}
                 {showHotelColumn && <TableCell sx={{ fontWeight: 'bold' }}>Hotel</TableCell>}
-                
                 <TableCell sx={{ fontWeight: 'bold' }}>Fecha</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Responsable</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Acción</TableCell>
@@ -276,46 +201,55 @@ const AuditLog = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={showHotelColumn ? 7 : 6} align="center" sx={{ py: 5 }}><CircularProgress /></TableCell></TableRow>
-              ) : filteredLogs.map((log) => {
-                const config = getActionConfig(log.action);
-                return (
-                  <TableRow key={log.id} hover>
-                    {/* 👇 Celda Condicional */}
-                    {showHotelColumn && (
-                        <TableCell>
-                            <Chip label={getHotelLabel(log.hotelId)} size="small" variant="outlined" />
-                        </TableCell>
-                    )}
-                    
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(log.createdAt)}</TableCell>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight="bold">{log.user?.nombre || 'Sistema'}</Typography>
-                        <Typography variant="caption" color="text.secondary">{log.user?.username}</Typography>
-                      </Box>
+                // 👇 UX: Skeletons
+                Array.from(new Array(10)).map((_, i) => (
+                    <TableRow key={i}>
+                        {showHotelColumn && <TableCell><Skeleton variant="text" width={40} /></TableCell>}
+                        <TableCell><Skeleton variant="text" width={100} /></TableCell>
+                        <TableCell><Skeleton variant="text" width={120} /></TableCell>
+                        <TableCell><Skeleton variant="rectangular" width={80} height={24} sx={{ borderRadius: 1 }} /></TableCell>
+                        <TableCell><Skeleton variant="text" width={80} /></TableCell>
+                        <TableCell><Skeleton variant="text" /></TableCell>
+                        <TableCell><Skeleton variant="circular" width={30} height={30} sx={{ mx: 'auto' }} /></TableCell>
+                    </TableRow>
+                ))
+              ) : filteredLogs.length === 0 ? (
+                // 👇 UX: Empty State
+                <TableRow>
+                    <TableCell colSpan={showHotelColumn ? 7 : 6}>
+                        <EmptyState title="Sin movimientos" description="No se encontraron registros de auditoría con los filtros actuales." />
                     </TableCell>
-                    <TableCell>
-                        <Chip icon={config.icon} label={config.label} color={config.color} size="small" variant="outlined" sx={{ fontWeight: 'bold', border: 'none', bgcolor: `${config.color}.50` }} />
-                    </TableCell>
-                    <TableCell>
-                        <Typography variant="body2">{log.entity}</Typography>
-                    </TableCell>
-                    <TableCell sx={{ maxWidth: 350 }}>
-                        <Typography variant="body2" noWrap>{log.details}</Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Button size="small" variant="contained" disableElevation startIcon={<VisibilityIcon />} onClick={() => { setSelectedLog(log); setOpenModal(true); }} sx={{ bgcolor: 'action.hover', color: 'text.primary' }}>Ver</Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                </TableRow>
+              ) : (
+                filteredLogs.map((log) => {
+                  const config = getActionConfig(log.action);
+                  return (
+                    <TableRow key={log.id} hover>
+                      {showHotelColumn && <TableCell><Chip label={getHotelLabel(log.hotelId)} size="small" variant="outlined" /></TableCell>}
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(log.createdAt)}</TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2" fontWeight="bold">{log.user?.nombre || 'Sistema'}</Typography>
+                          <Typography variant="caption" color="text.secondary">{log.user?.username}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell><Chip icon={config.icon} label={config.label} color={config.color} size="small" variant="outlined" sx={{ fontWeight: 'bold', border: 'none', bgcolor: `${config.color}.50` }} /></TableCell>
+                      <TableCell><Typography variant="body2">{log.entity}</Typography></TableCell>
+                      <TableCell sx={{ maxWidth: 350 }}><Typography variant="body2" noWrap>{log.details}</Typography></TableCell>
+                      <TableCell align="center">
+                        <Button size="small" variant="contained" disableElevation startIcon={<VisibilityIcon />} onClick={() => { setSelectedLog(log); setOpenModal(true); }} sx={{ bgcolor: 'action.hover', color: 'text.primary' }}>Ver</Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </TableContainer>
         <TablePagination rowsPerPageOptions={[20, 50]} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} labelRowsPerPage="Filas:" />
       </Paper>
 
+      {/* Modal Detalle (Read-only) */}
       <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {selectedLog && getActionConfig(selectedLog.action).icon} 

@@ -1,6 +1,7 @@
 // src/context/AuthContext.jsx
-import { createContext, useState, useEffect } from "react";
-import DefaultAvatar from "../assets/Avatar.png"; // avatar por defecto
+import { createContext, useState, useEffect, useCallback } from "react";
+import api from "../api/axios"; // Asegúrate de importar api para hacer el fetch
+import DefaultAvatar from "../assets/Avatar.png"; 
 
 export const AuthContext = createContext();
 
@@ -32,6 +33,9 @@ export const AuthProvider = ({ children }) => {
       return localStorage.getItem("selectedHotelId") || "";
   });
 
+  // Estado global para la lista de hoteles (para el Switcher)
+  const [availableHotels, setAvailableHotels] = useState([]);
+
   // Guardar en localStorage cada vez que user cambie
   useEffect(() => {
     if (user) {
@@ -50,14 +54,30 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+  // Función para obtener/refrescar la lista de hoteles
+  const refreshHotelList = useCallback(async () => {
+    if (!token) return;
+    try {
+        // Usamos el endpoint ligero para el selector
+        const res = await api.get('/hotels/list');
+        setAvailableHotels(res.data || []);
+    } catch (err) {
+        console.error("Error actualizando lista de hoteles:", err);
+    }
+  }, [token]);
+
+  // Cargar la lista de hoteles cuando hay un usuario logueado
+  useEffect(() => {
+    if (user && token) {
+        refreshHotelList();
+    }
+  }, [user, token, refreshHotelList]);
+
   // Función para cambiar de hotel manualmente
   const changeHotelContext = (hotelId) => {
       const val = hotelId ? String(hotelId) : ""; // "" significa Vista Global
       setSelectedHotelId(val);
       localStorage.setItem("selectedHotelId", val);
-      
-      // Forzar recarga para que React Query y otros componentes refetcheen con el nuevo header
-      window.location.reload();
   };
 
   const login = (token, userData) => {
@@ -84,6 +104,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setSelectedHotelId("");
+    setAvailableHotels([]); // Limpiar lista
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("selectedHotelId");
@@ -107,7 +128,9 @@ export const AuthProvider = ({ children }) => {
             login, 
             logout,
             selectedHotelId,
-            changeHotelContext 
+            changeHotelContext,
+            availableHotels, // 👈 Exportamos la lista
+            refreshHotelList // 👈 Exportamos la función de refresco
         }}
     >
       {children}

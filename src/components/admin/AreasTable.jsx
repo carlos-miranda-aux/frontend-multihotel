@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Box, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, IconButton, Alert, Modal, Fade,
-  Backdrop, TablePagination, CircularProgress, TableSortLabel, Chip
+  Backdrop, TablePagination, CircularProgress, TableSortLabel, Chip, Skeleton
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from "@mui/icons-material/Edit";
@@ -11,6 +11,10 @@ import api from "../../api/axios";
 import CreateAreaForm from "../CreateAreaForm";
 import { AuthContext } from "../../context/AuthContext"; 
 import { ROLES } from "../../config/constants"; 
+
+// 👇 Nuevos componentes UX
+import ConfirmDialog from "../common/ConfirmDialog";
+import EmptyState from "../common/EmptyState";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -25,6 +29,10 @@ const AreasTable = () => {
   
   const [openModal, setOpenModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
+  // Estados para ConfirmDialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -41,7 +49,6 @@ const AreasTable = () => {
     try {
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
       const response = await api.get(`/areas/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`);
-      
       if (response.data.data) {
           setAreas(response.data.data);
           setTotalCount(response.data.totalCount);
@@ -59,14 +66,23 @@ const AreasTable = () => {
 
   useEffect(() => { fetchAreas(); }, [fetchAreas]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("¿Estás seguro de eliminar este registro?")) return;
+  // Lógica de eliminación profesional
+  const handleOpenDelete = (item) => {
+      setItemToDelete(item);
+      setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
     try {
-        await api.delete(`/areas/delete/${id}`);
+        await api.delete(`/areas/delete/${itemToDelete.id}`);
         setMessage("Área eliminada correctamente.");
         fetchAreas();
     } catch (err) {
-      setError(err.response?.data?.error || "Error al eliminar.");
+      setError(err.response?.data?.error || "Error al eliminar. Verifique si tiene usuarios o equipos asignados.");
+    } finally {
+        setDeleteDialogOpen(false);
+        setItemToDelete(null);
     }
   };
 
@@ -101,58 +117,37 @@ const AreasTable = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                
-                {showHotelColumn && (
-                    <TableCell sx={headerStyle}>
-                        <TableSortLabel 
-                            active={sortConfig.key === 'hotel.nombre'} 
-                            direction={sortConfig.direction} 
-                            onClick={() => handleRequestSort('hotel.nombre')}
-                        >
-                            Hotel
-                        </TableSortLabel>
-                    </TableCell>
-                )}
-                
-                <TableCell sx={headerStyle}>
-                    <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>
-                        Nombre Área
-                    </TableSortLabel>
-                </TableCell>
-                <TableCell sx={headerStyle}>
-                    <TableSortLabel active={sortConfig.key === 'departamento.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('departamento.nombre')}>
-                        Departamento
-                    </TableSortLabel>
-                </TableCell>
+                {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
+                <TableCell sx={headerStyle}><TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre Área</TableSortLabel></TableCell>
+                <TableCell sx={headerStyle}><TableSortLabel active={sortConfig.key === 'departamento.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('departamento.nombre')}>Departamento</TableSortLabel></TableCell>
                 <TableCell sx={headerStyle}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={showHotelColumn ? 4 : 3} align="center"><CircularProgress /></TableCell></TableRow>
+                Array.from(new Array(5)).map((_, i) => (
+                    <TableRow key={i}>
+                        {showHotelColumn && <TableCell><Skeleton variant="text" /></TableCell>}
+                        <TableCell><Skeleton variant="text" width="60%" /></TableCell>
+                        <TableCell><Skeleton variant="text" /></TableCell>
+                        <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
+                    </TableRow>
+                ))
+              ) : areas.length === 0 ? (
+                <TableRow><TableCell colSpan={showHotelColumn ? 4 : 3}>
+                    <EmptyState title="Sin áreas" description="No hay áreas registradas. Crea una nueva para comenzar." />
+                </TableCell></TableRow>
               ) : (
                 areas.map((area) => (
-                  <TableRow key={area.id}>
-                    
+                  <TableRow key={area.id} hover>
                     {showHotelColumn && (
-                        <TableCell>
-                             <Chip 
-                                label={area.hotel?.nombre || area.hotel?.codigo || `ID:${area.hotelId}`} 
-                                size="small" 
-                                variant="outlined" 
-                             />
-                        </TableCell>
+                        <TableCell><Chip label={area.hotel?.nombre || `ID:${area.hotelId}`} size="small" variant="outlined" /></TableCell>
                     )}
-
                     <TableCell>{area.nombre}</TableCell>
                     <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
                     <TableCell>
-                      <IconButton color="primary" onClick={() => handleEditClick(area)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton color="error" onClick={() => handleDelete(area.id)}>
-                        <DeleteIcon />
-                      </IconButton>
+                      <IconButton color="primary" onClick={() => handleEditClick(area)}><EditIcon /></IconButton>
+                      <IconButton color="error" onClick={() => handleOpenDelete(area)}><DeleteIcon /></IconButton>
                     </TableCell>
                   </TableRow>
                 ))
@@ -178,6 +173,14 @@ const AreasTable = () => {
           </Box>
         </Fade>
       </Modal>
+
+      <ConfirmDialog 
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar Área?"
+        content={`¿Estás seguro de eliminar el área "${itemToDelete?.nombre}"?`}
+      />
     </Box>
   );
 };

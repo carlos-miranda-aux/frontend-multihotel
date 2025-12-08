@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  CircularProgress, Alert, IconButton, TablePagination, TableSortLabel, TextField, Chip
+  IconButton, TablePagination, TableSortLabel, TextField, Chip, Skeleton
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import api from "../api/axios";
@@ -10,15 +10,15 @@ import { ROLES } from "../config/constants";
 import { useNavigate } from "react-router-dom";
 import { useSortableData } from "../hooks/useSortableData";
 
+// 👇 Nuevos componentes UX
+import EmptyState from "../components/common/EmptyState";
+
 const Disposals = () => {
   const [disposals, setDisposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
-  // 👇 CONTEXTO
   const { user, selectedHotelId } = useContext(AuthContext);
-  
-  // 👇 LOGICA CONDICIONAL
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
@@ -43,7 +43,7 @@ const Disposals = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, search, selectedHotelId]); // 🔄 Dependencia
+  }, [page, rowsPerPage, search, selectedHotelId]);
 
   useEffect(() => { fetchDisposals(); }, [fetchDisposals]);
 
@@ -54,6 +54,22 @@ const Disposals = () => {
 
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
 
+  // Helper para mostrar skeletons
+  const renderSkeletons = () => (
+    Array.from(new Array(rowsPerPage)).map((_, index) => (
+      <TableRow key={index}>
+        {showHotelColumn && <TableCell><Skeleton variant="text" /></TableCell>}
+        <TableCell><Skeleton variant="text" width="60%" /></TableCell>
+        <TableCell><Skeleton variant="text" /></TableCell>
+        <TableCell><Skeleton variant="text" /></TableCell>
+        <TableCell><Skeleton variant="text" /></TableCell>
+        <TableCell><Skeleton variant="text" /></TableCell>
+        <TableCell><Skeleton variant="text" /></TableCell>
+        {(user?.rol === "HOTEL_ADMIN" || isGlobalUser) && <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>}
+      </TableRow>
+    ))
+  );
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -61,17 +77,15 @@ const Disposals = () => {
         <TextField label="Buscar..." variant="outlined" size="small" value={search} onChange={handleSearchChange} placeholder="Serie, nombre o motivo..." />
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {/* No necesitamos un Alert de éxito/error aquí si solo es lectura, pero dejamos el de error general */}
+      {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
 
       <Paper>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}> 
-                
-                {/* 👇 HEADER CONDICIONAL */}
                 {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
-
                 <TableCell sx={headerStyle}>
                   <TableSortLabel active={sortConfig?.key === 'nombre_equipo'} direction={sortConfig?.direction} onClick={() => requestSort('nombre_equipo')}>
                     Nombre Equipo
@@ -90,23 +104,14 @@ const Disposals = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={showHotelColumn ? 8 : 7} align="center"><CircularProgress /></TableCell></TableRow>
-              ) : sortedDisposals.length > 0 ? (
+              {loading ? renderSkeletons() : sortedDisposals.length > 0 ? (
                 sortedDisposals.map((disposal) => (
-                  <TableRow key={disposal.id}>
-                    
-                    {/* 👇 CELDA CONDICIONAL */}
+                  <TableRow key={disposal.id} hover>
                     {showHotelColumn && (
                         <TableCell>
-                            <Chip 
-                                label={disposal.hotelId === 1 ? "Cancún" : disposal.hotelId === 2 ? "Sensira" : "ID:"+disposal.hotelId} 
-                                size="small" 
-                                variant="outlined" 
-                            />
+                            <Chip label={disposal.hotelId === 1 ? "Cancún" : disposal.hotelId === 2 ? "Sensira" : "ID:"+disposal.hotelId} size="small" variant="outlined" />
                         </TableCell>
                     )}
-
                     <TableCell>
                         <Typography variant="body2" fontWeight="bold">{disposal.nombre_equipo || 'N/A'}</Typography>
                         <Typography variant="caption" color="textSecondary">{disposal.etiqueta}</Typography>
@@ -114,12 +119,12 @@ const Disposals = () => {
                     <TableCell>{disposal.numero_serie || 'N/A'}</TableCell>
                     <TableCell>{disposal.tipo?.nombre || 'N/A'}</TableCell>
                     <TableCell>{disposal.motivo_baja || 'N/A'}</TableCell>
-                    <TableCell>{disposal.observaciones_baja || 'N/A'}</TableCell>
+                    <TableCell sx={{ maxWidth: 200 }}><Typography noWrap variant="body2">{disposal.observaciones_baja || 'N/A'}</Typography></TableCell>
                     <TableCell>{disposal.fecha_baja ? new Date(disposal.fecha_baja).toLocaleDateString() : 'N/A'}</TableCell>
                     
                     {(user?.rol === "HOTEL_ADMIN" || isGlobalUser) && (
                       <TableCell>
-                        <IconButton color="primary" onClick={() => handleEdit(disposal.id)} title="Editar detalle">
+                        <IconButton color="primary" onClick={() => handleEdit(disposal.id)} title="Ver detalle">
                             <EditIcon />
                         </IconButton>
                       </TableCell>
@@ -127,7 +132,11 @@ const Disposals = () => {
                   </TableRow>
                 ))
               ) : (
-                <TableRow><TableCell colSpan={showHotelColumn ? 8 : 7} align="center">No hay equipos dados de baja.</TableCell></TableRow>
+                <TableRow>
+                    <TableCell colSpan={showHotelColumn ? 8 : 7}>
+                        <EmptyState title="No hay bajas registradas" description="Aún no se han retirado equipos del inventario activo." />
+                    </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>

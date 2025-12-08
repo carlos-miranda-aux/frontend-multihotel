@@ -2,10 +2,9 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Button,
-  Typography, Alert, Modal, Fade, Backdrop, Chip, Tabs, Tab, TablePagination, CircularProgress,
-  TableSortLabel, TextField 
-} from "@mui/material";
-// ... icons ...
+  Typography, Alert, Modal, Fade, Backdrop, Tabs, Tab, TablePagination, 
+  TableSortLabel, TextField, Chip, Skeleton
+} from "@mui/material"; // 👈 Añadido Skeleton
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
@@ -17,6 +16,10 @@ import CreateMaintenanceForm from "../components/CreateMaintenanceForm.jsx";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { AlertContext } from "../context/AlertContext.jsx";
 import { ROLES } from "../config/constants.js"; 
+
+// 👇 Nuevos componentes UX
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import EmptyState from "../components/common/EmptyState";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -31,17 +34,19 @@ const Maintenances = () => {
   const [activeTab, setActiveTab] = useState('pendiente');
   const [loading, setLoading] = useState(true);
   
+  // 👇 Estado para Eliminación Segura
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [mantoToDelete, setMantoToDelete] = useState(null);
+
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalMaintenances, setTotalMaintenances] = useState(0);
   const [search, setSearch] = useState(""); 
   const [sortConfig, setSortConfig] = useState({ key: 'fecha_programada', direction: 'desc' });
 
-  // 👈 CONTEXTO HOTEL
   const { user, selectedHotelId } = useContext(AuthContext);
-  
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
-  const showHotelColumn = isGlobalUser && !selectedHotelId; // Solo mostrar si no hay hotel fijo
+  const showHotelColumn = isGlobalUser && !selectedHotelId;
 
   const { refreshAlerts } = useContext(AlertContext);
   const navigate = useNavigate();
@@ -51,7 +56,6 @@ const Maintenances = () => {
     setError("");
     try {
       const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
-      // El backend ya filtra por 'x-hotel-id' automáticamente
       const res = await api.get(`/maintenances/get?page=${page + 1}&limit=${rowsPerPage}&status=${activeTab}&search=${search}${sortParam}`);
       setMaintenances(res.data.data);
       setTotalMaintenances(res.data.totalCount);
@@ -61,20 +65,37 @@ const Maintenances = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, activeTab, search, sortConfig, selectedHotelId]); // Recargar si cambia hotel
+  }, [page, rowsPerPage, activeTab, search, sortConfig, selectedHotelId]);
 
   useEffect(() => { fetchMaintenances(); }, [fetchMaintenances]);
 
   const handleSearchChange = (e) => { setSearch(e.target.value); setPage(0); };
   const handleRequestSort = (key) => { setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' }); };
-  const handleDeleteMaintenance = async (id) => { if(window.confirm("¿Borrar?")){ try { await api.delete(`/maintenances/delete/${id}`); setMessage("Borrado."); fetchMaintenances(); } catch(e){ setError("Error."); } } };
+  
+  // 👇 Lógica de eliminación actualizada
+  const handleOpenDelete = (manto) => {
+      setMantoToDelete(manto);
+      setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+      if(!mantoToDelete) return;
+      try { 
+          await api.delete(`/maintenances/delete/${mantoToDelete.id}`); 
+          setMessage("Mantenimiento eliminado correctamente."); 
+          fetchMaintenances(); 
+          refreshAlerts();
+      } catch(e){ 
+          setError("Error al eliminar."); 
+      } finally {
+          setDeleteDialogOpen(false);
+          setMantoToDelete(null);
+      }
+  };
+
   const handleEditMaintenance = (id) => navigate(`/maintenances/edit/${id}`);
   const handleExport = async (id) => { 
-      // Lógica de exportación individual (si aplica)
-      try {
-          // Trigger browser download via direct URL (or fetch blob)
-          window.open(`${api.defaults.baseURL}/maintenances/export/individual/${id}`, '_blank');
-      } catch(e) { console.error(e); }
+      try { window.open(`${api.defaults.baseURL}/maintenances/export/individual/${id}`, '_blank'); } catch(e) { console.error(e); }
   };
   
   const handleOpenModal = () => setOpenModal(true);
@@ -86,8 +107,6 @@ const Maintenances = () => {
   const formatDate = (date) => date ? new Date(date).toLocaleDateString() : "N/A";
   const getTypeChipColor = (type) => type === 'Correctivo' ? 'error' : 'info';
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
-
-  // Helper hotel name
   const getHotelName = (id) => id === 1 ? "Cancún" : id === 2 ? "Sensira" : id === 3 ? "Corp" : "N/A";
 
   return (
@@ -115,10 +134,7 @@ const Maintenances = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                
-                {/* 👇 COLUMNA CONDICIONAL */}
                 {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
-
                 <TableCell sx={headerStyle}>Equipo</TableCell>
                 <TableCell sx={headerStyle}>Tipo</TableCell>
                 <TableCell sx={headerStyle}>Descripción</TableCell>
@@ -130,24 +146,36 @@ const Maintenances = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={showHotelColumn ? 8 : 7} align="center"><CircularProgress /></TableCell></TableRow>
+                // 👇 SKELETONS
+                Array.from(new Array(5)).map((_, i) => (
+                    <TableRow key={i}>
+                        {showHotelColumn && <TableCell><Skeleton variant="text"/></TableCell>}
+                        <TableCell><Skeleton variant="text" width={120}/></TableCell>
+                        <TableCell><Skeleton variant="rectangular" width={60} height={24} sx={{ borderRadius: 1 }}/></TableCell>
+                        <TableCell><Skeleton variant="text" width="80%"/></TableCell>
+                        <TableCell><Skeleton variant="text" width={100}/></TableCell>
+                        <TableCell><Skeleton variant="rectangular" width={60} height={24}/></TableCell>
+                        <TableCell><Skeleton variant="text" width={80}/></TableCell>
+                        <TableCell><Skeleton variant="circular" width={30} height={30}/></TableCell>
+                    </TableRow>
+                ))
+              ) : maintenances.length === 0 ? (
+                // 👇 EMPTY STATE
+                <TableRow><TableCell colSpan={showHotelColumn ? 8 : 7}>
+                    <EmptyState title="No hay mantenimientos" description="No se encontraron registros en esta sección."/>
+                </TableCell></TableRow>
               ) : (
                 maintenances.map((m) => (
-                  <TableRow key={m.id}>
-                    
-                    {/* 👇 CELDA CONDICIONAL */}
+                  <TableRow key={m.id} hover>
                     {showHotelColumn && (
-                        <TableCell>
-                            <Chip label={getHotelName(m.hotelId)} size="small" variant="outlined" />
-                        </TableCell>
+                        <TableCell><Chip label={getHotelName(m.hotelId)} size="small" variant="outlined" /></TableCell>
                     )}
-
                     <TableCell>
                       <Typography variant="body2" fontWeight="bold">{m.device?.nombre_equipo || 'N/A'}</Typography>
                       <Typography variant="caption" color="textSecondary">{m.device?.etiqueta}</Typography>
                     </TableCell>
                     <TableCell><Chip label={m.tipo_mantenimiento} size="small" color={getTypeChipColor(m.tipo_mantenimiento)} /></TableCell>
-                    <TableCell>{m.descripcion}</TableCell>
+                    <TableCell sx={{ maxWidth: 300 }}><Typography noWrap variant="body2">{m.descripcion}</Typography></TableCell>
                     <TableCell>{m.device?.usuario?.nombre || 'N/A'}</TableCell>
                     <TableCell><Chip label={m.estado} size="small" /></TableCell>
                     <TableCell>{formatDate(activeTab === 'pendiente' ? m.fecha_programada : m.fecha_realizacion)}</TableCell>
@@ -155,7 +183,7 @@ const Maintenances = () => {
                       {activeTab === 'historial' && <IconButton color="secondary" onClick={() => handleExport(m.id)}><DownloadIcon /></IconButton>}
                       <IconButton color="primary" onClick={() => handleEditMaintenance(m.id)}><EditIcon /></IconButton>
                       {(user?.rol === ROLES.ROOT || user?.rol === ROLES.HOTEL_ADMIN) && m.estado === 'pendiente' && (
-                        <IconButton color="error" onClick={() => handleDeleteMaintenance(m.id)}><DeleteIcon /></IconButton>
+                        <IconButton color="error" onClick={() => handleOpenDelete(m)}><DeleteIcon /></IconButton>
                       )}
                     </TableCell>
                   </TableRow>
@@ -182,6 +210,15 @@ const Maintenances = () => {
           </Box>
         </Fade>
       </Modal>
+
+      {/* 👇 DIÁLOGO DE CONFIRMACIÓN */}
+      <ConfirmDialog 
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar Mantenimiento?"
+        content="Estás a punto de eliminar este registro de mantenimiento. Esta acción no se puede deshacer."
+      />
     </Box>
   );
 };

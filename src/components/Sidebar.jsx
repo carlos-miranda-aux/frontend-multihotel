@@ -13,7 +13,7 @@ import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
-import LogoImg from "../assets/logo_s.png"; 
+import LogoImg from "../assets/simetv2.png"; 
 
 const drawerWidth = 280; 
 
@@ -40,7 +40,7 @@ const Sidebar = () => {
       items: [
         { text: "Inventario", icon: <ComputerIcon />, path: "/inventory", show: true },
         { text: "Mantenimientos", icon: <BuildIcon />, path: "/maintenances", show: true },
-        { text: "Staff", icon: <PeopleIcon />, path: "/users", show: true },
+        { text: "Usuarios", icon: <PeopleIcon />, path: "/users", show: true },
         { text: "Bajas", icon: <DeleteSweepIcon />, path: "/disposals", show: true },
       ]
     },
@@ -73,7 +73,7 @@ const Sidebar = () => {
       }}
     >
       <Box sx={{ p: 2.5, display: "flex", justifyContent: "center", alignItems: "center" }}>
-        <Box component="img" src={LogoImg} alt="Logo" sx={{ height: 45, objectFit: 'contain' }} />
+        <Box component="img" src={LogoImg} alt="Logo" sx={{ height: 90, objectFit: 'contain' }} />
       </Box>
 
       <Box sx={{ flexGrow: 1, overflowY: "auto", px: 2 }}>

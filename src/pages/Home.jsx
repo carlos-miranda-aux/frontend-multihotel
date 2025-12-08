@@ -237,9 +237,9 @@ const Home = () => {
             ))
         ) : (
             <>
-                <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Activos" value={stats?.kpis?.totalActiveDevices || 0} icon={<ComputerIcon />} color="primary" subtitle="En inventario" onClick={() => navigate('/inventory')} /></Grid>
-                <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Staff" value={stats?.kpis?.totalStaff || 0} icon={<PeopleIcon />} color="info" subtitle="Usuarios totales" onClick={() => navigate('/users')} /></Grid>
-                <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Protegidos" value={stats?.kpis?.devicesWithPanda || 0} icon={<SecurityIcon />} color="success" subtitle="Antivirus activo" onClick={() => navigate('/inventory?filter=no-panda')} /></Grid>
+                <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Equipos" value={stats?.kpis?.totalActiveDevices || 0} icon={<ComputerIcon />} color="primary" subtitle="En inventario" onClick={() => navigate('/inventory')} /></Grid>
+                <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Usuarios" value={stats?.kpis?.totalStaff || 0} icon={<PeopleIcon />} color="info" subtitle="Totales" onClick={() => navigate('/users')} /></Grid>
+                <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Protegidos" value={stats?.kpis?.devicesWithPanda || 0} icon={<SecurityIcon />} color="success" subtitle="Equipos sin Panda" onClick={() => navigate('/inventory?filter=no-panda')} /></Grid>
                 <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Vencidas" value={stats?.warrantyStats?.expired || 0} icon={<GppBadIcon />} color="error" subtitle="Garantías expiradas" onClick={() => navigate('/inventory?filter=expired-warranty')} /></Grid>
                 <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Bajas Mes" value={stats?.kpis?.monthlyDisposals || 0} icon={<DeleteIcon />} color="warning" subtitle="Equipos retirados" onClick={() => navigate('/disposals')} /></Grid>
             </>
@@ -251,7 +251,7 @@ const Home = () => {
         <Grid item xs={12} md={8}>
             <Paper sx={{ height: 'auto', borderRadius: 4, overflow: 'hidden', boxShadow: theme.shadows[3], display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ p: 3, pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box><Typography variant="h6" fontWeight={800}>Estado de Garantías</Typography><Typography variant="caption" color="text.secondary" fontWeight={500}>Resumen de pólizas de equipos</Typography></Box>
+                    <Box><Typography variant="h5" fontWeight={800}>Estado de Garantías</Typography><Typography variant="caption" color="text.secondary" fontWeight={500}>Resumen de pólizas de equipos</Typography></Box>
                     <PieChartIcon color="action" />
                 </Box>
                 <Divider sx={{ mx: 3, opacity: 0.6 }} />

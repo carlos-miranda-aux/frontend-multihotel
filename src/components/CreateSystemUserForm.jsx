@@ -10,7 +10,6 @@ import { ROLES } from "../config/constants";
 import HotelSelect from "./common/HotelSelect"; 
 
 const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
-  // 👇 1. OBTENER CONTEXTO
   const { user, selectedHotelId: contextHotelId } = useContext(AuthContext);
   const isRoot = user?.rol === ROLES.ROOT;
   const isContextActive = !!contextHotelId;
@@ -21,13 +20,20 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     email: "",
     password: "",
     rol: "",
-    // 👇 2. PRE-LLENAR SI HAY CONTEXTO
     hotelIds: isContextActive ? [Number(contextHotelId)] : [] 
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+
+    // 🔥 VALIDACIÓN EN TIEMPO REAL
+    if (name === "username") {
+        // Convertir a minúsculas y eliminar CUALQUIER espacio automáticamente
+        const cleanValue = value.toLowerCase().replace(/\s/g, "");
+        setFormData({ ...formData, [name]: cleanValue });
+    } else {
+        setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleCreateUser = async (e) => {
@@ -43,7 +49,6 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
 
     const payload = { ...formData };
     
-    // El backend espera 'hotelIds' como array de números
     if (!payload.hotelIds || payload.hotelIds.length === 0) {
         delete payload.hotelIds;
     }
@@ -64,7 +69,6 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
         Crear nuevo usuario del sistema
       </Typography>
 
-      {/* Mensaje visual si hay contexto fijo */}
       {isContextActive && (
           <Alert severity="info" sx={{ mb: 2 }}>
               Creando usuario para el <b>Hotel Activo</b>. (Para asignar múltiples hoteles, usa la Vista Global).
@@ -73,7 +77,6 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
 
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         
-        {/* Selector de Hotel Múltiple (Solo para ROOT) */}
         {isRoot && (
             <HotelSelect 
                 value={formData.hotelIds} 
@@ -81,13 +84,24 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
                 name="hotelIds"
                 multiple={true}
                 required={![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)}
-                disabled={isContextActive} // 🔒 3. BLOQUEAR SI HAY CONTEXTO
+                disabled={isContextActive}
                 helperText={isContextActive ? "Ubicación fijada por el contexto actual" : "Puedes seleccionar varios hoteles"}
             />
         )}
 
         <TextField label="Nombre completo" name="nombre" value={formData.nombre} onChange={handleChange} fullWidth required />
-        <TextField label="Nombre de usuario" name="username" value={formData.username} onChange={handleChange} fullWidth required />
+        
+        {/* Este campo ahora no permite espacios */}
+        <TextField 
+            label="Nombre de usuario" 
+            name="username" 
+            value={formData.username} 
+            onChange={handleChange} 
+            fullWidth 
+            required 
+            helperText="Sin espacios, minúsculas automáticas."
+        />
+        
         <TextField label="Correo electrónico" name="email" type="email" value={formData.email} onChange={handleChange} fullWidth required />
         <TextField label="Contraseña" name="password" type="password" value={formData.password} onChange={handleChange} fullWidth required />
         

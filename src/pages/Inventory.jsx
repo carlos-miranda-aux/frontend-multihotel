@@ -2,8 +2,8 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Button,
-  Typography, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress, TableSortLabel,
-  TextField, Chip, Tooltip
+  Typography, Alert, Modal, Fade, Backdrop, TablePagination, TableSortLabel,
+  TextField, Chip, Skeleton, Tooltip // 👈 Importamos Skeleton
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete"; 
@@ -15,6 +15,10 @@ import ImportButton from "../components/ImportButton";
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
 import { ROLES } from "../config/constants"; 
+
+// 👇 Importamos los nuevos componentes UX
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import EmptyState from "../components/common/EmptyState";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -28,6 +32,10 @@ const Inventory = () => {
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Estados para el Diálogo de Confirmación (UX Punto 5)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deviceToDelete, setDeviceToDelete] = useState(null);
+
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalDevices, setTotalDevices] = useState(0);
@@ -39,17 +47,10 @@ const Inventory = () => {
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  
-  // 👇 Obtenemos el contexto del hotel seleccionado
   const { user, selectedHotelId } = useContext(AuthContext);
   
-  // Lógica de Vistas y Permisos
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
-  
-  // 🔒 SOLO Admin Local (1 hotel) puede importar (Regla de negocio actual)
   const canImport = user?.rol === ROLES.HOTEL_ADMIN && user?.hotels?.length === 1;
-
-  // 👁️ Lógica Visual: Mostrar columna Hotel solo si es usuario global Y NO ha seleccionado un hotel específico
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
   const fetchDevices = useCallback(async (filterToUse, pageToUse, sortKey, sortDir) => {
@@ -58,8 +59,6 @@ const Inventory = () => {
     try {
       const filterParam = filterToUse ? `&filter=${filterToUse}` : ""; 
       const sortParam = `&sortBy=${sortKey}&order=${sortDir}`;
-      
-      // Nota: El backend ya filtra por 'x-hotel-id' header si existe selectedHotelId
       const res = await api.get(`/devices/get?page=${pageToUse + 1}&limit=${rowsPerPage}&search=${search}${filterParam}${sortParam}`);
       setDevices(res.data.data);
       setTotalDevices(res.data.totalCount);
@@ -83,7 +82,7 @@ const Inventory = () => {
       pageToUse = 0;
     }
     fetchDevices(filterToUse, pageToUse, sortConfig.key, sortConfig.direction);
-  }, [searchParams, page, rowsPerPage, search, sortConfig, fetchDevices, selectedHotelId]); // Agregamos selectedHotelId para recargar al cambiar
+  }, [searchParams, page, rowsPerPage, search, sortConfig, fetchDevices, selectedHotelId]);
   
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -97,20 +96,30 @@ const Inventory = () => {
     setSortConfig({ key, direction: isAsc ? 'desc' : 'asc' });
   };
 
-  const handleDelete = async (d_id) => {
+  // --- Lógica de Eliminación (Punto 5) ---
+  const handleOpenDeleteDialog = (device) => {
+      setDeviceToDelete(device);
+      setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deviceToDelete) return;
+    
     setMessage("");
     setError("");
-    if (window.confirm("¡ADVERTENCIA! ¿Estás seguro de que quieres ELIMINAR este equipo?")) {
-      try {
-        await api.delete(`/devices/delete/${d_id}`); 
-        setMessage("Equipo eliminado permanentemente.");
-        fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); 
-        refreshAlerts(); 
-      } catch (err) {
-        setError(err.response?.data?.error || "Error al eliminar el equipo.");
-      }
+    try {
+      await api.delete(`/devices/delete/${deviceToDelete.id}`); 
+      setMessage("Equipo eliminado correctamente.");
+      fetchDevices(activeFilter, page, sortConfig.key, sortConfig.direction); 
+      refreshAlerts(); 
+    } catch (err) {
+      setError(err.response?.data?.error || "Error al eliminar el equipo.");
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeviceToDelete(null);
     }
   };
+  // ----------------------------------------
 
   const handleEdit = (id) => navigate(`/inventory/edit/${id}`);
   const handleOpenModal = () => setOpenModal(true);
@@ -137,8 +146,6 @@ const Inventory = () => {
   }
 
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
-
-  // Helper para nombre de hotel (simple)
   const getHotelLabel = (id) => {
       if (id === 1) return "Cancún";
       if (id === 2) return "Sensira";
@@ -164,7 +171,6 @@ const Inventory = () => {
             </Button>
           )}
           
-          {/* Botón Importar: SOLO visible para Admin Local (o lógica futura para Root con contexto) */}
           {canImport && (
               <ImportButton 
                 endpoint="/devices/import" 
@@ -193,15 +199,12 @@ const Inventory = () => {
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Paper>
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}> 
-                
-                {/* 👇 COLUMNA CONDICIONAL */}
                 {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
-
                 <TableCell sx={headerStyle}>
                   <TableSortLabel active={sortConfig.key === 'nombre_equipo'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre_equipo')}>
                     Nombre Equipo
@@ -228,42 +231,65 @@ const Inventory = () => {
                 <TableCell sx={headerStyle}>Acciones</TableCell>
               </TableRow>
             </TableHead>
+            
             <TableBody>
+              {/* 👇 UX PUNTO 4: SKELETONS DE CARGA */}
               {loading ? (
-                <TableRow><TableCell colSpan={showHotelColumn ? 9 : 8} align="center"><CircularProgress /></TableCell></TableRow>
+                Array.from(new Array(rowsPerPage)).map((_, index) => (
+                  <TableRow key={index}>
+                    {showHotelColumn && <TableCell><Skeleton variant="text" /></TableCell>}
+                    <TableCell><Skeleton variant="text" width="80%" /></TableCell>
+                    <TableCell><Skeleton variant="text" /></TableCell>
+                    <TableCell><Skeleton variant="text" /></TableCell>
+                    <TableCell><Skeleton variant="text" width={100} /></TableCell>
+                    <TableCell><Skeleton variant="text" /></TableCell>
+                    <TableCell><Skeleton variant="rectangular" width={60} height={24} sx={{ borderRadius: 1 }} /></TableCell>
+                    <TableCell><Skeleton variant="text" /></TableCell>
+                    <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
+                  </TableRow>
+                ))
+              ) : devices.length === 0 ? (
+                // 👇 UX PUNTO 6: EMPTY STATE
+                <TableRow>
+                    <TableCell colSpan={showHotelColumn ? 9 : 8}>
+                        <EmptyState 
+                            title="No hay equipos registrados" 
+                            description={search ? "No se encontraron resultados para tu búsqueda." : "Comienza agregando un equipo nuevo o importando una lista."} 
+                        />
+                    </TableCell>
+                </TableRow>
               ) : (
                 devices.map((device) => (
-                  <TableRow key={device.id}>
-                    
-                    {/* 👇 CELDA CONDICIONAL */}
+                  <TableRow key={device.id} hover>
                     {showHotelColumn && (
                         <TableCell>
                             <Chip label={getHotelLabel(device.hotelId)} size="small" variant="outlined" />
                         </TableCell>
                     )}
-
-                    <TableCell>{device.nombre_equipo}</TableCell>
+                    <TableCell>
+                        <Typography variant="body2" fontWeight="bold">{device.nombre_equipo}</Typography>
+                        <Typography variant="caption" color="text.secondary">{device.etiqueta}</Typography>
+                    </TableCell>
                     <TableCell>{device.descripcion || 'N/A'}</TableCell>
                     <TableCell>{device.usuario?.nombre || 'N/A'}</TableCell>
                     <TableCell>{device.ip_equipo || 'N/A'}</TableCell>
                     <TableCell>{device.numero_serie}</TableCell>
-                    <TableCell>{device.tipo?.nombre || 'N/A'}</TableCell>
+                    <TableCell><Chip label={device.tipo?.nombre || 'N/A'} size="small" /></TableCell>
                     <TableCell>
                         {device.sistema_operativo ? (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="body2">{device.sistema_operativo.nombre}</Typography>
-                            </Box>
+                            <Typography variant="body2">{device.sistema_operativo.nombre}</Typography>
                         ) : (
                             <Typography variant="caption" color="text.disabled">Sin SO</Typography>
                         )}
                     </TableCell>
                     <TableCell>
-                      <IconButton color="primary" onClick={() => handleEdit(device.id)}>
-                        <EditIcon />
+                      <IconButton color="primary" onClick={() => handleEdit(device.id)} size="small">
+                        <EditIcon fontSize="small" />
                       </IconButton>
                       {(user?.rol === "HOTEL_ADMIN" || isGlobalUser) && (
-                        <IconButton color="error" onClick={() => handleDelete(device.id)}>
-                          <DeleteIcon />
+                        // 👇 Abre el diálogo en lugar de borrar directo
+                        <IconButton color="error" onClick={() => handleOpenDeleteDialog(device)} size="small">
+                          <DeleteIcon fontSize="small" />
                         </IconButton>
                       )}
                     </TableCell>
@@ -281,10 +307,11 @@ const Inventory = () => {
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Filas por página:"
+          labelRowsPerPage="Filas:"
         />
       </Paper>
 
+      {/* Modal Crear */}
       <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openModal}>
           <Box sx={modalStyle}>
@@ -297,6 +324,15 @@ const Inventory = () => {
           </Box>
         </Fade>
       </Modal>
+
+      {/* 👇 UX PUNTO 5: DIÁLOGO DE CONFIRMACIÓN */}
+      <ConfirmDialog 
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar Equipo?"
+        content={`Estás a punto de eliminar "${deviceToDelete?.nombre_equipo}". Esta acción moverá el equipo a la papelera (Soft Delete).`}
+      />
     </Box>
   );
 };

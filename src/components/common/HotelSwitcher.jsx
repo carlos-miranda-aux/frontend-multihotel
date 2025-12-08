@@ -1,16 +1,14 @@
 // src/components/common/HotelSwitcher.jsx
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useContext } from 'react';
 import { Select, MenuItem, FormControl, Box, Typography, ListItemIcon } from '@mui/material';
 import DomainIcon from '@mui/icons-material/Domain';
 import LanguageIcon from '@mui/icons-material/Language';
-import api from '../../api/axios';
 import { AuthContext } from '../../context/AuthContext';
 import { ROLES } from '../../config/constants';
 
 const HotelSwitcher = () => {
-  const { user, selectedHotelId, changeHotelContext } = useContext(AuthContext);
-  const [hotels, setHotels] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // 👇 Ahora consumimos availableHotels del contexto
+  const { user, selectedHotelId, changeHotelContext, availableHotels } = useContext(AuthContext);
 
   // Determinar si debemos mostrar el selector
   // Se muestra si es ROOT, CORP_VIEWER, o si tiene asignado más de 1 hotel.
@@ -19,22 +17,6 @@ const HotelSwitcher = () => {
       user.rol === ROLES.CORP_VIEWER || 
       (user.hotels && user.hotels.length > 1)
   );
-
-  useEffect(() => {
-    if (shouldShow) {
-        const fetchHotels = async () => {
-            try {
-                const res = await api.get('/hotels/list');
-                setHotels(res.data || []);
-            } catch (err) {
-                console.error("Error cargando lista de hoteles:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchHotels();
-    }
-  }, [shouldShow]);
 
   if (!shouldShow) return null;
 
@@ -70,7 +52,8 @@ const HotelSwitcher = () => {
                     </Box>
                 );
             }
-            const hotel = hotels.find(h => String(h.id) === String(selected));
+            // Buscamos en la lista global del contexto
+            const hotel = availableHotels.find(h => String(h.id) === String(selected));
             return (
                 <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.primary' }}>
                     <DomainIcon fontSize="small" sx={{ mr: 1, color: 'action.active' }} />
@@ -86,7 +69,7 @@ const HotelSwitcher = () => {
             <Typography variant="body2" fontWeight="bold" color="primary">Arriva</Typography>
         </MenuItem>
         
-        {hotels.map((hotel) => (
+        {availableHotels.map((hotel) => (
             <MenuItem key={hotel.id} value={String(hotel.id)}>
                 <ListItemIcon><DomainIcon fontSize="small" /></ListItemIcon>
                 <Typography variant="body2">{hotel.nombre}</Typography>

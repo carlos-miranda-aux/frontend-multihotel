@@ -1,0 +1,65 @@
+import React from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+  Typography,
+  Box
+} from '@mui/material';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+
+const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delete" }) => {
+  const isDelete = type === "delete";
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        sx: { borderRadius: 3, padding: 1, maxWidth: 450 }
+      }}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 2 }}>
+        {isDelete && (
+          <Box sx={{ bgcolor: 'error.50', p: 2, borderRadius: '50%', mb: 1, color: 'error.main' }}>
+            <WarningAmberRoundedIcon fontSize="large" />
+          </Box>
+        )}
+        <DialogTitle sx={{ fontWeight: 'bold', textAlign: 'center', pt: 1 }}>
+          {title}
+        </DialogTitle>
+      </Box>
+
+      <DialogContent>
+        <DialogContentText sx={{ textAlign: 'center', color: 'text.secondary' }}>
+          {content}
+        </DialogContentText>
+      </DialogContent>
+
+      <DialogActions sx={{ justifyContent: 'center', pb: 2, gap: 2 }}>
+        <Button 
+            onClick={onClose} 
+            variant="outlined" 
+            color="inherit" 
+            sx={{ borderRadius: 2, px: 3 }}
+        >
+          Cancelar
+        </Button>
+        <Button
+          onClick={onConfirm}
+          variant="contained"
+          color={isDelete ? "error" : "primary"}
+          disableElevation
+          sx={{ borderRadius: 2, px: 3 }}
+        >
+          {isDelete ? "Sí, Eliminar" : "Confirmar"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default ConfirmDialog;

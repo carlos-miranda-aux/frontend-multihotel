@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
-import { Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Modal, Fade, Backdrop, TablePagination, CircularProgress, Chip, TableSortLabel } from "@mui/material";
+import { Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Modal, Fade, Backdrop, TablePagination, TableSortLabel, Chip, Skeleton, Alert } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import api from "../../api/axios";
 import CreateDepartmentForm from "../CreateDepartmentForm";
 import { AuthContext } from "../../context/AuthContext";
 import { ROLES } from "../../config/constants";
+
+// Nuevos componentes UX
+import ConfirmDialog from "../common/ConfirmDialog";
+import EmptyState from "../common/EmptyState";
 
 const modalStyle = { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2 };
 
@@ -17,6 +21,11 @@ const DepartmentsTable = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
+  const [error, setError] = useState(""); // Estado de error
+
+  // Estados Delete
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const { user, selectedHotelId } = useContext(AuthContext);
   const showHotelColumn = (user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER) && !selectedHotelId;
@@ -33,9 +42,23 @@ const DepartmentsTable = () => {
 
   useEffect(() => { fetchDepts(); }, [fetchDepts]);
 
-  const handleDelete = async (id) => {
-    if (!confirm("¿Eliminar departamento?")) return;
-    try { await api.delete(`/departments/delete/${id}`); fetchDepts(); } catch (e) { alert("Error al eliminar"); }
+  const handleOpenDelete = (item) => {
+      setItemToDelete(item);
+      setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    try { 
+        await api.delete(`/departments/delete/${itemToDelete.id}`); 
+        fetchDepts(); 
+    } catch (e) { 
+        setError("Error al eliminar. Verifique dependencias."); 
+        setTimeout(() => setError(""), 4000);
+    } finally {
+        setDeleteDialogOpen(false);
+        setItemToDelete(null);
+    }
   };
 
   const handleSort = (key) => setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' });
@@ -46,38 +69,35 @@ const DepartmentsTable = () => {
         <Typography variant="h5" color="primary" fontWeight="bold">Departamentos</Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditingItem(null); setOpenModal(true); }}>Nuevo</Button>
       </Box>
+      
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
       <Paper>
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: 'background.default' }}>
-                {showHotelColumn && (
-                    <TableCell>
-                        <TableSortLabel active={sortConfig.key === 'hotel.nombre'} direction={sortConfig.direction} onClick={() => handleSort('hotel.nombre')}>Hotel</TableSortLabel>
-                    </TableCell>
-                )}
-                <TableCell>
-                    <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleSort('nombre')}>Nombre</TableSortLabel>
-                </TableCell>
+                {showHotelColumn && <TableCell><TableSortLabel active={sortConfig.key === 'hotel.nombre'} direction={sortConfig.direction} onClick={() => handleSort('hotel.nombre')}>Hotel</TableSortLabel></TableCell>}
+                <TableCell><TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleSort('nombre')}>Nombre</TableSortLabel></TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={showHotelColumn ? 3 : 2} align="center"><CircularProgress /></TableCell></TableRow> : depts.map((d) => (
-                <TableRow key={d.id}>
-                  {showHotelColumn && (
-                    <TableCell>
-                        <Chip 
-                            label={d.hotel?.nombre || d.hotel?.codigo || `ID:${d.hotelId}`} 
-                            size="small" 
-                            variant="outlined" 
-                        />
-                    </TableCell>
-                  )}
+              {loading ? Array.from(new Array(5)).map((_, i) => (
+                <TableRow key={i}>
+                    {showHotelColumn && <TableCell><Skeleton variant="text" /></TableCell>}
+                    <TableCell><Skeleton variant="text" width="60%" /></TableCell>
+                    <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
+                </TableRow>
+              )) : depts.length === 0 ? (
+                <TableRow><TableCell colSpan={showHotelColumn ? 3 : 2}><EmptyState title="Sin departamentos" description="No hay registros." /></TableCell></TableRow>
+              ) : depts.map((d) => (
+                <TableRow key={d.id} hover>
+                  {showHotelColumn && <TableCell><Chip label={d.hotel?.nombre || `ID:${d.hotelId}`} size="small" variant="outlined" /></TableCell>}
                   <TableCell>{d.nombre}</TableCell>
                   <TableCell>
                     <IconButton color="primary" onClick={() => { setEditingItem(d); setOpenModal(true); }}><EditIcon /></IconButton>
-                    <IconButton color="error" onClick={() => handleDelete(d.id)}><DeleteIcon /></IconButton>
+                    <IconButton color="error" onClick={() => handleOpenDelete(d)}><DeleteIcon /></IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -86,9 +106,18 @@ const DepartmentsTable = () => {
         </TableContainer>
         <TablePagination component="div" count={totalCount} page={page} onPageChange={(e, p) => setPage(p)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }} />
       </Paper>
+      
       <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openModal}><Box sx={modalStyle}><CreateDepartmentForm onClose={() => setOpenModal(false)} onSuccess={fetchDepts} initialData={editingItem} /></Box></Fade>
       </Modal>
+
+      <ConfirmDialog 
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar Departamento?"
+        content={`¿Seguro que deseas eliminar "${itemToDelete?.nombre}"?`}
+      />
     </Box>
   );
 };

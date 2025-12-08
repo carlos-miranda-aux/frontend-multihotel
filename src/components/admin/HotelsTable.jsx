@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  IconButton, Alert, Modal, Fade, Backdrop, TextField, FormControlLabel, Switch
+  IconButton, Alert, Modal, Fade, Backdrop, TextField, FormControlLabel, Switch, Skeleton
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import api from "../../api/axios";
+import { AuthContext } from "../../context/AuthContext";
+
+// Nuevos componentes UX
+import ConfirmDialog from "../common/ConfirmDialog";
+import EmptyState from "../common/EmptyState";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -15,18 +20,28 @@ const modalStyle = {
 
 const HotelsTable = () => {
   const [hotels, setHotels] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({ nombre: "", codigo: "", direccion: "", activo: true });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  // Delete states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+
+  const { refreshHotelList } = useContext(AuthContext);
+
   const fetchHotels = async () => {
+    setLoading(true);
     try {
       const res = await api.get("/hotels/admin/list");
       setHotels(res.data);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,12 +56,22 @@ const HotelsTable = () => {
 
   const handleClose = () => setOpenModal(false);
 
-  const handleDelete = async (id) => {
-    if(!window.confirm("¿Seguro que quieres dar de baja este hotel?")) return;
+  const handleOpenDelete = (item) => {
+      setItemToDelete(item);
+      setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if(!itemToDelete) return;
     try {
-      await api.delete(`/hotels/delete/${id}`);
+      await api.delete(`/hotels/delete/${itemToDelete.id}`);
       fetchHotels();
+      refreshHotelList();
     } catch (err) { setError("Error al eliminar."); }
+    finally {
+        setDeleteDialogOpen(false);
+        setItemToDelete(null);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -60,6 +85,7 @@ const HotelsTable = () => {
         setMessage("Hotel creado.");
       }
       fetchHotels();
+      refreshHotelList();
       handleClose();
     } catch (err) {
       setError(err.response?.data?.error || "Error al guardar.");
@@ -88,15 +114,25 @@ const HotelsTable = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {hotels.map(h => (
-              <TableRow key={h.id}>
+            {loading ? Array.from(new Array(3)).map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton variant="text" /></TableCell>
+                    <TableCell><Skeleton variant="text" width={50} /></TableCell>
+                    <TableCell><Skeleton variant="text" /></TableCell>
+                    <TableCell><Skeleton variant="text" width={40} /></TableCell>
+                    <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
+                </TableRow>
+            )) : hotels.length === 0 ? (
+                <TableRow><TableCell colSpan={5}><EmptyState title="No hay hoteles" description="Registra la primera propiedad para comenzar." /></TableCell></TableRow>
+            ) : hotels.map(h => (
+              <TableRow key={h.id} hover>
                 <TableCell>{h.nombre}</TableCell>
                 <TableCell>{h.codigo}</TableCell>
                 <TableCell>{h.direccion}</TableCell>
                 <TableCell>{h.activo ? "Activo" : "Inactivo"}</TableCell>
                 <TableCell>
                   <IconButton color="primary" onClick={() => handleOpen(h)}><EditIcon /></IconButton>
-                  <IconButton color="error" onClick={() => handleDelete(h.id)}><DeleteIcon /></IconButton>
+                  <IconButton color="error" onClick={() => handleOpenDelete(h)}><DeleteIcon /></IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -120,6 +156,14 @@ const HotelsTable = () => {
           </Box>
         </Fade>
       </Modal>
+
+      <ConfirmDialog 
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar Hotel?"
+        content={`Estás a punto de dar de baja el hotel "${itemToDelete?.nombre}".`}
+      />
     </Box>
   );
 };

@@ -2,16 +2,17 @@
 import React, { useState, useEffect } from "react";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  IconButton, TextField, Button, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress,
-  TableSortLabel
+  IconButton, TextField, Button, Alert, Modal, Fade, Backdrop, TablePagination,
+  TableSortLabel, Skeleton
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from '@mui/icons-material/Add';
 import api from "../api/axios";
 
-// ❌ ELIMINADO: import "../components/styles/CrudTable.css";
-// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
+// 👇 Nuevos componentes
+import ConfirmDialog from "./common/ConfirmDialog";
+import EmptyState from "./common/EmptyState";
 
 const CrudTable = ({ title, apiUrl }) => {
   const [data, setData] = useState([]);
@@ -22,6 +23,10 @@ const CrudTable = ({ title, apiUrl }) => {
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Estado para Delete
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -59,9 +64,27 @@ const CrudTable = ({ title, apiUrl }) => {
   const handleEdit = async () => {
     try { await api.put(`${apiUrl}/put/${currentId}`, { nombre: itemName }); setMessage("Actualizado."); fetchData(); setItemName(""); setOpenModal(false); setIsEdit(false); } catch(e) { setError("Error."); }
   };
-  const handleDelete = async (id) => {
-    if(window.confirm("¿Eliminar?")) { try { await api.delete(`${apiUrl}/delete/${id}`); setMessage("Eliminado."); fetchData(); } catch(e) { setError("Error."); } }
+
+  // 👇 Lógica Delete Actualizada
+  const handleOpenDelete = (item) => {
+      setItemToDelete(item);
+      setDeleteDialogOpen(true);
   };
+
+  const confirmDelete = async () => {
+    if(!itemToDelete) return;
+    try { 
+        await api.delete(`${apiUrl}/delete/${itemToDelete.id}`); 
+        setMessage("Eliminado."); 
+        fetchData(); 
+    } catch(e) { 
+        setError("Error al eliminar."); 
+    } finally {
+        setDeleteDialogOpen(false);
+        setItemToDelete(null);
+    }
+  };
+
   const openEditModal = (item) => { setItemName(item.nombre); setCurrentId(item.id); setIsEdit(true); setOpenModal(true); };
   const handleOpenModal = () => { setIsEdit(false); setItemName(""); setOpenModal(true); };
   const handleCloseModal = () => { setOpenModal(false); };
@@ -74,21 +97,13 @@ const CrudTable = ({ title, apiUrl }) => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5" color="primary" fontWeight="bold">{title}</Typography>
-        
-        <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<AddIcon />} 
-            onClick={handleOpenModal}
-        >
-            Añadir
-        </Button>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpenModal}>Añadir</Button>
       </Box>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Paper>
+      <Paper variant="outlined">
         <TableContainer>
           <Table>
             <TableHead>
@@ -102,28 +117,34 @@ const CrudTable = ({ title, apiUrl }) => {
                     Nombre
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={headerStyle}>Acciones</TableCell>
+                <TableCell sx={headerStyle} align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                 <TableRow><TableCell colSpan={2} align="center"><CircularProgress /></TableCell></TableRow>
+                 // 👇 SKELETONS
+                 Array.from(new Array(5)).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton variant="text" width="60%" /></TableCell>
+                        <TableCell align="right"><Skeleton variant="circular" width={30} height={30} sx={{ display:'inline-block' }} /></TableCell>
+                    </TableRow>
+                 ))
+              ) : data.length === 0 ? (
+                 // 👇 EMPTY STATE
+                 <TableRow><TableCell colSpan={2}>
+                    <EmptyState title="Catálogo vacío" description="No hay elementos registrados aún."/>
+                 </TableCell></TableRow>
               ) : (
                 data.map((item) => ( 
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} hover>
                     <TableCell>{item.nombre}</TableCell>
-                    <TableCell>
-                      <IconButton color="primary" onClick={() => openEditModal(item)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton color="error" onClick={() => handleDelete(item.id)}>
-                        <DeleteIcon />
-                      </IconButton>
+                    <TableCell align="right">
+                      <IconButton color="primary" onClick={() => openEditModal(item)} size="small"><EditIcon /></IconButton>
+                      <IconButton color="error" onClick={() => handleOpenDelete(item)} size="small"><DeleteIcon /></IconButton>
                     </TableCell>
                   </TableRow>
                 ))
               )}
-               {!loading && data.length === 0 && <TableRow><TableCell colSpan={2} align="center">No hay datos.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </TableContainer>
@@ -142,6 +163,15 @@ const CrudTable = ({ title, apiUrl }) => {
           </Box>
         </Fade>
       </Modal>
+
+      {/* 👇 DIÁLOGO */}
+      <ConfirmDialog 
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar Registro?"
+        content={`¿Seguro que deseas eliminar "${itemToDelete?.nombre}"? Esta acción podría afectar a los equipos que usen este valor.`}
+      />
     </Box>
   );
 };

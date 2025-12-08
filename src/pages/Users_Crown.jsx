@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useContext } from "react"; 
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  IconButton, Button, Alert, Modal, Fade, Backdrop, TablePagination, CircularProgress,
-  TableSortLabel, TextField, Chip
+  IconButton, Button, Alert, Modal, Fade, Backdrop, TablePagination, 
+  TableSortLabel, TextField, Chip, Skeleton // 👈 Añadido Skeleton
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -13,6 +13,10 @@ import CreateCrownUserForm from "../components/CreateCrownUserForm";
 import ImportButton from "../components/ImportButton";
 import { AuthContext } from "../context/AuthContext"; 
 import { ROLES } from "../config/constants"; 
+
+// 👇 Nuevos componentes UX
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import EmptyState from "../components/common/EmptyState";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -27,10 +31,11 @@ const UsersCrownP = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   
-  // 👇 CONTEXTO
+  // 👇 Estado para confirmación
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+
   const { user, selectedHotelId } = useContext(AuthContext);
-  
-  // 👇 LOGICA CONDICIONAL
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
   const canImport = user?.rol === ROLES.HOTEL_ADMIN && user?.hotels?.length === 1;
@@ -56,13 +61,33 @@ const UsersCrownP = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, search, sortConfig, selectedHotelId]); // 🔄 Dependencia
+  }, [page, rowsPerPage, search, sortConfig, selectedHotelId]); 
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const handleSearchChange = (e) => { setSearch(e.target.value); setPage(0); };
   const handleRequestSort = (key) => { setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' }); };
-  const handleDelete = async (id) => { if (window.confirm("¿Estás seguro de que quieres eliminar este usuario?")) { try { await api.delete(`/users/delete/${id}`); setMessage("Usuario eliminado."); fetchUsers(); } catch (err) { setError(err.response?.data?.error || "Error al eliminar."); } } };
+  
+  // 👇 Lógica de eliminación
+  const handleOpenDelete = (u) => {
+      setUserToDelete(u);
+      setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+      if(!userToDelete) return;
+      try { 
+          await api.delete(`/users/delete/${userToDelete.id}`); 
+          setMessage("Usuario eliminado."); 
+          fetchUsers(); 
+      } catch (err) { 
+          setError(err.response?.data?.error || "Error al eliminar."); 
+      } finally {
+          setDeleteDialogOpen(false);
+          setUserToDelete(null);
+      }
+  };
+
   const handleEdit = (id) => navigate(`/users/edit/${id}`);
   const handleChangePage = (e, n) => setPage(n);
   const handleChangeRowsPerPage = (e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); };
@@ -97,10 +122,7 @@ const UsersCrownP = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: 'background.default' }}>
-                
-                {/* 👇 HEADER CONDICIONAL */}
                 {showHotelColumn && <TableCell sx={headerStyle}>Hotel</TableCell>}
-                
                 <TableCell sx={headerStyle}>
                   <TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre</TableSortLabel>
                 </TableCell>
@@ -111,24 +133,35 @@ const UsersCrownP = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={showHotelColumn ? 5 : 4} align="center"><CircularProgress /></TableCell></TableRow>
+                // 👇 SKELETONS
+                Array.from(new Array(5)).map((_, i) => (
+                    <TableRow key={i}>
+                        {showHotelColumn && <TableCell><Skeleton variant="text" /></TableCell>}
+                        <TableCell><Skeleton variant="text" width="60%" /></TableCell>
+                        <TableCell><Skeleton variant="text" /></TableCell>
+                        <TableCell><Skeleton variant="text" /></TableCell>
+                        <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
+                    </TableRow>
+                ))
+              ) : users.length === 0 ? (
+                // 👇 EMPTY STATE
+                <TableRow><TableCell colSpan={showHotelColumn ? 5 : 4}>
+                    <EmptyState title="Sin usuarios" description="No hay personal registrado que coincida con tu búsqueda."/>
+                </TableCell></TableRow>
               ) : (
                 users.map((u) => (
-                  <TableRow key={u.id}>
-                    
-                    {/* 👇 CELDA CONDICIONAL */}
+                  <TableRow key={u.id} hover>
                     {showHotelColumn && (
                         <TableCell>
                             <Chip label={u.hotelId === 1 ? "Cancún" : u.hotelId === 2 ? "Sensira" : "ID: "+u.hotelId} size="small" variant="outlined" />
                         </TableCell>
                     )}
-
-                    <TableCell>{u.nombre}</TableCell>
+                    <TableCell sx={{ fontWeight: '500' }}>{u.nombre}</TableCell>
                     <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>
                     <TableCell>
                       <IconButton color="primary" onClick={() => handleEdit(u.id)}><EditIcon /></IconButton>
-                      <IconButton color="error" onClick={() => handleDelete(u.id)}><DeleteIcon /></IconButton>
+                      <IconButton color="error" onClick={() => handleOpenDelete(u)}><DeleteIcon /></IconButton>
                     </TableCell>
                   </TableRow>
                 ))
@@ -150,6 +183,15 @@ const UsersCrownP = () => {
           </Box>
         </Fade>
       </Modal>
+
+      {/* 👇 DIÁLOGO */}
+      <ConfirmDialog 
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="¿Eliminar Usuario?"
+        content={`Estás eliminando a "${userToDelete?.nombre}". Esta acción afectará a los equipos asignados a esta persona.`}
+      />
     </Box>
   );
 };

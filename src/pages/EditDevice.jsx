@@ -16,11 +16,12 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DomainIcon from '@mui/icons-material/Domain';
+import EventBusyIcon from '@mui/icons-material/EventBusy'; // Nuevo icono para baja
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
-import { ROLES, DEVICE_STATUS } from "../config/constants"; // <--- IMPORTACIÓN ACTUALIZADA
+import { ROLES, DEVICE_STATUS } from "../config/constants"; // <--- Importante: DEVICE_STATUS
 import PageHeader from "../components/common/PageHeader"; 
 import SectionCard from "../components/common/SectionCard"; 
 import StatusBadge from "../components/common/StatusBadge"; 
@@ -45,7 +46,7 @@ const EditDevice = () => {
       office_tipo_licencia: "", office_serial: "", office_key: "", es_panda: false,
       garantia_numero_producto: "", garantia_numero_reporte: "", garantia_notes: "",
       garantia_inicio: "", garantia_fin: "", areaId: "", fecha_proxima_revision: "",
-      motivo_baja: "", observaciones_baja: "", isWarrantyApplied: false,
+      motivo_baja: "", observaciones_baja: "", fecha_baja: "", isWarrantyApplied: false, // <--- Agregado fecha_baja
       hotelId: ""
     }
   });
@@ -64,7 +65,6 @@ const EditDevice = () => {
   const [areas, setAreas] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [bajaStatusId, setBajaStatusId] = useState(null);
   const [isPermanentlyBaja, setIsPermanentlyBaja] = useState(false);
 
   useEffect(() => {
@@ -85,11 +85,13 @@ const EditDevice = () => {
         const formatDate = (d) => d ? new Date(d).toISOString().substring(0, 10) : "";
         const statusList = Array.isArray(deviceStatusesRes.data) ? deviceStatusesRes.data : [];
         
-        // Buscar ID del estado de baja (comprobando "baja" o "inactivo")
-        const bajaStatus = statusList.find(s => s.nombre.toLowerCase() === DEVICE_STATUS.DISPOSED.toLowerCase());
+        // Detectar si ya venía como baja permanente desde la BD
+        const bajaStatusName = DEVICE_STATUS.DISPOSED.toLowerCase();
+        const currentStatusName = deviceData.estado?.nombre?.toLowerCase();
         
-        if (bajaStatus) setBajaStatusId(bajaStatus.id);
-        if (bajaStatus && deviceData.estadoId === bajaStatus.id) setIsPermanentlyBaja(true);
+        if (currentStatusName === bajaStatusName) {
+            setIsPermanentlyBaja(true);
+        }
 
         reset({
           ...deviceData,
@@ -97,6 +99,7 @@ const EditDevice = () => {
           garantia_inicio: formatDate(deviceData.garantia_inicio),
           garantia_fin: formatDate(deviceData.garantia_fin),
           fecha_proxima_revision: formatDate(deviceData.fecha_proxima_revision),
+          fecha_baja: formatDate(deviceData.fecha_baja), // <--- Cargar fecha de baja si existe
           es_panda: deviceData.es_panda || false,
           usuarioId: deviceData.usuarioId || "",
           areaId: deviceData.areaId || "",
@@ -127,7 +130,8 @@ const EditDevice = () => {
     setError(""); setMessage("");
     const payload = { ...data };
 
-    const fieldsToRemove = ['id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento', 'isWarrantyApplied', 'hotelId'];
+    // Limpieza de campos que no se envían
+    const fieldsToRemove = ['id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento', 'isWarrantyApplied', 'hotelId', 'fecha_baja']; // fecha_baja la gestiona el backend al cambiar estado
     fieldsToRemove.forEach(field => delete payload[field]); 
 
     const foreignKeys = ['areaId', 'usuarioId', 'tipoId', 'estadoId', 'sistemaOperativoId'];
@@ -175,8 +179,9 @@ const EditDevice = () => {
 
   const hotelName = watchHotelId === 1 ? "Cancún" : watchHotelId === 2 ? "Sensira" : watchHotelId === 3 ? "Corporativo" : "Desconocido";
 
-  // Lógica para detectar estado de baja en tiempo real
+  // LÓGICA DE DETECCIÓN DE ESTADO INACTIVO
   const currentStatusObj = deviceStatuses.find(s => s.id === watchEstadoId);
+  // Comparamos con la constante "Inactivo" (o como se llame en tu config)
   const isStatusBaja = currentStatusObj?.nombre === DEVICE_STATUS.DISPOSED;
 
   if (loading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
@@ -203,7 +208,7 @@ const EditDevice = () => {
 
               {isRoot && (
                  <Alert severity="info" icon={<DomainIcon />}>
-                    Estás editando un equipo del hotel: <b>{hotelName}</b>. (Solo se muestran usuarios y áreas de este hotel).
+                    Estás editando un equipo del hotel: <b>{hotelName}</b>.
                  </Alert>
               )}
 
@@ -362,6 +367,7 @@ const EditDevice = () => {
                 </Stack>
               </SectionCard>
 
+              {/* SECCIÓN ACTUALIZADA DE ESTADO Y BAJA */}
               <SectionCard title="Estado del Activo" icon={<SettingsIcon />}>
                  <Stack spacing={2}>
                      <FormControl fullWidth>
@@ -376,10 +382,14 @@ const EditDevice = () => {
                         />
                      </FormControl>
 
-                     {/* Lógica para mostrar campos de baja si se selecciona "Inactivo" */}
+                     {/* Panel de Baja (Solo visible si el estado es Inactivo) */}
                      <Fade in={isStatusBaja} unmountOnExit>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, bgcolor: 'error.50', borderRadius: 2, border: '1px dashed', borderColor: 'error.main' }}>
-                            <Typography variant="subtitle2" color="error.main" fontWeight="bold">Detalles de la Baja</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+                                <EventBusyIcon fontSize="small" />
+                                <Typography variant="subtitle2" fontWeight="bold">Detalles de la Baja</Typography>
+                            </Box>
+                            
                             <Controller 
                                 name="motivo_baja" 
                                 control={control} 
@@ -387,8 +397,9 @@ const EditDevice = () => {
                                 render={({ field }) => (
                                     <TextField 
                                         {...field} 
-                                        label="Motivo de Baja / Inactividad" 
+                                        label="Motivo de Baja" 
                                         fullWidth 
+                                        size="small"
                                         color="error" 
                                         required={isStatusBaja}
                                         error={!!errors.motivo_baja}
@@ -396,18 +407,39 @@ const EditDevice = () => {
                                     />
                                 )} 
                             />
+                            
                             <Controller 
                                 name="observaciones_baja" 
                                 control={control} 
                                 render={({ field }) => (
                                     <TextField 
                                         {...field} 
-                                        label="Observaciones Adicionales" 
+                                        label="Observaciones" 
                                         fullWidth 
                                         multiline 
                                         rows={2} 
+                                        size="small"
                                         color="error" 
-                                        placeholder="Ej. Dictamen técnico, destino final, etc."
+                                        placeholder="Detalles adicionales..."
+                                    />
+                                )} 
+                            />
+
+                            {/* Campo de Fecha de Baja (Solo Lectura o Informativo) */}
+                            <Controller 
+                                name="fecha_baja" 
+                                control={control} 
+                                render={({ field }) => (
+                                    <TextField 
+                                        {...field} 
+                                        label="Fecha de Baja" 
+                                        type="date" 
+                                        fullWidth 
+                                        size="small"
+                                        color="error" 
+                                        InputLabelProps={{ shrink: true }}
+                                        disabled // Deshabilitado porque el backend lo pone automático (solo para visualizar)
+                                        helperText="Se registrará automáticamente al guardar"
                                     />
                                 )} 
                             />

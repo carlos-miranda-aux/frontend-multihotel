@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import { createContext, useState, useEffect, useCallback } from "react";
 import api from "../api/axios"; 
 import DefaultAvatar from "../assets/Avatar.png"; 
@@ -45,7 +44,6 @@ export const AuthProvider = ({ children }) => {
     if (user && token) refreshHotelList();
   }, [user, token, refreshHotelList]);
 
-  // 👇 NUEVO HELPER GLOBAL: Obtiene el nombre del hotel desde la lista dinámica
   const getHotelName = useCallback((id) => {
       if (!id) return "N/A";
       const idNum = Number(id);
@@ -86,7 +84,7 @@ export const AuthProvider = ({ children }) => {
         value={{ 
             user, setUser: updateUser, token, setToken, login, logout,
             selectedHotelId, changeHotelContext, availableHotels, refreshHotelList,
-            getHotelName // 👈 Exportamos la función
+            getHotelName
         }}
     >
       {children}

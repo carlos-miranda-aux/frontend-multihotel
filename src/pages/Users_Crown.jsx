@@ -29,7 +29,6 @@ const UsersCrownP = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 👇 Usamos getHotelName
   const { user, selectedHotelId, getHotelName } = useContext(AuthContext);
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
@@ -114,7 +113,6 @@ const UsersCrownP = () => {
                   <TableRow key={u.id} hover>
                     {showHotelColumn && (
                         <TableCell>
-                            {/* 👇 CORRECCIÓN */}
                             <Chip label={getHotelName(u.hotelId)} size="small" variant="outlined" />
                         </TableCell>
                     )}

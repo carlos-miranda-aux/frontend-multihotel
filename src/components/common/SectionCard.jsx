@@ -1,4 +1,3 @@
-// src/components/common/SectionCard.jsx
 import React from 'react';
 import { Paper, Typography, Box, Divider } from '@mui/material';
 

@@ -1,4 +1,3 @@
-// src/pages/UserManager.jsx
 import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
@@ -24,8 +23,6 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-
-// ❌ ELIMINADO: import "../pages/styles/ConfigButtons.css";
 
 const UserManager = () => {
   const [users, setUsers] = useState([]);
@@ -161,7 +158,6 @@ const UserManager = () => {
             </Select>
           </FormControl>
           
-          {/* ✅ BOTÓN REFACTORIZADO */}
           <Button 
             type="submit" 
             variant="contained" 
@@ -180,7 +176,6 @@ const UserManager = () => {
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
-            {/* ✅ FONDO DEL TEMA */}
             <TableRow sx={{ backgroundColor: 'background.default' }}>
               <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Usuario</TableCell>
@@ -197,7 +192,6 @@ const UserManager = () => {
                 <TableCell>{u.email}</TableCell>
                 <TableCell>{u.rol}</TableCell>
                 <TableCell>
-                  {/* ✅ ICONOS REFACTORIZADOS */}
                   <IconButton
                     color="primary"
                     onClick={() => handleEdit(u.id)}

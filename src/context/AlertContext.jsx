@@ -1,7 +1,6 @@
-// src/context/AlertContext.jsx
 import React, { createContext, useState, useEffect, useCallback, useContext } from "react";
 import api from "../api/axios";
-import { AuthContext } from "./AuthContext"; // 👈 Importar contexto de Auth
+import { AuthContext } from "./AuthContext";
 
 export const AlertContext = createContext();
 
@@ -65,7 +64,7 @@ const _fetchAlertLogic = async () => {
 };
 
 export const AlertProvider = ({ children }) => {
-  const { user, token } = useContext(AuthContext); // 👈 Usamos el usuario y token
+  const { user, token } = useContext(AuthContext);
   const [loading, setLoading] = useState(false); 
   
   const [alertState, setAlertState] = useState({
@@ -81,7 +80,6 @@ export const AlertProvider = ({ children }) => {
   });
 
   const fetchInitialData = useCallback(async () => {
-    // 🛡️ BLINDAJE: Si no hay usuario logueado, NO hacemos nada.
     if (!user || !token) return;
 
     try {
@@ -93,7 +91,7 @@ export const AlertProvider = ({ children }) => {
     } finally {
       setLoading(false); 
     }
-  }, [user, token]); // Dependencias clave
+  }, [user, token]);
   
   const refreshAlerts = useCallback(async () => {
       if (!user || !token) return;

@@ -1,4 +1,3 @@
-// src/components/ImportButton.jsx
 import React, { useRef, useState } from "react";
 import { Button, CircularProgress, Alert, Snackbar } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
@@ -15,8 +14,7 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel", extraData
 
     const formData = new FormData();
     formData.append("file", file);
-    
-    // 🔥 CORRECCIÓN: Agregamos datos extra (como hotelId) al FormData
+
     Object.keys(extraData).forEach(key => {
         if (extraData[key]) {
             formData.append(key, extraData[key]);

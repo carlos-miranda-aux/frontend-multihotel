@@ -1,4 +1,3 @@
-// src/pages/EditCrownUser.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
@@ -52,7 +51,7 @@ const EditCrownUser = () => {
           areaId: userData.areaId || "", 
           usuario_login: userData.usuario_login || "", 
           isManager: userData.es_jefe_de_area || false,
-          hotelId: userData.hotelId // Cargar hotel
+          hotelId: userData.hotelId
         });
         setLoading(false);
       } catch (err) {
@@ -71,7 +70,7 @@ const EditCrownUser = () => {
       es_jefe_de_area: data.isManager
     };
     delete payload.isManager; 
-    delete payload.hotelId; // No cambiamos hotel
+    delete payload.hotelId;
 
     try {
       await api.put(`/users/put/${id}`, payload);

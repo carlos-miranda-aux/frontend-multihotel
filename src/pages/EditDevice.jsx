@@ -1,4 +1,3 @@
-// src/pages/EditDevice.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
@@ -18,7 +17,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import DomainIcon from '@mui/icons-material/Domain'; // Icon for Hotel
+import DomainIcon from '@mui/icons-material/Domain';
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
@@ -49,7 +48,7 @@ const EditDevice = () => {
       garantia_numero_producto: "", garantia_numero_reporte: "", garantia_notes: "",
       garantia_inicio: "", garantia_fin: "", areaId: "", fecha_proxima_revision: "",
       motivo_baja: "", observaciones_baja: "", isWarrantyApplied: false,
-      hotelId: "" // Field to store the hotel ID (readonly)
+      hotelId: ""
     }
   });
 
@@ -57,7 +56,7 @@ const EditDevice = () => {
   const watchUsuarioId = watch("usuarioId");
   const watchEstadoId = watch("estadoId");
   const isWarrantyApplied = watch("isWarrantyApplied");
-  const watchHotelId = watch("hotelId"); // Watch hotel to filter lists
+  const watchHotelId = watch("hotelId");
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
@@ -74,9 +73,7 @@ const EditDevice = () => {
     const fetchDeviceData = async () => {
       try {
         setLoading(true);
-        // Fetch all necessary data. 
-        // Note: For 'areas' and 'users', the backend will filter them based on the user's hotel.
-        // If the user is ROOT, they will receive ALL areas/users, so we must filter them in the UI based on the device's hotel.
+      
         const [deviceResponse, usersRes, deviceTypesRes, deviceStatusesRes, operatingSystemsRes, areasRes] = await Promise.all([
           api.get(`/devices/get/${id}`),
           api.get("/users/get?limit=0"), 
@@ -90,7 +87,6 @@ const EditDevice = () => {
         const formatDate = (d) => d ? new Date(d).toISOString().substring(0, 10) : "";
         const statusList = Array.isArray(deviceStatusesRes.data) ? deviceStatusesRes.data : [];
         
-        // Find the ID for "Inactivo" / "Baja" status
         const bajaStatus = statusList.find(s => s.nombre.toLowerCase() === 'baja' || s.nombre.toLowerCase() === 'inactivo');
         
         if (bajaStatus) setBajaStatusId(bajaStatus.id);
@@ -110,7 +106,7 @@ const EditDevice = () => {
           sistemaOperativoId: deviceData.sistemaOperativoId || "",
           comentarios: deviceData.comentarios || "",
           isWarrantyApplied: !!(deviceData.garantia_numero_reporte || deviceData.garantia_notes),
-          hotelId: deviceData.hotelId // Load the hotel ID
+          hotelId: deviceData.hotelId
         });
 
         setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
@@ -131,19 +127,15 @@ const EditDevice = () => {
   const onSubmit = async (data) => {
     setError(""); setMessage("");
     const payload = { ...data };
-    
-    // Remove fields that should not be sent to the backend
+
     const fieldsToRemove = ['id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento', 'isWarrantyApplied', 'hotelId'];
     fieldsToRemove.forEach(field => delete payload[field]); 
 
-    // Convert foreign keys to numbers or null
     const foreignKeys = ['areaId', 'usuarioId', 'tipoId', 'estadoId', 'sistemaOperativoId'];
     foreignKeys.forEach(key => { payload[key] = payload[key] ? Number(payload[key]) : null; });
 
-    // Format profiles array to string
     if (Array.isArray(payload.perfiles_usuario)) payload.perfiles_usuario = payload.perfiles_usuario.join(", ");
     
-    // Format dates
     ['garantia_inicio', 'garantia_fin', 'fecha_proxima_revision'].forEach(key => {
         payload[key] = payload[key] ? new Date(payload[key]).toISOString() : null;
     });
@@ -161,10 +153,7 @@ const EditDevice = () => {
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
-    
-    // 🛡️ Filter areas by the device's hotel.
-    // If not Root, 'areas' is already filtered by backend.
-    // If Root, we filter 'areas' to match 'watchHotelId' (the device's hotel).
+
     const filteredAreas = isRoot && watchHotelId 
         ? areas.filter(a => a.hotelId === watchHotelId) 
         : areas;
@@ -184,8 +173,7 @@ const EditDevice = () => {
   const getStatusName = () => { const s = deviceStatuses.find(s => s.id === watchEstadoId); return s ? s.nombre : "N/A"; }
   const assignedUser = users.find(u => u.id === watchUsuarioId);
   const isAdmin = user?.rol === ROLES.HOTEL_ADMIN || isRoot;
-  
-  // Hotel label for display
+
   const hotelName = watchHotelId === 1 ? "Cancún" : watchHotelId === 2 ? "Sensira" : watchHotelId === 3 ? "Corporativo" : "Desconocido";
 
   if (loading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
@@ -207,11 +195,9 @@ const EditDevice = () => {
 
       <Box component="form" noValidate sx={{ px: 3 }}>
         <Grid container spacing={3}>
-          {/* LEFT COLUMN: MAIN INFO */}
           <Grid item xs={12} lg={8}>
             <Stack spacing={3}>
-              
-              {/* Hotel Warning for Root */}
+
               {isRoot && (
                  <Alert severity="info" icon={<DomainIcon />}>
                     Estás editando un equipo del hotel: <b>{hotelName}</b>. (Solo se muestran usuarios y áreas de este hotel).
@@ -294,7 +280,6 @@ const EditDevice = () => {
             </Stack>
           </Grid>
 
-          {/* RIGHT COLUMN: ASSIGNMENT & STATUS */}
           <Grid item xs={12} lg={4}>
             <Stack spacing={3} sx={{ position: 'sticky', top: 20 }}>
               <SectionCard title="Responsable Actual" icon={<PersonIcon />}>
@@ -334,7 +319,6 @@ const EditDevice = () => {
                                 <Select {...field} label="Usuario">
                                     <MenuItem value=""><em>Ninguno</em></MenuItem>
                                     {users
-                                      // 🛡️ Filter users by the device's hotel (same logic as areas)
                                       .filter(u => !isRoot || !watchHotelId || u.hotelId === watchHotelId) 
                                       .map(u => <MenuItem key={u.id} value={u.id}>{u.nombre}</MenuItem>)
                                     }

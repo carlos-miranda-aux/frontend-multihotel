@@ -1,4 +1,3 @@
-// src/pages/EditUser.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -52,7 +51,7 @@ const EditUser = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // 🔥 VALIDACIÓN EN TIEMPO REAL
+    // VALIDACIÓN EN TIEMPO REAL
     if (name === "username") {
         const cleanValue = value.toLowerCase().replace(/\s/g, "");
         setFormData({ ...formData, [name]: cleanValue });

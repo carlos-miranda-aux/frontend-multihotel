@@ -1,4 +1,3 @@
-// src/components/admin/HotelsTable.jsx
 import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
@@ -30,7 +29,7 @@ const HotelsTable = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   
-  // 1. 👇 NUEVO ESTADO PARA CARGA DE ACCIÓN
+
   const [actionLoading, setActionLoading] = useState(false);
 
   const { refreshHotelList } = useContext(AuthContext);
@@ -63,22 +62,22 @@ const HotelsTable = () => {
       setDeleteDialogOpen(true);
   };
 
-  // 2. 👇 FUNCIÓN DE ELIMINAR ACTUALIZADA
+  // FUNCIÓN DE ELIMINAR ACTUALIZADA
   const confirmDelete = async () => {
     if(!itemToDelete) return;
     
     setActionLoading(true); // Bloqueamos botones
     try {
       await api.delete(`/hotels/delete/${itemToDelete.id}`);
-      setMessage("Hotel eliminado correctamente."); // Feedback positivo
+      setMessage("Hotel eliminado correctamente.");
       fetchHotels();
       refreshHotelList();
-      setDeleteDialogOpen(false); // Cerramos el diálogo SOLO si tuvo éxito
+      setDeleteDialogOpen(false);
     } catch (err) { 
         setError("Error al eliminar."); 
-        setDeleteDialogOpen(false); // Opcional: cerrar o dejar abierto para que reintente
+        setDeleteDialogOpen(false);
     } finally {
-        setActionLoading(false); // Desbloqueamos (limpieza)
+        setActionLoading(false); // Limpieza
         setItemToDelete(null);
     }
   };
@@ -166,14 +165,14 @@ const HotelsTable = () => {
         </Fade>
       </Modal>
 
-      {/* 3. 👇 PASAMOS LA PROP isLoading */}
+      {/* PASAMOS LA PROP isLoading */}
       <ConfirmDialog 
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
         title="¿Eliminar Hotel?"
         content={`Estás a punto de dar de baja el hotel "${itemToDelete?.nombre}".`}
-        isLoading={actionLoading} // <--- ¡AQUÍ ESTÁ LA MAGIA!
+        isLoading={actionLoading}
       />
     </Box>
   );

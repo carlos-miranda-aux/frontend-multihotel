@@ -3,11 +3,11 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#4A6274', // Nuevo color corporativo (Slate Blue)
+      main: '#4A6274',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#34495e', // Tono oscuro complementario
+      main: '#34495e',
       contrastText: '#ffffff',
     },
     error: {
@@ -23,8 +23,8 @@ const theme = createTheme({
       main: '#2e7d32',
     },
     background: {
-      default: '#f4f6f8', // Fondo general gris muy suave
-      paper: '#ffffff',   // Fondo de tarjetas blanco
+      default: '#f4f6f8',
+      paper: '#ffffff',
     },
     text: {
       primary: '#333333',
@@ -44,7 +44,6 @@ const theme = createTheme({
     h6: { fontWeight: 600 },
   },
   components: {
-    // Sobrescribir estilos globales de componentes
     MuiButton: {
       styleOverrides: {
         root: {
@@ -52,7 +51,6 @@ const theme = createTheme({
           textTransform: 'none',
           fontWeight: 500,
         },
-        // Eliminamos el 'hover' hardcoded anterior para que MUI use el nuevo primary automáticamente
       },
     },
     MuiAppBar: {

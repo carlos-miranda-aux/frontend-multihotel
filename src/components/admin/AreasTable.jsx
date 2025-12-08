@@ -29,7 +29,7 @@ const AreasTable = () => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false); // 🔥
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -57,14 +57,14 @@ const AreasTable = () => {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
-    setActionLoading(true); // 🔥
+    setActionLoading(true);
     try {
         await api.delete(`/areas/delete/${itemToDelete.id}`);
         setMessage("Área eliminada correctamente.");
         fetchAreas();
-        setDeleteDialogOpen(false); // 🔥
+        setDeleteDialogOpen(false);
     } catch (err) { setError(err.response?.data?.error || "Error al eliminar."); } 
-    finally { setActionLoading(false); setItemToDelete(null); } // 🔥
+    finally { setActionLoading(false); setItemToDelete(null); }
   };
 
   const handleCreateClick = () => { setEditingItem(null); setOpenModal(true); };
@@ -132,7 +132,7 @@ const AreasTable = () => {
         onConfirm={confirmDelete}
         title="¿Eliminar Área?"
         content={`¿Estás seguro de eliminar el área "${itemToDelete?.nombre}"?`}
-        isLoading={actionLoading} // 🔥
+        isLoading={actionLoading}
       />
     </Box>
   );

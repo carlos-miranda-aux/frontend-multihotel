@@ -1,4 +1,3 @@
-// src/pages/Home.jsx
 import React, { useEffect, useState, useContext } from "react";
 import { 
   Grid, Paper, Typography, Box, Alert, Card, CardContent, 

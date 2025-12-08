@@ -1,8 +1,6 @@
-// src/components/common/StatusBadge.jsx
 import React from 'react';
 import { Chip } from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
-// 👇 IMPORTAR CONSTANTES
 import { MAINTENANCE_STATUS, DEVICE_STATUS } from '../../config/constants'; 
 
 const getStatusColor = (statusName) => {

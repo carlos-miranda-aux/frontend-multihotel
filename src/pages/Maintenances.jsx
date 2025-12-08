@@ -36,7 +36,6 @@ const Maintenances = () => {
   const [search, setSearch] = useState(""); 
   const [sortConfig, setSortConfig] = useState({ key: 'fecha_programada', direction: 'desc' });
 
-  // 👇 Usamos getHotelName
   const { user, selectedHotelId, getHotelName } = useContext(AuthContext);
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
@@ -137,7 +136,6 @@ const Maintenances = () => {
                   <TableRow key={m.id} hover>
                     {showHotelColumn && (
                         <TableCell>
-                            {/* 👇 CORRECCIÓN */}
                             <Chip label={getHotelName(m.hotelId)} size="small" variant="outlined" />
                         </TableCell>
                     )}

@@ -1,4 +1,3 @@
-// src/components/CreateCrownUserForm.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { useForm, Controller } from "react-hook-form"; 
 import {
@@ -11,7 +10,6 @@ import { ROLES } from "../config/constants";
 import HotelSelect from "./common/HotelSelect";
 
 const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
-  // 👇 Obtenemos el contexto
   const { user, selectedHotelId: contextHotelId } = useContext(AuthContext); 
   
   const isRoot = user?.rol === ROLES.ROOT; // O regional
@@ -20,7 +18,6 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
   const { control, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: { 
         nombre: "", correo: "", areaId: "", usuario_login: "", isManager: false, 
-        // 👇 Inicializamos con contexto si existe
         hotelId: contextHotelId ? Number(contextHotelId) : "" 
     }
   });
@@ -52,7 +49,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
       es_jefe_de_area: data.isManager
     };
 
-    // 🛡️ Lógica Root/MultiHotel
+    // Lógica Root/MultiHotel
     if (isRoot) {
         if (!data.hotelId) {
              if (setError) setError("Selecciona un hotel."); return;
@@ -107,7 +104,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
 
       <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         
-        {/* 👇 SELECTOR PARA ROOT/MULTI, BLOQUEADO SI HAY CONTEXTO */}
+        {/* SELECTOR PARA ROOT/MULTI, BLOQUEADO SI HAY CONTEXTO */}
         {isRoot && (
              <Controller
                 name="hotelId" control={control}

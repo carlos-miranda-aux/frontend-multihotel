@@ -1,4 +1,3 @@
-// src/config/constants.js
 
 export const ROLES = {
   ROOT: "ROOT",             

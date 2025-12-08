@@ -1,4 +1,3 @@
-// src/pages/Settings.jsx
 import React, { useState, useContext } from "react";
 import {
   Box, Typography, TextField, Button, Alert, 
@@ -13,7 +12,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 
 const Settings = () => {
-  const { user, logout } = useContext(AuthContext); // 👇 Importar logout
+  const { user, logout } = useContext(AuthContext);
   
   const [formData, setFormData] = useState({
     password: "", newPassword: "", confirmPassword: ""
@@ -47,7 +46,7 @@ const Settings = () => {
       setMessage("Tu contraseña ha sido actualizada. Cerrando sesión...");
       setFormData({ password: "", newPassword: "", confirmPassword: "" });
       
-      // 👇 Logout automático tras 1.5 seg
+      // Logout automático tras 1.5 seg
       setTimeout(() => {
           logout();
       }, 1500);

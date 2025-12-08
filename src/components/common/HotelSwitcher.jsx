@@ -1,4 +1,3 @@
-// src/components/common/HotelSwitcher.jsx
 import React, { useContext } from 'react';
 import { Select, MenuItem, FormControl, Box, Typography, ListItemIcon } from '@mui/material';
 import DomainIcon from '@mui/icons-material/Domain';
@@ -7,7 +6,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { ROLES } from '../../config/constants';
 
 const HotelSwitcher = () => {
-  // 👇 Ahora consumimos availableHotels del contexto
+
   const { user, selectedHotelId, changeHotelContext, availableHotels } = useContext(AuthContext);
 
   // Determinar si debemos mostrar el selector

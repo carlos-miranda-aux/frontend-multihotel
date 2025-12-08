@@ -1,4 +1,3 @@
-// src/pages/EditMaintenance.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
@@ -132,7 +131,7 @@ const EditMaintenance = () => {
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         
-        {/* 👇 ALERTA VISUAL PARA ROOT */}
+        {/* ALERTA VISUAL PARA ROOT */}
         {isRoot && (
             <Alert severity="info" icon={<DomainIcon />} sx={{ mb: 3 }}>
                 Este mantenimiento pertenece al hotel: <b>{hotelLabel}</b>.

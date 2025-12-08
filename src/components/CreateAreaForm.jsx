@@ -1,4 +1,3 @@
-// src/components/CreateAreaForm.jsx
 import React, { useState, useEffect, useContext } from "react";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Button, Alert, FormHelperText
@@ -43,7 +42,6 @@ const CreateAreaForm = ({ onClose, onSuccess, initialData }) => {
     }
   }, [initialData]);
 
-  // Efecto: Filtrar departamentos cuando cambia el Hotel seleccionado (Solo Root)
   useEffect(() => {
     if (isRoot) {
         if (formData.hotelId) {
@@ -53,7 +51,6 @@ const CreateAreaForm = ({ onClose, onSuccess, initialData }) => {
             setFilteredDepartments([]); 
         }
     } else {
-        // Si no es Root, ve todos sus departamentos (ya filtrados por el backend)
         setFilteredDepartments(departments);
     }
   }, [formData.hotelId, departments, isRoot]);
@@ -61,7 +58,6 @@ const CreateAreaForm = ({ onClose, onSuccess, initialData }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => {
-        // Si cambia el hotel, limpiamos el departamento para evitar inconsistencias
         if (name === 'hotelId') {
             return { ...prev, [name]: value, departamentoId: "" };
         }
@@ -110,14 +106,13 @@ const CreateAreaForm = ({ onClose, onSuccess, initialData }) => {
 
       <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         
-        {/* 👇 Selector de Hotel para ROOT */}
+        {/* Selector de Hotel para ROOT */}
         {isRoot && (
             <HotelSelect 
                 value={formData.hotelId} 
                 onChange={handleChange} 
                 name="hotelId"
                 error={!formData.hotelId}
-                // Si estamos editando, bloqueamos el cambio de hotel para evitar conflictos complejos
                 required
             />
         )}

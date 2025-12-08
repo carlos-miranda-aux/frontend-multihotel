@@ -1,4 +1,3 @@
-// src/components/CreateSystemUserForm.jsx
 import React, { useState, useContext } from "react";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
@@ -25,10 +24,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // 🔥 VALIDACIÓN EN TIEMPO REAL
     if (name === "username") {
-        // Convertir a minúsculas y eliminar CUALQUIER espacio automáticamente
         const cleanValue = value.toLowerCase().replace(/\s/g, "");
         setFormData({ ...formData, [name]: cleanValue });
     } else {

@@ -39,7 +39,6 @@ const Inventory = () => {
 
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  // 👇 Usamos getHotelName del contexto
   const { user, selectedHotelId, getHotelName } = useContext(AuthContext);
   
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
@@ -150,7 +149,6 @@ const Inventory = () => {
                   <TableRow key={device.id} hover>
                     {showHotelColumn && (
                         <TableCell>
-                            {/* 👇 AQUI ESTA LA CORRECCION */}
                             <Chip label={getHotelName(device.hotelId)} size="small" variant="outlined" />
                         </TableCell>
                     )}

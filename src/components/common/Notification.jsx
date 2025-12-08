@@ -7,7 +7,7 @@ const Notification = ({ open, onClose, message, severity = "success" }) => {
       open={open} 
       autoHideDuration={6000} 
       onClose={onClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} // Posición profesional
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
     >
       <Alert onClose={onClose} severity={severity} variant="filled" sx={{ width: '100%' }}>
         {message}

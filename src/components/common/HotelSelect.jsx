@@ -1,10 +1,9 @@
-// src/components/common/HotelSelect.jsx
 import React, { useContext } from 'react';
 import { FormControl, InputLabel, Select, MenuItem, FormHelperText, Box, Chip } from '@mui/material';
-import { AuthContext } from '../../context/AuthContext'; // 👈 Importar Contexto
+import { AuthContext } from '../../context/AuthContext';
 
 const HotelSelect = ({ value, onChange, error, helperText, name, required = true, multiple = false, disabled = false }) => {
-  // 👇 Usamos la lista real de la base de datos
+
   const { availableHotels } = useContext(AuthContext);
 
   return (

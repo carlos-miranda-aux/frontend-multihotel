@@ -23,7 +23,7 @@ const DepartmentsTable = () => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false); // 🔥
+  const [actionLoading, setActionLoading] = useState(false);
 
   const { user, selectedHotelId } = useContext(AuthContext);
   const showHotelColumn = (user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER) && !selectedHotelId;
@@ -44,14 +44,14 @@ const DepartmentsTable = () => {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
-    setActionLoading(true); // 🔥
+    setActionLoading(true);
     try { 
         await api.delete(`/departments/delete/${itemToDelete.id}`); 
         fetchDepts(); 
-        setDeleteDialogOpen(false); // 🔥
+        setDeleteDialogOpen(false);
     } catch (e) { 
         setError("Error al eliminar. Verifique dependencias."); setTimeout(() => setError(""), 4000);
-    } finally { setActionLoading(false); setItemToDelete(null); } // 🔥
+    } finally { setActionLoading(false); setItemToDelete(null); }
   };
 
   const handleSort = (key) => setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' });
@@ -108,7 +108,7 @@ const DepartmentsTable = () => {
         onConfirm={confirmDelete}
         title="¿Eliminar Departamento?"
         content={`¿Seguro que deseas eliminar "${itemToDelete?.nombre}"?`}
-        isLoading={actionLoading} // 🔥
+        isLoading={actionLoading}
       />
     </Box>
   );

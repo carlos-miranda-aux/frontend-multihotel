@@ -198,7 +198,6 @@ const AuditLog = () => {
                   const config = getActionConfig(log.action);
                   return (
                     <TableRow key={log.id} hover>
-                      {/* 👇 CORRECCIÓN */}
                       {showHotelColumn && <TableCell><Chip label={getHotelName(log.hotelId)} size="small" variant="outlined" /></TableCell>}
                       <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(log.createdAt)}</TableCell>
                       <TableCell>

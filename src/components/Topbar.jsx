@@ -1,4 +1,3 @@
-// src/components/Topbar.jsx
 import React, { useContext, useState } from "react";
 import {
   AppBar,
@@ -152,7 +151,7 @@ const TopBar = ({ onMenuClick }) => {
         {user && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             
-            {/* 🔥 SWITCHER DE HOTELES AQUÍ */}
+            {/* SWITCHER DE HOTELES AQUÍ */}
             <HotelSwitcher />
 
             <IconButton color="inherit" onClick={handleAlertsClick}>

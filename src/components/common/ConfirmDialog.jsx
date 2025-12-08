@@ -1,18 +1,17 @@
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-  Button, Box, CircularProgress // 👈 Importar CircularProgress
+  Button, Box, CircularProgress
 } from '@mui/material';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 
-// 👇 Agregamos prop 'isLoading'
 const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delete", isLoading = false }) => {
   const isDelete = type === "delete";
 
   return (
     <Dialog
       open={open}
-      onClose={!isLoading ? onClose : undefined} // 👈 Evitar cerrar si está cargando
+      onClose={!isLoading ? onClose : undefined}
       PaperProps={{ sx: { borderRadius: 3, padding: 1, maxWidth: 450 } }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 2 }}>
@@ -33,7 +32,7 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delet
             onClick={onClose} 
             variant="outlined" 
             color="inherit" 
-            disabled={isLoading} // 👈 Deshabilitar
+            disabled={isLoading}
             sx={{ borderRadius: 2, px: 3 }}
         >
           Cancelar
@@ -43,8 +42,8 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, content, type = "delet
           variant="contained"
           color={isDelete ? "error" : "primary"}
           disableElevation
-          disabled={isLoading} // 👈 Deshabilitar
-          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null} // 👈 Mostrar Spinner
+          disabled={isLoading}
+          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
           sx={{ borderRadius: 2, px: 3 }}
         >
           {isLoading ? "Procesando..." : (isDelete ? "Sí, Eliminar" : "Confirmar")}

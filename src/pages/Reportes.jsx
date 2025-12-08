@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import {
   Box, Typography, Paper, Grid, TextField, Alert, useTheme, Card,
-  CardActionArea, CardContent, Avatar, Chip, CircularProgress // 👈 Import
+  CardActionArea, CardContent, Avatar, Chip, CircularProgress
 } from '@mui/material';
 
 import InventoryIcon from '@mui/icons-material/Inventory';
@@ -21,13 +21,13 @@ const Reportes = () => {
   const theme = useTheme();
   const { user, selectedHotelId } = useContext(AuthContext); 
   const isRoot = user?.rol === ROLES.ROOT;
-  const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api"; 
+  const apiBaseUrl = import.meta.env.VITE_API_URL; 
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reportError, setReportError] = useState('');
   
-  // 👇 Estado para controlar cuál reporte se está descargando
+  // Estado para controlar cuál reporte se está descargando
   const [downloadingReport, setDownloadingReport] = useState(null);
 
   const handleExport = (reportName, url, isFiltered = false) => {
@@ -37,7 +37,7 @@ const Reportes = () => {
     let finalUrl = url;
     if (isFiltered) {
         if (!startDate || !endDate) {
-            setReportError("⚠️ Para este reporte es obligatorio seleccionar un rango de fechas.");
+            setReportError("Para este reporte es obligatorio seleccionar un rango de fechas.");
             setDownloadingReport(null);
             return;
         }

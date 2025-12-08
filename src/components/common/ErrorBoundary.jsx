@@ -1,4 +1,3 @@
-// src/components/common/ErrorBoundary.jsx
 import React from 'react';
 import { Box, Typography, Button, Paper } from '@mui/material';
 import BugReportIcon from '@mui/icons-material/BugReport';
@@ -15,7 +14,6 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("Error crítico capturado:", error, errorInfo);
-    // Aquí podrías enviar el error a un servicio de logs como Sentry
   }
 
   handleReload = () => {

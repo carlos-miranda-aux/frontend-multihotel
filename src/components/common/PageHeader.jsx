@@ -1,4 +1,3 @@
-// src/components/common/PageHeader.jsx
 import React from 'react';
 import { Box, Typography, Stack, Button, Paper, useTheme, alpha } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -15,7 +14,6 @@ const PageHeader = ({ title, subtitle, status, onBack, actions }) => {
         position: 'sticky',
         top: 0,
         zIndex: 1100,
-        // Usamos el color del tema con transparencia para el efecto blur
         backgroundColor: alpha(theme.palette.background.paper, 0.95),
         backdropFilter: 'blur(6px)',
         borderBottom: '1px solid',

@@ -4,7 +4,7 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { Box, TextField, Button, Typography, Paper, Alert } from "@mui/material";
 
-import Logo from "../assets/logo_s.png";
+import Logo from "../assets/simetv2.png";
 import ArrivaLogo from "../assets/arriva_png.png";
 
 const Login = () => {
@@ -63,7 +63,7 @@ const Login = () => {
           <img src={ArrivaLogo} alt="Arriva Hospitality Group" style={{ maxWidth: "100%", height: "auto" }} />
         </Box>
         <Box sx={{ mb: 3 }}>
-          <img src={Logo} alt="SIMET Logo" style={{ width: "35%", height: "auto", opacity: 1 }} />
+          <img src={Logo} alt="SIMET Logo" style={{ width: "40%", height: "auto", opacity: 1 }} />
         </Box>
 
         <Typography variant="subtitle1" sx={{ mb: 3, color: "text.secondary" }}>

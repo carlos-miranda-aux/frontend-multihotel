@@ -15,14 +15,12 @@ import WifiIcon from '@mui/icons-material/Wifi';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DomainIcon from '@mui/icons-material/Domain';
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
-import { ROLES } from "../config/constants";
+import { ROLES, DEVICE_STATUS } from "../config/constants"; // <--- IMPORTACIÓN ACTUALIZADA
 import PageHeader from "../components/common/PageHeader"; 
 import SectionCard from "../components/common/SectionCard"; 
 import StatusBadge from "../components/common/StatusBadge"; 
@@ -87,7 +85,8 @@ const EditDevice = () => {
         const formatDate = (d) => d ? new Date(d).toISOString().substring(0, 10) : "";
         const statusList = Array.isArray(deviceStatusesRes.data) ? deviceStatusesRes.data : [];
         
-        const bajaStatus = statusList.find(s => s.nombre.toLowerCase() === 'baja' || s.nombre.toLowerCase() === 'inactivo');
+        // Buscar ID del estado de baja (comprobando "baja" o "inactivo")
+        const bajaStatus = statusList.find(s => s.nombre.toLowerCase() === DEVICE_STATUS.DISPOSED.toLowerCase());
         
         if (bajaStatus) setBajaStatusId(bajaStatus.id);
         if (bajaStatus && deviceData.estadoId === bajaStatus.id) setIsPermanentlyBaja(true);
@@ -175,6 +174,10 @@ const EditDevice = () => {
   const isAdmin = user?.rol === ROLES.HOTEL_ADMIN || isRoot;
 
   const hotelName = watchHotelId === 1 ? "Cancún" : watchHotelId === 2 ? "Sensira" : watchHotelId === 3 ? "Corporativo" : "Desconocido";
+
+  // Lógica para detectar estado de baja en tiempo real
+  const currentStatusObj = deviceStatuses.find(s => s.id === watchEstadoId);
+  const isStatusBaja = currentStatusObj?.nombre === DEVICE_STATUS.DISPOSED;
 
   if (loading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
 
@@ -360,22 +363,63 @@ const EditDevice = () => {
               </SectionCard>
 
               <SectionCard title="Estado del Activo" icon={<SettingsIcon />}>
-                 <FormControl fullWidth>
-                    <InputLabel>Estado</InputLabel>
-                    <Controller 
-                        name="estadoId" control={control} 
-                        render={({ field }) => (
-                            <Select {...field} label="Estado" disabled={isPermanentlyBaja && !isAdmin}>
-                                {deviceStatuses.map(s => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
-                            </Select>
-                        )} 
-                    />
-                 </FormControl>
-                 {isPermanentlyBaja && (
-                     <Alert severity="warning" sx={{ mt: 2 }}>
-                         Este equipo está dado de baja (Inactivo). Para reactivarlo, cambia su estado a "Activo" (Solo Admins).
-                     </Alert>
-                 )}
+                 <Stack spacing={2}>
+                     <FormControl fullWidth>
+                        <InputLabel>Estado</InputLabel>
+                        <Controller 
+                            name="estadoId" control={control} 
+                            render={({ field }) => (
+                                <Select {...field} label="Estado" disabled={isPermanentlyBaja && !isAdmin}>
+                                    {deviceStatuses.map(s => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
+                                </Select>
+                            )} 
+                        />
+                     </FormControl>
+
+                     {/* Lógica para mostrar campos de baja si se selecciona "Inactivo" */}
+                     <Fade in={isStatusBaja} unmountOnExit>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, bgcolor: 'error.50', borderRadius: 2, border: '1px dashed', borderColor: 'error.main' }}>
+                            <Typography variant="subtitle2" color="error.main" fontWeight="bold">Detalles de la Baja</Typography>
+                            <Controller 
+                                name="motivo_baja" 
+                                control={control} 
+                                rules={{ required: isStatusBaja ? "El motivo es obligatorio para dar de baja." : false }}
+                                render={({ field }) => (
+                                    <TextField 
+                                        {...field} 
+                                        label="Motivo de Baja / Inactividad" 
+                                        fullWidth 
+                                        color="error" 
+                                        required={isStatusBaja}
+                                        error={!!errors.motivo_baja}
+                                        helperText={errors.motivo_baja?.message}
+                                    />
+                                )} 
+                            />
+                            <Controller 
+                                name="observaciones_baja" 
+                                control={control} 
+                                render={({ field }) => (
+                                    <TextField 
+                                        {...field} 
+                                        label="Observaciones Adicionales" 
+                                        fullWidth 
+                                        multiline 
+                                        rows={2} 
+                                        color="error" 
+                                        placeholder="Ej. Dictamen técnico, destino final, etc."
+                                    />
+                                )} 
+                            />
+                        </Box>
+                     </Fade>
+
+                     {isPermanentlyBaja && !isAdmin && (
+                         <Alert severity="warning">
+                             Este equipo está dado de baja (Inactivo). Solo un administrador puede reactivarlo.
+                         </Alert>
+                     )}
+                 </Stack>
               </SectionCard>
             </Stack>
           </Grid>

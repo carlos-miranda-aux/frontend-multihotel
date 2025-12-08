@@ -16,10 +16,7 @@ import { ROLES } from "../config/constants";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import EmptyState from "../components/common/EmptyState";
 
-const modalStyle = {
-  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-  width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
-};
+const modalStyle = { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2 };
 
 const UsersCrownP = () => {
   const [users, setUsers] = useState([]);
@@ -28,12 +25,12 @@ const UsersCrownP = () => {
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false); // 🔥
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const { user, selectedHotelId } = useContext(AuthContext);
+  // 👇 Usamos getHotelName
+  const { user, selectedHotelId, getHotelName } = useContext(AuthContext);
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
   const canImport = user?.rol === ROLES.HOTEL_ADMIN && user?.hotels?.length === 1;
@@ -42,7 +39,6 @@ const UsersCrownP = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
   const [search, setSearch] = useState(""); 
-  
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
   const fetchUsers = useCallback(async () => {
@@ -60,19 +56,16 @@ const UsersCrownP = () => {
 
   const handleSearchChange = (e) => { setSearch(e.target.value); setPage(0); };
   const handleRequestSort = (key) => { setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' }); };
-  
   const handleOpenDelete = (u) => { setUserToDelete(u); setDeleteDialogOpen(true); };
 
   const confirmDelete = async () => {
       if(!userToDelete) return;
-      setActionLoading(true); // 🔥
+      setActionLoading(true);
       try { 
           await api.delete(`/users/delete/${userToDelete.id}`); 
-          setMessage("Usuario eliminado."); 
-          fetchUsers(); 
-          setDeleteDialogOpen(false); // 🔥
+          setMessage("Usuario eliminado."); fetchUsers(); setDeleteDialogOpen(false);
       } catch (err) { setError(err.response?.data?.error || "Error al eliminar."); } 
-      finally { setActionLoading(false); setUserToDelete(null); } // 🔥
+      finally { setActionLoading(false); setUserToDelete(null); }
   };
 
   const handleEdit = (id) => navigate(`/users/edit/${id}`);
@@ -119,7 +112,12 @@ const UsersCrownP = () => {
               ) : (
                 users.map((u) => (
                   <TableRow key={u.id} hover>
-                    {showHotelColumn && <TableCell><Chip label={u.hotelId === 1 ? "Cancún" : u.hotelId === 2 ? "Sensira" : "ID: "+u.hotelId} size="small" variant="outlined" /></TableCell>}
+                    {showHotelColumn && (
+                        <TableCell>
+                            {/* 👇 CORRECCIÓN */}
+                            <Chip label={getHotelName(u.hotelId)} size="small" variant="outlined" />
+                        </TableCell>
+                    )}
                     <TableCell sx={{ fontWeight: '500' }}>{u.nombre}</TableCell>
                     <TableCell>{u.area?.nombre || "Sin Asignar"}</TableCell>
                     <TableCell>{u.usuario_login || "N/A"}</TableCell>
@@ -138,14 +136,7 @@ const UsersCrownP = () => {
 
       <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}><Fade in={openModal}><Box sx={modalStyle}><CreateCrownUserForm onClose={() => setOpenModal(false)} onUserCreated={fetchUsers} setMessage={setMessage} setError={setError} /></Box></Fade></Modal>
 
-      <ConfirmDialog 
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-        title="¿Eliminar Usuario?"
-        content={`Estás eliminando a "${userToDelete?.nombre}". Esta acción afectará a los equipos asignados a esta persona.`}
-        isLoading={actionLoading} // 🔥
-      />
+      <ConfirmDialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} onConfirm={confirmDelete} title="¿Eliminar Usuario?" content={`Estás eliminando a "${userToDelete?.nombre}". Esta acción afectará a los equipos asignados a esta persona.`} isLoading={actionLoading} />
     </Box>
   );
 };

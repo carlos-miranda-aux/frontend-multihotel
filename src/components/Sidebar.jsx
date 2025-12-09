@@ -40,7 +40,7 @@ const Sidebar = () => {
       items: [
         { text: "Inventario", icon: <ComputerIcon />, path: "/inventory", show: true },
         { text: "Mantenimientos", icon: <BuildIcon />, path: "/maintenances", show: true },
-        { text: "Staff", icon: <PeopleIcon />, path: "/users", show: true },
+        { text: "Usuarios", icon: <PeopleIcon />, path: "/users", show: true },
         { text: "Bajas", icon: <DeleteSweepIcon />, path: "/disposals", show: true },
       ]
     },
@@ -72,18 +72,17 @@ const Sidebar = () => {
         },
       }}
     >
-      {/* LOGO CON NAVEGACIÓN RESTAURADA */}
       <Box 
         sx={{ 
           p: 2.5, 
           display: "flex", 
           justifyContent: "center", 
           alignItems: "center",
-          cursor: "pointer", // Mano al pasar el mouse
+          cursor: "pointer",
           transition: "opacity 0.2s",
-          "&:hover": { opacity: 0.8 } // Efecto visual al pasar el mouse
+          "&:hover": { opacity: 0.8 }
         }}
-        onClick={() => navigate("/home")} // Acción de navegar
+        onClick={() => navigate("/home")}
       >
         <Box component="img" src={LogoImg} alt="Logo" sx={{ height: 80, objectFit: 'contain' }} />
       </Box>

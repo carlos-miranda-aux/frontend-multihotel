@@ -30,18 +30,26 @@ const Reportes = () => {
   // Estado para controlar cuál reporte se está descargando
   const [downloadingReport, setDownloadingReport] = useState(null);
 
-  const handleExport = (reportName, url, isFiltered = false) => {
+  const handleExport = (reportName, url, isFiltered = false, isOptionalFilter = false) => {
     setReportError('');
     setDownloadingReport(reportName); // Activar loading
 
     let finalUrl = url;
+    
+    // Lógica de filtrado
     if (isFiltered) {
-        if (!startDate || !endDate) {
+        // Si es filtrado pero NO es opcional, y las fechas están vacías, lanzamos error
+        if (!isOptionalFilter && (!startDate || !endDate)) {
             setReportError("Para este reporte es obligatorio seleccionar un rango de fechas.");
             setDownloadingReport(null);
             return;
         }
-        finalUrl += `?startDate=${startDate}&endDate=${endDate}`;
+
+        // Si hay fechas seleccionadas, las agregamos (aplica tanto para obligatorio como opcional)
+        if (startDate && endDate) {
+            finalUrl += `?startDate=${startDate}&endDate=${endDate}`;
+        }
+        // Si es opcional y NO hay fechas, no agregamos nada y el backend devolverá todo el historial
     }
     
     const token = localStorage.getItem("token");
@@ -57,7 +65,10 @@ const Reportes = () => {
       const href = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = href;
-      let fileName = url.substring(url.lastIndexOf('/') + 1) + (isFiltered ? `_${startDate}_${endDate}` : "") + ".xlsx";
+      // Ajustar nombre si se usaron filtros
+      const hasDates = startDate && endDate;
+      let fileName = url.substring(url.lastIndexOf('/') + 1) + (hasDates ? `_${startDate}_${endDate}` : "") + ".xlsx";
+      
       link.setAttribute('download', fileName); 
       document.body.appendChild(link);
       link.click();
@@ -69,12 +80,56 @@ const Reportes = () => {
   };
 
   const reportList = [
-    { name: "Inventario Activo", description: "Listado detallado de todos los equipos actualmente en operación.", url: `${apiBaseUrl}/devices/export/all`, icon: <InventoryIcon fontSize="large" />, color: theme.palette.primary.main, isFiltered: false },
-    { name: "Bajas de Equipos", description: "Histórico de equipos dados de baja definitiva.", url: `${apiBaseUrl}/devices/export/inactivos`, icon: <DeleteSweepIcon fontSize="large" />, color: theme.palette.error.main, isFiltered: false },
-    { name: "Análisis de Garantías", description: "Equipos con garantía vencida y sus mantenimientos correctivos.", url: `${apiBaseUrl}/devices/export/corrective-analysis`, icon: <AssessmentIcon fontSize="large" />, color: theme.palette.warning.main, isFiltered: true },
-    { name: "Historial Mantenimientos", description: "Bitácora completa de servicios preventivos y correctivos.", url: `${apiBaseUrl}/maintenances/export/all`, icon: <BuildIcon fontSize="large" />, color: theme.palette.info.main, isFiltered: false },
-    { name: "Directorio de Staff", description: "Empleados y Jefes de Área registrados.", url: `${apiBaseUrl}/users/export/all`, icon: <GroupIcon fontSize="large" />, color: theme.palette.success.main, isFiltered: false },
-    ...(user?.rol === ROLES.ROOT || user?.rol === "HOTEL_ADMIN" ? [{ name: "Usuarios del Sistema", description: "Administradores y editores con acceso a SIMET.", url: `${apiBaseUrl}/auth/export/all`, icon: <AdminPanelSettingsIcon fontSize="large" />, color: theme.palette.secondary.main, isFiltered: false }] : []),
+    { 
+      name: "Inventario Activo", 
+      description: "Listado de todos los equipos en operación.", 
+      url: `${apiBaseUrl}/devices/export/all`, 
+      icon: <InventoryIcon fontSize="large" />, 
+      color: theme.palette.primary.main, 
+      isFiltered: false 
+    },
+    { 
+      name: "Bajas de Equipos", 
+      description: "Histórico de equipos dados de baja.", 
+      url: `${apiBaseUrl}/devices/export/inactivos`, 
+      icon: <DeleteSweepIcon fontSize="large" />, 
+      color: theme.palette.error.main, 
+      isFiltered: true, 
+      isOptionalFilter: true
+    },
+    { 
+      name: "Análisis de Garantías", 
+      description: "Equipos con garantía vencida y sus mantenimientos.", 
+      url: `${apiBaseUrl}/devices/export/corrective-analysis`, 
+      icon: <AssessmentIcon fontSize="large" />, 
+      color: theme.palette.warning.main, 
+      isFiltered: true,
+      isOptionalFilter: false
+    },
+    { 
+      name: "Historial Mantenimientos", 
+      description: "Bitácora completa de servicios.", 
+      url: `${apiBaseUrl}/maintenances/export/all`, 
+      icon: <BuildIcon fontSize="large" />, 
+      color: theme.palette.info.main, 
+      isFiltered: false 
+    },
+    { 
+      name: "Directorio de usuarios", 
+      description: "Usuarios del hotel registrados.", 
+      url: `${apiBaseUrl}/users/export/all`, 
+      icon: <GroupIcon fontSize="large" />, 
+      color: theme.palette.success.main, 
+      isFiltered: false 
+    },
+    ...(user?.rol === ROLES.ROOT || user?.rol === "HOTEL_ADMIN" ? [{ 
+      name: "Usuarios del Sistema", 
+      description: "Usuarios con acceso al sistema.", 
+      url: `${apiBaseUrl}/auth/export/all`, 
+      icon: <AdminPanelSettingsIcon fontSize="large" />, 
+      color: theme.palette.secondary.main, 
+      isFiltered: false 
+    }] : []),
   ];
 
   return (
@@ -89,7 +144,7 @@ const Reportes = () => {
 
       <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'primary.main' }}><AccessTimeIcon sx={{ mr: 1 }} /><Typography variant="h6" fontWeight="bold">Filtro por Fechas</Typography></Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Selecciona un rango de fechas si vas a descargar el reporte de <b>Análisis de Garantías</b>.</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Selecciona un rango de fechas para filtrar los reportes compatibles. Si lo dejas vacío en reportes opcionales, se descargará todo el historial.</Typography>
           <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={4}><TextField label="Fecha Inicio" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Grid>
               <Grid item xs={12} sm={6} md={4}><TextField label="Fecha Fin" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Grid>
@@ -103,22 +158,22 @@ const Reportes = () => {
           <Grid item xs={12} sm={6} md={4} key={report.name}>
             <Card elevation={2} sx={{ height: '100%', borderRadius: 3, transition: '0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 } }}>
               <CardActionArea 
-                onClick={() => handleExport(report.name, report.url, report.isFiltered)} 
+                onClick={() => handleExport(report.name, report.url, report.isFiltered, report.isOptionalFilter)} 
                 sx={{ height: '100%', p: 2 }}
-                disabled={downloadingReport !== null} // Deshabilitar si hay algo descargando
+                disabled={downloadingReport !== null}
               >
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                   <Avatar sx={{ bgcolor: report.color + '22', color: report.color, width: 64, height: 64, mb: 2 }}>{report.icon}</Avatar>
                   <Typography variant="h6" fontWeight="bold" gutterBottom>{report.name}</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>{report.description}</Typography>
                   
-                  {/* 👇 Feedback Visual */}
                   {downloadingReport === report.name ? (
                       <Chip label="Generando..." icon={<CircularProgress size={16} />} sx={{ bgcolor: 'action.selected', fontWeight: 'bold' }} />
                   ) : (
                       <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
                         <Chip label="Excel" size="small" icon={<DownloadIcon />} sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} />
-                        {report.isFiltered && <Chip label="Requiere Fechas" size="small" sx={{ bgcolor: '#fff3e0', color: '#ef6c00', fontWeight: 'bold' }} />}
+                        {report.isFiltered && !report.isOptionalFilter && <Chip label="Requiere Fechas" size="small" sx={{ bgcolor: '#fff3e0', color: '#ef6c00', fontWeight: 'bold' }} />}
+                        {report.isFiltered && report.isOptionalFilter && <Chip label="Fechas Opcionales" size="small" sx={{ bgcolor: '#e3f2fd', color: '#0288d1', fontWeight: 'bold' }} />}
                       </Box>
                   )}
                 </CardContent>

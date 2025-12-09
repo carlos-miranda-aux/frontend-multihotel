@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import { 
   Grid, Paper, Typography, Box, Alert, Card, CardContent, 
-  CardActionArea, Chip, Button, useTheme, alpha, Divider, Stack, Skeleton // 👈 Import Skeleton
+  CardActionArea, Chip, Button, useTheme, alpha, Divider, Stack, Skeleton 
 } from "@mui/material";
 import { 
   Timeline, TimelineItem, TimelineSeparator, TimelineConnector, TimelineContent, 
@@ -24,7 +24,6 @@ import EventIcon from '@mui/icons-material/Event';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PieChartIcon from '@mui/icons-material/PieChart';
 import CircleIcon from '@mui/icons-material/Circle';
-import DomainIcon from '@mui/icons-material/Domain';
 
 // --- SKELETON COMPONENTS ---
 const KPISkeleton = () => (
@@ -195,10 +194,6 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  let welcomeSubtitle = "Resumen de la operación global.";
-  if (selectedHotelId) welcomeSubtitle = "Resumen del Hotel activo.";
-  else if (user?.hotels && user.hotels.length === 1) welcomeSubtitle = `Operación local: ${user.hotels[0].nombre}`;
-
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -222,10 +217,6 @@ const Home = () => {
     <Box sx={{ p: 3, maxWidth: 1600, margin: '0 auto' }}>
       <Box sx={{ mb: 5 }}>
         <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ letterSpacing: -0.5 }}>Panel de Control</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="subtitle1" color="text.secondary" fontWeight={500}>{welcomeSubtitle}</Typography>
-            {selectedHotelId && <Chip label="Filtrado" size="small" color="primary" variant="outlined" icon={<DomainIcon />} />}
-        </Box>
       </Box>
 
       {/* --- SECCIÓN 1: TARJETAS KPI --- */}

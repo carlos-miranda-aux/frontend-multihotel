@@ -3,12 +3,11 @@ import { useForm, Controller } from "react-hook-form";
 import {
   Box, Typography, TextField, Button, Grid, Fade, MenuItem, CircularProgress, 
   Chip, Checkbox, ListItemText, FormControlLabel, Switch, Alert, Avatar, Stack, Divider, 
-  FormControl, InputLabel, FormHelperText, useTheme, alpha,
-  ListSubheader, Select, OutlinedInput 
+  FormControl, InputLabel, Select, OutlinedInput, ListSubheader, FormHelperText
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 
-// Icons
+// Iconos
 import SaveIcon from '@mui/icons-material/Save';
 import ComputerIcon from '@mui/icons-material/Computer';
 import WifiIcon from '@mui/icons-material/Wifi';
@@ -16,12 +15,13 @@ import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DomainIcon from '@mui/icons-material/Domain';
-import EventBusyIcon from '@mui/icons-material/EventBusy'; // Nuevo icono para baja
+import EventBusyIcon from '@mui/icons-material/EventBusy';
+import DescriptionIcon from '@mui/icons-material/Description'; // Icono para el botón de resguardo
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
 import { AuthContext } from "../context/AuthContext"; 
-import { ROLES, DEVICE_STATUS } from "../config/constants"; // <--- Importante: DEVICE_STATUS
+import { ROLES, DEVICE_STATUS } from "../config/constants"; 
 import PageHeader from "../components/common/PageHeader"; 
 import SectionCard from "../components/common/SectionCard"; 
 import StatusBadge from "../components/common/StatusBadge"; 
@@ -36,7 +36,6 @@ const EditDevice = () => {
   const { refreshAlerts } = useContext(AlertContext);
   const { user } = useContext(AuthContext);
   const isRoot = user?.rol === ROLES.ROOT;
-  const theme = useTheme();
 
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
     defaultValues: {
@@ -46,16 +45,15 @@ const EditDevice = () => {
       office_tipo_licencia: "", office_serial: "", office_key: "", es_panda: false,
       garantia_numero_producto: "", garantia_numero_reporte: "", garantia_notes: "",
       garantia_inicio: "", garantia_fin: "", areaId: "", fecha_proxima_revision: "",
-      motivo_baja: "", observaciones_baja: "", fecha_baja: "", isWarrantyApplied: false, // <--- Agregado fecha_baja
+      motivo_baja: "", observaciones_baja: "", fecha_baja: "", isWarrantyApplied: false, 
       hotelId: ""
     }
   });
 
-  const watchAreaId = watch("areaId");
-  const watchUsuarioId = watch("usuarioId");
   const watchEstadoId = watch("estadoId");
-  const isWarrantyApplied = watch("isWarrantyApplied");
   const watchHotelId = watch("hotelId");
+  const watchUsuarioId = watch("usuarioId");
+  const isWarrantyApplied = watch("isWarrantyApplied");
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
@@ -66,6 +64,9 @@ const EditDevice = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isPermanentlyBaja, setIsPermanentlyBaja] = useState(false);
+  
+  // Estado para controlar la descarga del documento
+  const [downloadingDoc, setDownloadingDoc] = useState(false);
 
   useEffect(() => {
     const fetchDeviceData = async () => {
@@ -85,7 +86,7 @@ const EditDevice = () => {
         const formatDate = (d) => d ? new Date(d).toISOString().substring(0, 10) : "";
         const statusList = Array.isArray(deviceStatusesRes.data) ? deviceStatusesRes.data : [];
         
-        // Detectar si ya venía como baja permanente desde la BD
+        // Detectar si el equipo ya estaba dado de baja
         const bajaStatusName = DEVICE_STATUS.DISPOSED.toLowerCase();
         const currentStatusName = deviceData.estado?.nombre?.toLowerCase();
         
@@ -99,7 +100,7 @@ const EditDevice = () => {
           garantia_inicio: formatDate(deviceData.garantia_inicio),
           garantia_fin: formatDate(deviceData.garantia_fin),
           fecha_proxima_revision: formatDate(deviceData.fecha_proxima_revision),
-          fecha_baja: formatDate(deviceData.fecha_baja), // <--- Cargar fecha de baja si existe
+          fecha_baja: formatDate(deviceData.fecha_baja), 
           es_panda: deviceData.es_panda || false,
           usuarioId: deviceData.usuarioId || "",
           areaId: deviceData.areaId || "",
@@ -108,7 +109,7 @@ const EditDevice = () => {
           sistemaOperativoId: deviceData.sistemaOperativoId || "",
           comentarios: deviceData.comentarios || "",
           isWarrantyApplied: !!(deviceData.garantia_numero_reporte || deviceData.garantia_notes),
-          hotelId: deviceData.hotelId
+          hotelId: deviceData.hotelId // Asegurar que sea número si viene de BD
         });
 
         setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
@@ -130,15 +131,18 @@ const EditDevice = () => {
     setError(""); setMessage("");
     const payload = { ...data };
 
-    // Limpieza de campos que no se envían
-    const fieldsToRemove = ['id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento', 'isWarrantyApplied', 'hotelId', 'fecha_baja']; // fecha_baja la gestiona el backend al cambiar estado
+    // Eliminar campos que no se deben enviar al backend
+    const fieldsToRemove = ['id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento', 'isWarrantyApplied', 'hotelId', 'fecha_baja']; 
     fieldsToRemove.forEach(field => delete payload[field]); 
 
+    // Asegurar que las llaves foráneas sean números o null
     const foreignKeys = ['areaId', 'usuarioId', 'tipoId', 'estadoId', 'sistemaOperativoId'];
     foreignKeys.forEach(key => { payload[key] = payload[key] ? Number(payload[key]) : null; });
 
+    // Convertir array de perfiles a string
     if (Array.isArray(payload.perfiles_usuario)) payload.perfiles_usuario = payload.perfiles_usuario.join(", ");
     
+    // Formatear fechas
     ['garantia_inicio', 'garantia_fin', 'fecha_proxima_revision'].forEach(key => {
         payload[key] = payload[key] ? new Date(payload[key]).toISOString() : null;
     });
@@ -153,12 +157,38 @@ const EditDevice = () => {
     }
   };
 
+  // Función para descargar el documento Word
+  const handleDownloadResguardo = async () => {
+      setDownloadingDoc(true);
+      try {
+          const response = await api.get(`/devices/export/resguardo/${id}`, {
+              responseType: 'blob', // Necesario para descargar archivos binarios
+          });
+          
+          // Crear un enlace temporal para descargar el blob
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', `Resguardo_${watch("nombre_equipo") || "Equipo"}.docx`);
+          document.body.appendChild(link);
+          link.click();
+          link.parentNode.removeChild(link);
+      } catch (err) {
+          console.error(err);
+          setError("Error al descargar el resguardo. Verifica que la plantilla exista en el servidor.");
+      } finally {
+          setDownloadingDoc(false);
+      }
+  };
+
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
 
+    // Filtrar áreas según el hotel del dispositivo (si aplica)
+    // Usamos comparación flexible (==) por si watchHotelId es string y a.hotelId es número
     const filteredAreas = isRoot && watchHotelId 
-        ? areas.filter(a => a.hotelId === watchHotelId) 
+        ? areas.filter(a => a.hotelId == watchHotelId) 
         : areas;
 
     const sortedAreas = [...filteredAreas].sort((a, b) => (a.departamento?.nombre || "").localeCompare(b.departamento?.nombre || ""));
@@ -176,12 +206,11 @@ const EditDevice = () => {
   const getStatusName = () => { const s = deviceStatuses.find(s => s.id === watchEstadoId); return s ? s.nombre : "N/A"; }
   const assignedUser = users.find(u => u.id === watchUsuarioId);
   const isAdmin = user?.rol === ROLES.HOTEL_ADMIN || isRoot;
-
-  const hotelName = watchHotelId === 1 ? "Cancún" : watchHotelId === 2 ? "Sensira" : watchHotelId === 3 ? "Corporativo" : "Desconocido";
-
-  // LÓGICA DE DETECCIÓN DE ESTADO INACTIVO
+  
+  // Mapeo simple de nombres de hotel para visualización (opcional)
+  const hotelName = watchHotelId === 1 ? "Cancún" : watchHotelId === 2 ? "Sensira" : watchHotelId === 3 ? "Corporativo" : `ID: ${watchHotelId}`;
+  
   const currentStatusObj = deviceStatuses.find(s => s.id === watchEstadoId);
-  // Comparamos con la constante "Inactivo" (o como se llame en tu config)
   const isStatusBaja = currentStatusObj?.nombre === DEVICE_STATUS.DISPOSED;
 
   if (loading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
@@ -193,7 +222,22 @@ const EditDevice = () => {
         subtitle={isRoot ? `Ubicación: ${hotelName}` : `${watch("marca")} ${watch("modelo")}`}
         status={<StatusBadge status={getStatusName()} />}
         onBack={() => navigate(-1)}
-        actions={<Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSubmit(onSubmit)}>Guardar Cambios</Button>}
+        actions={
+            <>
+                <Button 
+                    variant="outlined" 
+                    color="secondary" 
+                    startIcon={downloadingDoc ? <CircularProgress size={20} color="inherit" /> : <DescriptionIcon />} 
+                    onClick={handleDownloadResguardo}
+                    disabled={downloadingDoc}
+                >
+                    {downloadingDoc ? "Generando..." : "Resguardo"}
+                </Button>
+                <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSubmit(onSubmit)}>
+                    Guardar Cambios
+                </Button>
+            </>
+        }
       />
 
       <Box sx={{ px: 3, mb: 2 }}>
@@ -327,7 +371,7 @@ const EditDevice = () => {
                                 <Select {...field} label="Usuario">
                                     <MenuItem value=""><em>Ninguno</em></MenuItem>
                                     {users
-                                      .filter(u => !isRoot || !watchHotelId || u.hotelId === watchHotelId) 
+                                      .filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId) 
                                       .map(u => <MenuItem key={u.id} value={u.id}>{u.nombre}</MenuItem>)
                                     }
                                 </Select>
@@ -353,7 +397,7 @@ const EditDevice = () => {
                                     MenuProps={MenuProps}
                                 >
                                     {users
-                                        .filter(u => !isRoot || !watchHotelId || u.hotelId === watchHotelId)
+                                        .filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId)
                                         .map((user) => (
                                         <MenuItem key={user.id} value={user.nombre}>
                                             <Checkbox checked={field.value.indexOf(user.nombre) > -1} />
@@ -367,7 +411,6 @@ const EditDevice = () => {
                 </Stack>
               </SectionCard>
 
-              {/* SECCIÓN ACTUALIZADA DE ESTADO Y BAJA */}
               <SectionCard title="Estado del Activo" icon={<SettingsIcon />}>
                  <Stack spacing={2}>
                      <FormControl fullWidth>
@@ -382,7 +425,6 @@ const EditDevice = () => {
                         />
                      </FormControl>
 
-                     {/* Panel de Baja (Solo visible si el estado es Inactivo) */}
                      <Fade in={isStatusBaja} unmountOnExit>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, bgcolor: 'error.50', borderRadius: 2, border: '1px dashed', borderColor: 'error.main' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
@@ -425,7 +467,6 @@ const EditDevice = () => {
                                 )} 
                             />
 
-                            {/* Campo de Fecha de Baja (Solo Lectura o Informativo) */}
                             <Controller 
                                 name="fecha_baja" 
                                 control={control} 
@@ -438,7 +479,7 @@ const EditDevice = () => {
                                         size="small"
                                         color="error" 
                                         InputLabelProps={{ shrink: true }}
-                                        disabled // Deshabilitado porque el backend lo pone automático (solo para visualizar)
+                                        disabled 
                                         helperText="Se registrará automáticamente al guardar"
                                     />
                                 )} 

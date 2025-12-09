@@ -21,15 +21,13 @@ const HotelsTable = () => {
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: "", codigo: "", direccion: "", activo: true });
+  const [formData, setFormData] = useState({ nombre: "", codigo: "", direccion: "", ciudad: "", activo: true }); // Se agrega ciudad
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // Delete states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   
-
   const [actionLoading, setActionLoading] = useState(false);
 
   const { refreshHotelList } = useContext(AuthContext);
@@ -50,7 +48,7 @@ const HotelsTable = () => {
 
   const handleOpen = (item = null) => {
     setEditingItem(item);
-    setFormData(item ? { ...item } : { nombre: "", codigo: "", direccion: "", activo: true });
+    setFormData(item ? { ...item } : { nombre: "", codigo: "", direccion: "", ciudad: "", activo: true });
     setError(""); setMessage("");
     setOpenModal(true);
   };
@@ -62,11 +60,10 @@ const HotelsTable = () => {
       setDeleteDialogOpen(true);
   };
 
-  // FUNCIÓN DE ELIMINAR ACTUALIZADA
   const confirmDelete = async () => {
     if(!itemToDelete) return;
     
-    setActionLoading(true); // Bloqueamos botones
+    setActionLoading(true); 
     try {
       await api.delete(`/hotels/delete/${itemToDelete.id}`);
       setMessage("Hotel eliminado correctamente.");
@@ -77,7 +74,7 @@ const HotelsTable = () => {
         setError("Error al eliminar."); 
         setDeleteDialogOpen(false);
     } finally {
-        setActionLoading(false); // Limpieza
+        setActionLoading(false); 
         setItemToDelete(null);
     }
   };
@@ -116,6 +113,7 @@ const HotelsTable = () => {
             <TableRow sx={{ bgcolor: 'background.default' }}>
               <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Código</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Ciudad</TableCell> {/* Nueva Columna */}
               <TableCell sx={{ fontWeight: 'bold' }}>Dirección</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Acciones</TableCell>
@@ -127,15 +125,17 @@ const HotelsTable = () => {
                     <TableCell><Skeleton variant="text" /></TableCell>
                     <TableCell><Skeleton variant="text" width={50} /></TableCell>
                     <TableCell><Skeleton variant="text" /></TableCell>
+                    <TableCell><Skeleton variant="text" /></TableCell>
                     <TableCell><Skeleton variant="text" width={40} /></TableCell>
                     <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
                 </TableRow>
             )) : hotels.length === 0 ? (
-                <TableRow><TableCell colSpan={5}><EmptyState title="No hay hoteles" description="Registra la primera propiedad para comenzar." /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={6}><EmptyState title="No hay hoteles" description="Registra la primera propiedad para comenzar." /></TableCell></TableRow>
             ) : hotels.map(h => (
               <TableRow key={h.id} hover>
                 <TableCell>{h.nombre}</TableCell>
                 <TableCell>{h.codigo}</TableCell>
+                <TableCell>{h.ciudad || "—"}</TableCell> {/* Dato Ciudad */}
                 <TableCell>{h.direccion}</TableCell>
                 <TableCell>{h.activo ? "Activo" : "Inactivo"}</TableCell>
                 <TableCell>
@@ -154,6 +154,17 @@ const HotelsTable = () => {
             <Typography variant="h6" mb={2}>{editingItem ? "Editar Hotel" : "Crear Hotel"}</Typography>
             <TextField fullWidth label="Nombre" margin="normal" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} required />
             <TextField fullWidth label="Código (ej. CPC-CUN)" margin="normal" value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} required />
+            
+            {/* Nuevo Campo de Ciudad */}
+            <TextField 
+                fullWidth 
+                label="Ciudad / Lugar de Emisión (ej. Puerto Vallarta, Jalisco)" 
+                margin="normal" 
+                value={formData.ciudad} 
+                onChange={e => setFormData({...formData, ciudad: e.target.value})} 
+                placeholder="Para formatos legales"
+            />
+
             <TextField fullWidth label="Dirección" margin="normal" value={formData.direccion} onChange={e => setFormData({...formData, direccion: e.target.value})} />
             <FormControlLabel 
                 control={<Switch checked={formData.activo} onChange={e => setFormData({...formData, activo: e.target.checked})} />} 
@@ -165,7 +176,6 @@ const HotelsTable = () => {
         </Fade>
       </Modal>
 
-      {/* PASAMOS LA PROP isLoading */}
       <ConfirmDialog 
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
@@ -178,4 +188,4 @@ const HotelsTable = () => {
   );
 };
 
-export default HotelsTable; 
+export default HotelsTable;

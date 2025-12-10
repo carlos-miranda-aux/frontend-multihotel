@@ -27,19 +27,33 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel", extraData
         headers: { "Content-Type": "multipart/form-data" },
       });
       
-      const { message, errors } = res.data;
+      // Extraemos también 'warnings' y 'successCount' de la respuesta del Backend
+      const { message, errors, warnings, successCount } = res.data;
       
+      // Construimos el mensaje base si no viene uno explícito
+      let finalMessage = message || `Proceso finalizado. Registros importados: ${successCount || 0}.`;
+      let finalSeverity = "success";
+
       if (errors && errors.length > 0) {
           console.warn("Errores de importación:", errors);
-          setToast({ open: true, msg: `${message}. Revisa la consola para detalles.`, severity: "warning" });
+          finalMessage = `${message || 'Error'}. Hubo fallos críticos. Revisa la consola.`;
+          finalSeverity = "error";
+      } else if (warnings && warnings.length > 0) {
+          // --- LÓGICA DE ALERTA SOLICITADA ---
+          // Si hay advertencias (ej: usuarios no encontrados), mostramos alerta naranja
+          console.warn("Advertencias de importación (Usuarios no encontrados):", warnings);
+          finalMessage = `Importación exitosa (${successCount}), pero con ALERTAS: ${warnings.length} equipos tienen usuarios no encontrados en el sistema (Ver consola F12).`;
+          finalSeverity = "warning";
       } else {
-          setToast({ open: true, msg: message, severity: "success" });
+          // Éxito total sin advertencias
+          finalSeverity = "success";
       }
+
+      setToast({ open: true, msg: finalMessage, severity: finalSeverity });
       
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error(err);
-      // Mensaje más claro si falta el hotel
       const errMsg = err.response?.data?.error || "Error al importar el archivo.";
       setToast({ open: true, msg: errMsg, severity: "error" });
     } finally {
@@ -70,7 +84,7 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel", extraData
 
       <Snackbar 
         open={toast.open} 
-        autoHideDuration={6000} 
+        autoHideDuration={8000} // Aumenté un poco el tiempo para leer las advertencias
         onClose={() => setToast({ ...toast, open: false })}
       >
         <Alert severity={toast.severity} sx={{ width: '100%' }}>

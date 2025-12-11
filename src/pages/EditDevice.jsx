@@ -16,7 +16,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DomainIcon from '@mui/icons-material/Domain';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
-import DescriptionIcon from '@mui/icons-material/Description'; // Icono para el botón de resguardo
+import DescriptionIcon from '@mui/icons-material/Description'; 
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
@@ -34,7 +34,7 @@ const EditDevice = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  const { user, getHotelName } = useContext(AuthContext); // CORRECCIÓN: Extraer getHotelName
+  const { user, getHotelName } = useContext(AuthContext); 
   const isRoot = user?.rol === ROLES.ROOT;
 
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
@@ -65,7 +65,6 @@ const EditDevice = () => {
   const [error, setError] = useState("");
   const [isPermanentlyBaja, setIsPermanentlyBaja] = useState(false);
   
-  // Estado para controlar la descarga del documento
   const [downloadingDoc, setDownloadingDoc] = useState(false);
 
   useEffect(() => {
@@ -86,7 +85,6 @@ const EditDevice = () => {
         const formatDate = (d) => d ? new Date(d).toISOString().substring(0, 10) : "";
         const statusList = Array.isArray(deviceStatusesRes.data) ? deviceStatusesRes.data : [];
         
-        // Detectar si el equipo ya estaba dado de baja
         const bajaStatusName = DEVICE_STATUS.DISPOSED.toLowerCase();
         const currentStatusName = deviceData.estado?.nombre?.toLowerCase();
         
@@ -109,7 +107,7 @@ const EditDevice = () => {
           sistemaOperativoId: deviceData.sistemaOperativoId || "",
           comentarios: deviceData.comentarios || "",
           isWarrantyApplied: !!(deviceData.garantia_numero_reporte || deviceData.garantia_notes),
-          hotelId: deviceData.hotelId // Asegurar que sea número si viene de BD
+          hotelId: deviceData.hotelId
         });
 
         setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
@@ -131,18 +129,34 @@ const EditDevice = () => {
     setError(""); setMessage("");
     const payload = { ...data };
 
-    // Eliminar campos que no se deben enviar al backend
-    const fieldsToRemove = ['id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 'sistema_operativo', 'area', 'maintenances', 'departamentoId', 'departamento', 'isWarrantyApplied', 'hotelId', 'fecha_baja']; 
+    const currentStatusObj = deviceStatuses.find(s => s.id === payload.estadoId);
+    const isDisposing = currentStatusObj?.nombre === DEVICE_STATUS.DISPOSED;
+
+    // --- CORRECCIÓN AQUÍ: Agregado 'hotel' a la lista de eliminación ---
+    const fieldsToRemove = [
+        'id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 
+        'sistema_operativo', 'area', 'maintenances', 'departamentoId', 
+        'departamento', 'isWarrantyApplied', 'hotelId', 'hotel' // <--- 'hotel' AGREGADO
+    ]; 
     fieldsToRemove.forEach(field => delete payload[field]); 
 
-    // Asegurar que las llaves foráneas sean números o null
+    if (!isDisposing) {
+        payload.fecha_baja = null;
+        payload.motivo_baja = null;
+        payload.observaciones_baja = null;
+    } else {
+        if (!payload.fecha_baja) {
+            payload.fecha_baja = new Date().toISOString();
+        } else {
+            payload.fecha_baja = new Date(payload.fecha_baja).toISOString();
+        }
+    }
+
     const foreignKeys = ['areaId', 'usuarioId', 'tipoId', 'estadoId', 'sistemaOperativoId'];
     foreignKeys.forEach(key => { payload[key] = payload[key] ? Number(payload[key]) : null; });
 
-    // Convertir array de perfiles a string
     if (Array.isArray(payload.perfiles_usuario)) payload.perfiles_usuario = payload.perfiles_usuario.join(", ");
     
-    // Formatear fechas
     ['garantia_inicio', 'garantia_fin', 'fecha_proxima_revision'].forEach(key => {
         payload[key] = payload[key] ? new Date(payload[key]).toISOString() : null;
     });
@@ -153,19 +167,17 @@ const EditDevice = () => {
       setMessage("Guardado correctamente.");
       setTimeout(() => navigate("/inventory"), 1500);
     } catch (err) {
-      setError(err.response?.data?.error || "Error al guardar.");
+      console.error(err);
+      setError(err.response?.data?.error || "Error al guardar el equipo.");
     }
   };
 
-  // Función para descargar el documento Word
   const handleDownloadResguardo = async () => {
       setDownloadingDoc(true);
       try {
           const response = await api.get(`/devices/export/resguardo/${id}`, {
-              responseType: 'blob', // Necesario para descargar archivos binarios
+              responseType: 'blob', 
           });
-          
-          // Crear un enlace temporal para descargar el blob
           const url = window.URL.createObjectURL(new Blob([response.data]));
           const link = document.createElement('a');
           link.href = url;
@@ -184,12 +196,7 @@ const EditDevice = () => {
   const renderAreaOptions = () => {
     const options = [];
     let lastDept = null;
-
-    // Filtrar áreas según el hotel del dispositivo (si aplica)
-    const filteredAreas = isRoot && watchHotelId 
-        ? areas.filter(a => a.hotelId == watchHotelId) 
-        : areas;
-
+    const filteredAreas = isRoot && watchHotelId ? areas.filter(a => a.hotelId == watchHotelId) : areas;
     const sortedAreas = [...filteredAreas].sort((a, b) => (a.departamento?.nombre || "").localeCompare(b.departamento?.nombre || ""));
     
     sortedAreas.forEach(area => {
@@ -205,8 +212,6 @@ const EditDevice = () => {
   const getStatusName = () => { const s = deviceStatuses.find(s => s.id === watchEstadoId); return s ? s.nombre : "N/A"; }
   const assignedUser = users.find(u => u.id === watchUsuarioId);
   const isAdmin = user?.rol === ROLES.HOTEL_ADMIN || isRoot;
-  
-  // CORRECCIÓN: Uso dinámico de getHotelName
   const hotelName = getHotelName(watchHotelId);
   
   const currentStatusObj = deviceStatuses.find(s => s.id === watchEstadoId);
@@ -248,20 +253,17 @@ const EditDevice = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} lg={8}>
             <Stack spacing={3}>
-
               {isRoot && (
                  <Alert severity="info" icon={<DomainIcon />}>
                     Estás editando un equipo del hotel: <b>{hotelName}</b>.
                  </Alert>
               )}
-
               <SectionCard title="Identidad del Equipo" icon={<ComputerIcon />}>
                  <Stack spacing={3}>
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}><Controller name="nombre_equipo" control={control} rules={{ required: "Requerido" }} render={({ field }) => <TextField {...field} label="Nombre del Equipo" fullWidth required error={!!errors.nombre_equipo} />} /></Grid>
                         <Grid item xs={12} sm={6}><Controller name="etiqueta" control={control} render={({ field }) => <TextField {...field} label="Etiqueta" fullWidth />} /></Grid>
                     </Grid>
-                    
                     <Grid container spacing={2}>
                         <Grid item xs={12} sm={4}><Controller name="marca" control={control} render={({ field }) => <TextField {...field} label="Marca" fullWidth />} /></Grid>
                         <Grid item xs={12} sm={4}><Controller name="modelo" control={control} render={({ field }) => <TextField {...field} label="Modelo" fullWidth />} /></Grid>
@@ -297,12 +299,7 @@ const EditDevice = () => {
                           <Grid item xs={12} sm={6}><Controller name="office_serial" control={control} render={({ field }) => <TextField {...field} label="Serial Office" fullWidth />} /></Grid>
                           <Grid item xs={12} sm={6}><Controller name="office_key" control={control} render={({ field }) => <TextField {...field} label="Key Office" fullWidth />} /></Grid>
                       </Grid>
-                      <Controller
-                        name="es_panda" control={control}
-                        render={({ field: { onChange, value } }) => (
-                            <FormControlLabel control={<Switch checked={value} onChange={onChange} color="success" />} label="Antivirus Panda Instalado" />
-                        )}
-                      />
+                      <Controller name="es_panda" control={control} render={({ field: { onChange, value } }) => (<FormControlLabel control={<Switch checked={value} onChange={onChange} color="success" />} label="Antivirus Panda Instalado" />)} />
                   </Stack>
               </SectionCard>
 
@@ -314,12 +311,7 @@ const EditDevice = () => {
                           <Grid item xs={12} sm={6}><Controller name="garantia_fin" control={control} render={({ field }) => <TextField {...field} label="Fin Garantía" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
                           <Grid item xs={12} sm={6}><Controller name="fecha_proxima_revision" control={control} render={({ field }) => <TextField {...field} label="Próxima Revisión" type="date" fullWidth InputLabelProps={{ shrink: true }} />} /></Grid>
                       </Grid>
-                      <Controller
-                        name="isWarrantyApplied" control={control}
-                        render={({ field: { onChange, value } }) => (
-                            <FormControlLabel control={<Switch checked={value} onChange={onChange} />} label="¿Se ha aplicado garantía?" />
-                        )}
-                      />
+                      <Controller name="isWarrantyApplied" control={control} render={({ field: { onChange, value } }) => (<FormControlLabel control={<Switch checked={value} onChange={onChange} />} label="¿Se ha aplicado garantía?" />)} />
                       <Fade in={isWarrantyApplied} unmountOnExit>
                           <Stack spacing={2}>
                               <Controller name="garantia_numero_reporte" control={control} render={({ field }) => <TextField {...field} label="Número de Reporte" fullWidth />} />
@@ -336,77 +328,12 @@ const EditDevice = () => {
               <SectionCard title="Responsable Actual" icon={<PersonIcon />}>
                 <Stack spacing={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 2 }}>
-                        <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}>
-                            {assignedUser ? assignedUser.nombre.charAt(0) : "?"}
-                        </Avatar>
-                        <Box>
-                            <Typography variant="subtitle1" fontWeight="bold">
-                                {assignedUser ? assignedUser.nombre : "Sin Asignar"}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {assignedUser ? assignedUser.usuario_login : ""}
-                            </Typography>
-                        </Box>
+                        <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}>{assignedUser ? assignedUser.nombre.charAt(0) : "?"}</Avatar>
+                        <Box><Typography variant="subtitle1" fontWeight="bold">{assignedUser ? assignedUser.nombre : "Sin Asignar"}</Typography><Typography variant="caption" color="text.secondary">{assignedUser ? assignedUser.usuario_login : ""}</Typography></Box>
                     </Box>
-                    
-                    <FormControl fullWidth>
-                        <InputLabel>Área</InputLabel>
-                        <Controller 
-                            name="areaId" control={control} 
-                            render={({ field }) => (
-                                <Select {...field} label="Área">
-                                    <MenuItem value=""><em>Ninguna</em></MenuItem>
-                                    {renderAreaOptions()}
-                                </Select>
-                            )} 
-                        />
-                    </FormControl>
-
-                    <FormControl fullWidth>
-                        <InputLabel>Usuario</InputLabel>
-                        <Controller 
-                            name="usuarioId" control={control} 
-                            render={({ field }) => (
-                                <Select {...field} label="Usuario">
-                                    <MenuItem value=""><em>Ninguno</em></MenuItem>
-                                    {users
-                                      .filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId) 
-                                      .map(u => <MenuItem key={u.id} value={u.id}>{u.nombre}</MenuItem>)
-                                    }
-                                </Select>
-                            )} 
-                        />
-                    </FormControl>
-
-                    <FormControl fullWidth>
-                        <InputLabel>Perfiles de Usuario</InputLabel>
-                        <Controller
-                            name="perfiles_usuario"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    {...field}
-                                    multiple
-                                    input={<OutlinedInput label="Perfiles de Usuario" />}
-                                    renderValue={(selected) => (
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {selected.map((value) => <Chip key={value} label={value} size="small" />)}
-                                        </Box>
-                                    )}
-                                    MenuProps={MenuProps}
-                                >
-                                    {users
-                                        .filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId)
-                                        .map((user) => (
-                                        <MenuItem key={user.id} value={user.nombre}>
-                                            <Checkbox checked={field.value.indexOf(user.nombre) > -1} />
-                                            <ListItemText primary={user.nombre} />
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            )}
-                        />
-                    </FormControl>
+                    <FormControl fullWidth><InputLabel>Área</InputLabel><Controller name="areaId" control={control} render={({ field }) => (<Select {...field} label="Área"><MenuItem value=""><em>Ninguna</em></MenuItem>{renderAreaOptions()}</Select>)} /></FormControl>
+                    <FormControl fullWidth><InputLabel>Usuario</InputLabel><Controller name="usuarioId" control={control} render={({ field }) => (<Select {...field} label="Usuario"><MenuItem value=""><em>Ninguno</em></MenuItem>{users.filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId).map(u => <MenuItem key={u.id} value={u.id}>{u.nombre}</MenuItem>)}</Select>)} /></FormControl>
+                    <FormControl fullWidth><InputLabel>Perfiles de Usuario</InputLabel><Controller name="perfiles_usuario" control={control} render={({ field }) => (<Select {...field} multiple input={<OutlinedInput label="Perfiles de Usuario" />} renderValue={(selected) => (<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{selected.map((value) => <Chip key={value} label={value} size="small" />)}</Box>)} MenuProps={MenuProps}>{users.filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId).map((user) => (<MenuItem key={user.id} value={user.nombre}><Checkbox checked={field.value.indexOf(user.nombre) > -1} /><ListItemText primary={user.nombre} /></MenuItem>))}</Select>)} /></FormControl>
                 </Stack>
               </SectionCard>
 
@@ -414,83 +341,18 @@ const EditDevice = () => {
                  <Stack spacing={2}>
                      <FormControl fullWidth>
                         <InputLabel>Estado</InputLabel>
-                        <Controller 
-                            name="estadoId" control={control} 
-                            render={({ field }) => (
-                                <Select {...field} label="Estado" disabled={isPermanentlyBaja && !isAdmin}>
-                                    {deviceStatuses.map(s => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
-                                </Select>
-                            )} 
-                        />
+                        <Controller name="estadoId" control={control} render={({ field }) => (<Select {...field} label="Estado" disabled={isPermanentlyBaja && !isAdmin}>{deviceStatuses.map(s => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}</Select>)} />
                      </FormControl>
-
+                     
                      <Fade in={isStatusBaja} unmountOnExit>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, bgcolor: 'error.50', borderRadius: 2, border: '1px dashed', borderColor: 'error.main' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
-                                <EventBusyIcon fontSize="small" />
-                                <Typography variant="subtitle2" fontWeight="bold">Detalles de la Baja</Typography>
-                            </Box>
-                            
-                            <Controller 
-                                name="motivo_baja" 
-                                control={control} 
-                                rules={{ required: isStatusBaja ? "El motivo es obligatorio para dar de baja." : false }}
-                                render={({ field }) => (
-                                    <TextField 
-                                        {...field} 
-                                        label="Motivo de Baja" 
-                                        fullWidth 
-                                        size="small"
-                                        color="error" 
-                                        required={isStatusBaja}
-                                        error={!!errors.motivo_baja}
-                                        helperText={errors.motivo_baja?.message}
-                                    />
-                                )} 
-                            />
-                            
-                            <Controller 
-                                name="observaciones_baja" 
-                                control={control} 
-                                render={({ field }) => (
-                                    <TextField 
-                                        {...field} 
-                                        label="Observaciones" 
-                                        fullWidth 
-                                        multiline 
-                                        rows={2} 
-                                        size="small"
-                                        color="error" 
-                                        placeholder="Detalles adicionales..."
-                                    />
-                                )} 
-                            />
-
-                            <Controller 
-                                name="fecha_baja" 
-                                control={control} 
-                                render={({ field }) => (
-                                    <TextField 
-                                        {...field} 
-                                        label="Fecha de Baja" 
-                                        type="date" 
-                                        fullWidth 
-                                        size="small"
-                                        color="error" 
-                                        InputLabelProps={{ shrink: true }}
-                                        disabled 
-                                        helperText="Se registrará automáticamente al guardar"
-                                    />
-                                )} 
-                            />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}><EventBusyIcon fontSize="small" /><Typography variant="subtitle2" fontWeight="bold">Detalles de la Baja</Typography></Box>
+                            <Controller name="motivo_baja" control={control} rules={{ required: isStatusBaja ? "El motivo es obligatorio." : false }} render={({ field }) => (<TextField {...field} label="Motivo de Baja" fullWidth size="small" color="error" required={isStatusBaja} error={!!errors.motivo_baja} helperText={errors.motivo_baja?.message} />)} />
+                            <Controller name="observaciones_baja" control={control} render={({ field }) => (<TextField {...field} label="Observaciones" fullWidth multiline rows={2} size="small" color="error" />)} />
+                            <Controller name="fecha_baja" control={control} render={({ field }) => (<TextField {...field} label="Fecha de Baja" type="date" fullWidth size="small" color="error" InputLabelProps={{ shrink: true }} />)} />
                         </Box>
                      </Fade>
-
-                     {isPermanentlyBaja && !isAdmin && (
-                         <Alert severity="warning">
-                             Este equipo está dado de baja (Inactivo). Solo un administrador puede reactivarlo.
-                         </Alert>
-                     )}
+                     {isPermanentlyBaja && !isAdmin && <Alert severity="warning">Este equipo está dado de baja (Inactivo).</Alert>}
                  </Stack>
               </SectionCard>
             </Stack>

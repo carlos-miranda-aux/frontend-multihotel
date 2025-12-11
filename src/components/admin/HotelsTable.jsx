@@ -21,13 +21,19 @@ const HotelsTable = () => {
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [formData, setFormData] = useState({ nombre: "", codigo: "", direccion: "", ciudad: "", activo: true }); // Se agrega ciudad
+  
+  // Estado del formulario actualizado con los nuevos campos
+  const [formData, setFormData] = useState({ 
+      nombre: "", codigo: "", direccion: "", ciudad: "", 
+      razonSocial: "", diminutivo: "", 
+      activo: true 
+  });
+  
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  
   const [actionLoading, setActionLoading] = useState(false);
 
   const { refreshHotelList } = useContext(AuthContext);
@@ -48,7 +54,16 @@ const HotelsTable = () => {
 
   const handleOpen = (item = null) => {
     setEditingItem(item);
-    setFormData(item ? { ...item } : { nombre: "", codigo: "", direccion: "", ciudad: "", activo: true });
+    // Cargar datos existentes o valores por defecto
+    setFormData(item ? { 
+        ...item, 
+        razonSocial: item.razonSocial || "", 
+        diminutivo: item.diminutivo || "" 
+    } : { 
+        nombre: "", codigo: "", direccion: "", ciudad: "", 
+        razonSocial: "", diminutivo: "", 
+        activo: true 
+    });
     setError(""); setMessage("");
     setOpenModal(true);
   };
@@ -113,8 +128,8 @@ const HotelsTable = () => {
             <TableRow sx={{ bgcolor: 'background.default' }}>
               <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Código</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Ciudad</TableCell> {/* Nueva Columna */}
-              <TableCell sx={{ fontWeight: 'bold' }}>Dirección</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Razón Social</TableCell> {/* Nueva Columna */}
+              <TableCell sx={{ fontWeight: 'bold' }}>Ciudad</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Acciones</TableCell>
             </TableRow>
@@ -135,8 +150,8 @@ const HotelsTable = () => {
               <TableRow key={h.id} hover>
                 <TableCell>{h.nombre}</TableCell>
                 <TableCell>{h.codigo}</TableCell>
-                <TableCell>{h.ciudad || "—"}</TableCell> {/* Dato Ciudad */}
-                <TableCell>{h.direccion}</TableCell>
+                <TableCell>{h.razonSocial || "—"}</TableCell> {/* Dato Razón Social */}
+                <TableCell>{h.ciudad || "—"}</TableCell>
                 <TableCell>{h.activo ? "Activo" : "Inactivo"}</TableCell>
                 <TableCell>
                   <IconButton color="primary" onClick={() => handleOpen(h)}><EditIcon /></IconButton>
@@ -152,26 +167,47 @@ const HotelsTable = () => {
         <Fade in={openModal}>
           <Box sx={modalStyle} component="form" onSubmit={handleSubmit}>
             <Typography variant="h6" mb={2}>{editingItem ? "Editar Hotel" : "Crear Hotel"}</Typography>
-            <TextField fullWidth label="Nombre" margin="normal" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} required />
-            <TextField fullWidth label="Código (ej. CPC-CUN)" margin="normal" value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} required />
             
-            {/* Nuevo Campo de Ciudad */}
+            <TextField fullWidth label="Nombre" margin="normal" size="small" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} required />
+            <TextField fullWidth label="Código (ej. CPC-CUN)" margin="normal" size="small" value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} required />
+            
+            {/* Campos Nuevos */}
             <TextField 
                 fullWidth 
-                label="Ciudad / Lugar de Emisión (ej. Puerto Vallarta, Jalisco)" 
+                label="Razón Social (Para Documentos)" 
                 margin="normal" 
-                value={formData.ciudad} 
-                onChange={e => setFormData({...formData, ciudad: e.target.value})} 
-                placeholder="Para formatos legales"
+                size="small"
+                value={formData.razonSocial} 
+                onChange={e => setFormData({...formData, razonSocial: e.target.value})} 
+                placeholder="Ej: HOTELERA CANCO S.A. DE C.V."
+            />
+            <TextField 
+                fullWidth 
+                label="Diminutivo / Alias (Para Documentos)" 
+                margin="normal" 
+                size="small"
+                value={formData.diminutivo} 
+                onChange={e => setFormData({...formData, diminutivo: e.target.value})} 
+                placeholder="Ej: CANCO"
             />
 
-            <TextField fullWidth label="Dirección" margin="normal" value={formData.direccion} onChange={e => setFormData({...formData, direccion: e.target.value})} />
+            <TextField 
+                fullWidth 
+                label="Ciudad (Lugar de Emisión)" 
+                margin="normal" 
+                size="small"
+                value={formData.ciudad} 
+                onChange={e => setFormData({...formData, ciudad: e.target.value})} 
+            />
+
+            <TextField fullWidth label="Dirección" margin="normal" size="small" value={formData.direccion} onChange={e => setFormData({...formData, direccion: e.target.value})} />
+            
             <FormControlLabel 
                 control={<Switch checked={formData.activo} onChange={e => setFormData({...formData, activo: e.target.checked})} />} 
                 label="Activo" 
-                sx={{ mt: 2 }}
+                sx={{ mt: 1 }}
             />
-            <Button type="submit" variant="contained" fullWidth sx={{ mt: 3 }}>Guardar</Button>
+            <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>Guardar</Button>
           </Box>
         </Fade>
       </Modal>

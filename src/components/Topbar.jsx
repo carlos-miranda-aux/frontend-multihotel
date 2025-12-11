@@ -23,12 +23,13 @@ import WarningIcon from "@mui/icons-material/Warning";
 import BuildIcon from "@mui/icons-material/Build";
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline'; // <--- IMPORTAR ICONO NUEVO
 
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
 import { useNavigate } from "react-router-dom";
 import Logo from "../assets/arriva.png";
-import HotelSwitcher from "./common/HotelSwitcher"; // 👈 IMPORTAR EL SWITCHER
+import HotelSwitcher from "./common/HotelSwitcher"; 
 
 const TopBar = ({ onMenuClick }) => { 
   const { user, logout } = useContext(AuthContext);
@@ -63,6 +64,12 @@ const TopBar = ({ onMenuClick }) => {
   const handleSettings = () => {
     navigate("/settings");
     handleProfileClose();
+  };
+  
+  // NUEVA FUNCIÓN DE NAVEGACIÓN
+  const handleAbout = () => {
+      navigate("/about");
+      handleProfileClose();
   };
   
   const handleLogoClick = () => navigate("/home");
@@ -151,7 +158,6 @@ const TopBar = ({ onMenuClick }) => {
         {user && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             
-            {/* SWITCHER DE HOTELES AQUÍ */}
             <HotelSwitcher />
 
             <IconButton color="inherit" onClick={handleAlertsClick}>
@@ -191,11 +197,20 @@ const TopBar = ({ onMenuClick }) => {
               onClose={handleProfileClose}
               transformOrigin={{ horizontal: 'right', vertical: 'top' }}
               anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+              slotProps={{ paper: { sx: { width: 200, mt: 1 } } }}
             >
               <MenuItem onClick={handleSettings}>
                  <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
                  Configuración
               </MenuItem>
+              
+              {/* --- NUEVA OPCIÓN --- */}
+              <MenuItem onClick={handleAbout}>
+                 <ListItemIcon><HelpOutlineIcon fontSize="small" /></ListItemIcon>
+                 Info
+              </MenuItem>
+              {/* ------------------- */}
+
               <Divider />
               <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
                  <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>

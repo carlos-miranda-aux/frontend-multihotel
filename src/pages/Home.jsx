@@ -231,7 +231,6 @@ const Home = () => {
                 <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Equipos" value={stats?.kpis?.totalActiveDevices || 0} icon={<ComputerIcon />} color="primary" subtitle="En inventario" onClick={() => navigate('/inventory')} /></Grid>
                 <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Usuarios" value={stats?.kpis?.totalStaff || 0} icon={<PeopleIcon />} color="info" subtitle="Totales" onClick={() => navigate('/users')} /></Grid>
                 <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Protegidos" value={stats?.kpis?.devicesWithPanda || 0} icon={<SecurityIcon />} color="success" subtitle="Equipos sin Panda" onClick={() => navigate('/inventory?filter=no-panda')} /></Grid>
-                <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Vencidas" value={stats?.warrantyStats?.expired || 0} icon={<GppBadIcon />} color="error" subtitle="Garantías expiradas" onClick={() => navigate('/inventory?filter=expired-warranty')} /></Grid>
                 <Grid item xs={12} sm={6} md={2.4}><KpiCard title="Bajas Mes" value={stats?.kpis?.monthlyDisposals || 0} icon={<DeleteIcon />} color="warning" subtitle="Equipos retirados" onClick={() => navigate('/disposals')} /></Grid>
             </>
         )}

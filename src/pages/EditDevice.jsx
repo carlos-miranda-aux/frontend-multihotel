@@ -34,7 +34,7 @@ const EditDevice = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  const { user } = useContext(AuthContext);
+  const { user, getHotelName } = useContext(AuthContext); // CORRECCIÓN: Extraer getHotelName
   const isRoot = user?.rol === ROLES.ROOT;
 
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
@@ -186,7 +186,6 @@ const EditDevice = () => {
     let lastDept = null;
 
     // Filtrar áreas según el hotel del dispositivo (si aplica)
-    // Usamos comparación flexible (==) por si watchHotelId es string y a.hotelId es número
     const filteredAreas = isRoot && watchHotelId 
         ? areas.filter(a => a.hotelId == watchHotelId) 
         : areas;
@@ -207,8 +206,8 @@ const EditDevice = () => {
   const assignedUser = users.find(u => u.id === watchUsuarioId);
   const isAdmin = user?.rol === ROLES.HOTEL_ADMIN || isRoot;
   
-  // Mapeo simple de nombres de hotel para visualización (opcional)
-  const hotelName = watchHotelId === 1 ? "Cancún" : watchHotelId === 2 ? "Sensira" : watchHotelId === 3 ? "Corporativo" : `ID: ${watchHotelId}`;
+  // CORRECCIÓN: Uso dinámico de getHotelName
+  const hotelName = getHotelName(watchHotelId);
   
   const currentStatusObj = deviceStatuses.find(s => s.id === watchEstadoId);
   const isStatusBaja = currentStatusObj?.nombre === DEVICE_STATUS.DISPOSED;

@@ -18,7 +18,7 @@ import { ROLES } from "../config/constants";
 const EditCrownUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, getHotelName } = useContext(AuthContext); // 👈 Extraer getHotelName
   const isRoot = user?.rol === ROLES.ROOT;
 
   const { control, handleSubmit, reset, watch } = useForm({
@@ -98,7 +98,8 @@ const EditCrownUser = () => {
     return options;
   };
   
-  const hotelLabel = watchedHotelId === 1 ? "Cancún" : watchedHotelId === 2 ? "Sensira" : "Corp";
+  // CORRECCIÓN: Uso dinámico de getHotelName
+  const hotelLabel = getHotelName(watchedHotelId);
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 

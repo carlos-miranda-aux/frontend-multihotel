@@ -17,7 +17,7 @@ const Disposals = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
-  const { user, selectedHotelId } = useContext(AuthContext);
+  const { user, selectedHotelId, getHotelName } = useContext(AuthContext); // 👈 Extraer getHotelName
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
@@ -107,7 +107,8 @@ const Disposals = () => {
                   <TableRow key={disposal.id} hover>
                     {showHotelColumn && (
                         <TableCell>
-                            <Chip label={disposal.hotelId === 1 ? "Cancún" : disposal.hotelId === 2 ? "Sensira" : "ID:"+disposal.hotelId} size="small" variant="outlined" />
+                            {/* CORRECCIÓN: Uso dinámico de getHotelName */}
+                            <Chip label={getHotelName(disposal.hotelId)} size="small" variant="outlined" />
                         </TableCell>
                     )}
                     <TableCell>

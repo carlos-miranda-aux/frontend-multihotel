@@ -243,12 +243,12 @@ const Reportes = () => {
                         <Avatar sx={{ bgcolor: theme.palette.info.dark + '22', color: theme.palette.info.dark, width: 64, height: 64, mb: 2 }}>
                             <AssignmentIndIcon fontSize="large" />
                         </Avatar>
-                        <Typography variant="h6" fontWeight="bold" gutterBottom>Generar Resguardo</Typography>
+                        <Typography variant="h6" fontWeight="bold" gutterBottom>Documento de responsiva</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
-                            Crea un formato de asignación PDF/Word seleccionando equipo y usuario.
+                            Genera el formato de responsiva de equipo.
                         </Typography>
                         <Box sx={{ mt: 'auto' }}>
-                            <Chip label="Documento" size="small" icon={<DownloadIcon />} sx={{ bgcolor: '#e3f2fd', color: '#0288d1', fontWeight: 'bold' }} />
+                            <Chip label="Word" size="small" icon={<DownloadIcon />} sx={{ bgcolor: '#e3f2fd', color: '#0288d1', fontWeight: 'bold' }} />
                         </Box>
                     </CardContent>
                 </CardActionArea>
@@ -288,7 +288,7 @@ const Reportes = () => {
       <Modal open={openResguardoModal} onClose={() => setOpenResguardoModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openResguardoModal}>
             <Box sx={modalStyle}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: 'bold' }}>Generar Resguardo de Equipo</Typography>
+                <Typography variant="h6" sx={{ mb: 3, fontWeight: 'bold' }}>Generar responsiva de equipo</Typography>
                 
                 {loadingData ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}><CircularProgress /></Box> : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>

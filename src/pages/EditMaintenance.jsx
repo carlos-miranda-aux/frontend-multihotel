@@ -33,7 +33,7 @@ const EditMaintenance = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  const { user } = useContext(AuthContext); // 👈 Contexto Usuario
+  const { user, getHotelName } = useContext(AuthContext); // 👈 Extraer getHotelName
   const isRoot = user?.rol === ROLES.ROOT;
 
   const { control, handleSubmit, reset, watch, setValue } = useForm({
@@ -109,8 +109,8 @@ const EditMaintenance = () => {
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
-  // Helper nombre hotel
-  const hotelLabel = deviceInfo?.hotelId === 1 ? "Cancún" : deviceInfo?.hotelId === 2 ? "Sensira" : "Corp";
+  // CORRECCIÓN: Usar getHotelName para hacerlo dinámico
+  const hotelLabel = getHotelName(deviceInfo?.hotelId);
 
   return (
     <Box sx={{ pb: 4, bgcolor: 'background.default', minHeight: '100vh' }}>

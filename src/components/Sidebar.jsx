@@ -13,6 +13,7 @@ import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
+// (Eliminado HelpOutlineIcon)
 import LogoImg from "../assets/simetv2.png"; 
 
 const drawerWidth = 280; 
@@ -25,7 +26,6 @@ const Sidebar = () => {
 
   const isRoot = user?.rol === ROLES.ROOT;
   const isHotelAdmin = user?.rol === ROLES.HOTEL_ADMIN;
-  // Solo Root y Admin ven configuraciones maestras
   const canConfig = isRoot || isHotelAdmin;
 
   const menuGroups = [
@@ -47,14 +47,12 @@ const Sidebar = () => {
     {
       title: "ADMINISTRACIÓN",
       items: [
-        // 1. Configuraciones Maestras (Contiene Hoteles, Áreas, Usuarios Sist, etc.)
         { text: "Configuraciones Maestras", icon: <SettingsSuggestIcon />, path: "/admin-settings", show: canConfig },
-        // 2. Bitácora de Cambios
         { text: "Bitácora de Cambios", icon: <HistoryEduIcon />, path: "/audit", show: canConfig || user?.rol === ROLES.CORP_VIEWER },
-        // 3. Reportes
         { text: "Reportes", icon: <AssessmentIcon />, path: "/reports", show: true },
       ]
     }
+    // (SE ELIMINÓ EL GRUPO AYUDA DE AQUÍ)
   ];
 
   return (

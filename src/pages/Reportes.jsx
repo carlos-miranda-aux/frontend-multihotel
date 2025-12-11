@@ -1,27 +1,35 @@
 import React, { useState, useContext, useEffect } from 'react';
 import {
-  Box, Typography, Paper, Grid, TextField, Alert, useTheme, Card,
+  Box, Typography, Grid, TextField, Alert, useTheme, Card,
   CardActionArea, CardContent, Avatar, Chip, CircularProgress, Modal, Fade, 
-  Button, Autocomplete, FormControl, Backdrop
+  Button, Autocomplete, Backdrop, Dialog, DialogTitle, DialogContent, DialogActions,
+  RadioGroup, FormControlLabel, Radio, FormControl, FormLabel 
 } from '@mui/material';
 
+// Librerías para PDF
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+// Iconos
 import InventoryIcon from '@mui/icons-material/Inventory';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BuildIcon from '@mui/icons-material/Build';
 import GroupIcon from '@mui/icons-material/Group';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DownloadIcon from '@mui/icons-material/Download';
-import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'; // Icono para resguardo
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'; 
 import LockIcon from '@mui/icons-material/Lock';
+import DateRangeIcon from '@mui/icons-material/DateRange';
+import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'; 
+import TableViewIcon from '@mui/icons-material/TableView'; 
 
 import { AuthContext } from "../context/AuthContext";
 import { ROLES } from "../config/constants";
 import api from '../api/axios'; 
 
-const modalStyle = {
+const resguardoModalStyle = {
     position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
     width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
@@ -32,12 +40,21 @@ const Reportes = () => {
   const isRoot = user?.rol === ROLES.ROOT;
   const apiBaseUrl = import.meta.env.VITE_API_URL; 
   
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [reportError, setReportError] = useState('');
   const [downloadingReport, setDownloadingReport] = useState(null);
 
-  // Estados para el Modal de Resguardo
+  // --- ESTADOS PARA FILTROS Y CONFIGURACIÓN ---
+  const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [currentReportConfig, setCurrentReportConfig] = useState(null);
+  
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [deviceTypes, setDeviceTypes] = useState([]);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  
+  const [exportFormat, setExportFormat] = useState('excel'); 
+
+  // --- ESTADOS MODAL RESGUARDO ---
   const [openResguardoModal, setOpenResguardoModal] = useState(false);
   const [devices, setDevices] = useState([]);
   const [usersList, setUsersList] = useState([]);
@@ -45,7 +62,16 @@ const Reportes = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [loadingData, setLoadingData] = useState(false);
 
-  // Cargar datos para el modal de resguardo
+  useEffect(() => {
+      const fetchTypes = async () => {
+          try {
+              const res = await api.get('/device-types/get?limit=0');
+              setDeviceTypes(res.data || []);
+          } catch (err) { console.error(err); }
+      };
+      fetchTypes();
+  }, []);
+
   useEffect(() => {
       if (openResguardoModal) {
           const fetchData = async () => {
@@ -57,32 +83,147 @@ const Reportes = () => {
                   ]);
                   setDevices(devicesRes.data || []);
                   setUsersList(usersRes.data || []);
-              } catch (err) {
-                  console.error("Error cargando datos para resguardo", err);
-              } finally {
-                  setLoadingData(false);
-              }
+              } catch (err) { console.error(err); } finally { setLoadingData(false); }
           };
           fetchData();
       }
   }, [openResguardoModal]);
 
-  const handleExport = (reportName, url, isFiltered = false, isOptionalFilter = false) => {
-    setReportError('');
-    setDownloadingReport(reportName); 
+  // --- LISTA MAESTRA DE REPORTES ---
+  const reportList = [
+    { 
+      name: "Inventario Activo", 
+      description: "Listado de equipos en operación.", 
+      excelUrl: `${apiBaseUrl}/devices/export/all`, 
+      dataUrl: '/devices/get', 
+      pdfColumns: [
+          { title: 'Etiqueta', dataKey: 'etiqueta' },
+          { title: 'Equipo', dataKey: 'nombre_equipo' },
+          { title: 'Serie', dataKey: 'numero_serie' },
+          { title: 'Tipo', dataKey: 'tipo.nombre' },
+          { title: 'Usuario', dataKey: 'usuario.nombre' },
+          { title: 'Area', dataKey: 'area.nombre' },
+      ],
+      icon: <InventoryIcon fontSize="large" />, 
+      color: theme.palette.primary.main, 
+      requiresType: true,
+      requiresDate: false
+    },
+    { 
+      name: "Bajas de Equipos", 
+      description: "Histórico de equipos retirados.", 
+      excelUrl: `${apiBaseUrl}/devices/export/inactivos`, 
+      dataUrl: '/disposals/get',
+      pdfColumns: [
+          { title: 'Equipo', dataKey: 'nombre_equipo' },
+          { title: 'Serie', dataKey: 'numero_serie' },
+          { title: 'Motivo', dataKey: 'motivo_baja' },
+          { title: 'Fecha Baja', dataKey: 'fecha_baja' },
+      ],
+      icon: <DeleteSweepIcon fontSize="large" />, 
+      color: theme.palette.error.main, 
+      requiresType: false, requiresDate: true, dateOptional: true
+    },
+    { 
+      name: "Análisis de Garantías", 
+      description: "Equipos vencidos y sus correctivos.", 
+      excelUrl: `${apiBaseUrl}/devices/export/corrective-analysis`, 
+      dataUrl: null, 
+      icon: <AssessmentIcon fontSize="large" />, 
+      color: theme.palette.warning.main, 
+      requiresType: false, requiresDate: true, dateOptional: false
+    },
+    { 
+      name: "Historial Mantenimientos", 
+      description: "Bitácora completa de servicios.", 
+      excelUrl: `${apiBaseUrl}/maintenances/export/all`, 
+      dataUrl: '/maintenances/get',
+      pdfColumns: [
+        { title: 'Equipo', dataKey: 'device.nombre_equipo' },
+        { title: 'Tipo', dataKey: 'tipo_mantenimiento' },
+        { title: 'Fecha', dataKey: 'fecha_programada' },
+        { title: 'Estado', dataKey: 'estado' },
+        { title: 'Descripción', dataKey: 'descripcion' },
+      ],
+      icon: <BuildIcon fontSize="large" />, 
+      color: theme.palette.info.main, 
+      requiresType: false, requiresDate: false
+    },
+    { 
+      name: "Directorio de usuarios", 
+      description: "Usuarios del hotel registrados.", 
+      excelUrl: `${apiBaseUrl}/users/export/all`, 
+      dataUrl: '/users/get',
+      pdfColumns: [
+        { title: 'Nombre', dataKey: 'nombre' },
+        { title: 'Correo', dataKey: 'correo' },
+        { title: 'Usuario', dataKey: 'usuario_login' },
+        { title: 'Area', dataKey: 'area.nombre' },
+      ],
+      icon: <GroupIcon fontSize="large" />, 
+      color: theme.palette.success.main, 
+      requiresType: false, requiresDate: false 
+    },
+    ...(user?.rol === ROLES.ROOT || user?.rol === "HOTEL_ADMIN" ? [{ 
+      name: "Usuarios del Sistema", 
+      description: "Credenciales de acceso.", 
+      excelUrl: `${apiBaseUrl}/auth/export/all`, 
+      dataUrl: '/auth/get',
+      pdfColumns: [
+        { title: 'Nombre', dataKey: 'nombre' },
+        { title: 'Usuario', dataKey: 'username' },
+        { title: 'Rol', dataKey: 'rol' },
+        { title: 'Email', dataKey: 'email' },
+      ],
+      icon: <AdminPanelSettingsIcon fontSize="large" />, 
+      color: theme.palette.secondary.main, 
+      requiresType: false, requiresDate: false 
+    }] : []),
+  ];
 
-    let finalUrl = url;
-    
-    if (isFiltered) {
-        if (!isOptionalFilter && (!startDate || !endDate)) {
-            setReportError("Para este reporte es obligatorio seleccionar un rango de fechas.");
-            setDownloadingReport(null);
-            return;
-        }
-        if (startDate && endDate) {
-            finalUrl += `?startDate=${startDate}&endDate=${endDate}`;
-        }
+  // --- MANEJO DE SELECCIÓN ---
+  const handleCardClick = (report) => {
+      setCurrentReportConfig(report);
+      setStartDate('');
+      setEndDate('');
+      setSelectedTypes([]);
+      setExportFormat('excel'); 
+      setReportError('');
+      setConfigModalOpen(true);
+  };
+
+  const handleConfirmConfig = () => {
+      if (!currentReportConfig) return;
+
+      if (currentReportConfig.requiresDate && !currentReportConfig.dateOptional) {
+          if (!startDate || !endDate) {
+              setReportError("Es obligatorio seleccionar un rango de fechas.");
+              return;
+          }
+      }
+
+      if (exportFormat === 'pdf') {
+          generatePDF(currentReportConfig);
+      } else {
+          downloadExcel(currentReportConfig);
+      }
+      setConfigModalOpen(false);
+  };
+
+  // --- GENERACIÓN DE EXCEL ---
+  const downloadExcel = (report) => {
+    setDownloadingReport(report.name); 
+    let finalUrl = report.excelUrl;
+    const params = [];
+
+    if (report.requiresDate && startDate && endDate) {
+        params.push(`startDate=${startDate}`); params.push(`endDate=${endDate}`);
     }
+    if (report.requiresType && selectedTypes.length > 0) {
+        const typeIds = selectedTypes.map(t => t.id).join(',');
+        params.push(`types=${typeIds}`);
+    }
+    if (params.length > 0) finalUrl += `?${params.join('&')}`;
     
     const token = localStorage.getItem("token");
     const headers = { 'Authorization': `Bearer ${token}` };
@@ -90,191 +231,148 @@ const Reportes = () => {
 
     fetch(finalUrl, { method: 'GET', headers })
     .then(res => {
-        if (!res.ok) return res.json().then(e => { throw new Error(e.error || "Error desconocido."); }).catch(() => { throw new Error(`Error ${res.status}`); });
+        if (!res.ok) throw new Error("Error en descarga");
         return res.blob();
     })
     .then(blob => {
       const href = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = href;
-      const hasDates = startDate && endDate;
-      let fileName = url.substring(url.lastIndexOf('/') + 1) + (hasDates ? `_${startDate}_${endDate}` : "") + ".xlsx";
-      
+      const suffix = (startDate && endDate) ? `_${startDate}_${endDate}` : "";
+      const fileName = report.name.replace(/ /g, '_') + suffix + ".xlsx";
       link.setAttribute('download', fileName); 
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
       window.URL.revokeObjectURL(href);
     })
-    .catch(err => setReportError(err.message || "Error al descargar el reporte."))
+    .catch(err => setReportError("Error al descargar Excel."))
     .finally(() => setDownloadingReport(null));
   };
 
-  const handleGenerateResguardo = async () => {
-      if (!selectedDevice) {
-          setReportError("Debes seleccionar un equipo.");
+  // --- GENERACIÓN DE PDF ---
+  const generatePDF = async (report) => {
+      if (!report.dataUrl) {
+          setReportError("Este reporte no está disponible en PDF.");
           return;
       }
-      
-      // Validación: Si no tiene usuario asignado en BD, DEBE seleccionar uno manual
-      if (!selectedDevice.usuario && !selectedUser) {
-          setReportError("Este equipo no tiene dueño. Por favor selecciona un usuario para asignar en el documento.");
-          return;
-      }
-
-      setReportError('');
-      setDownloadingReport("Generar Resguardo");
+      setDownloadingReport(report.name);
 
       try {
-          // Construir URL. Si seleccionó usuario manual, se envía.
-          let url = `/devices/export/resguardo/${selectedDevice.id}`;
-          if (!selectedDevice.usuario && selectedUser) {
-              url += `?userId=${selectedUser.id}`;
+          let params = "?limit=10000"; 
+          if (report.requiresDate && startDate && endDate) params += `&startDate=${startDate}&endDate=${endDate}`;
+          if (report.requiresType && selectedTypes.length > 0) params += `&types=${selectedTypes.map(t=>t.id).join(',')}`;
+          
+          const response = await api.get(`${report.dataUrl}${params}`);
+          let data = response.data.data || response.data; 
+
+          if (!data || data.length === 0) {
+              setReportError("No hay datos para generar el PDF.");
+              setDownloadingReport(null);
+              return;
           }
 
-          const response = await api.get(url, { responseType: 'blob' });
-          
-          const urlObj = window.URL.createObjectURL(new Blob([response.data]));
-          const link = document.createElement('a');
-          link.href = urlObj;
-          link.setAttribute('download', `Resguardo_${selectedDevice.nombre_equipo}.docx`);
-          document.body.appendChild(link);
-          link.click();
-          link.parentNode.removeChild(link);
-          
-          setOpenResguardoModal(false);
-          setSelectedDevice(null);
-          setSelectedUser(null);
+          const doc = new jsPDF();
+          doc.setFontSize(18);
+          doc.text(report.name.toUpperCase(), 14, 22);
+          doc.setFontSize(10);
+          const fechaImpresion = new Date().toLocaleDateString();
+          doc.text(`Fecha de impresión: ${fechaImpresion}`, 14, 28);
+          if (selectedHotelId) doc.text(`Hotel ID: ${selectedHotelId}`, 14, 33);
+
+          const getNestedValue = (obj, path) => {
+              return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : '', obj);
+          };
+
+          const tableRows = data.map(item => {
+              return report.pdfColumns.map(col => {
+                  let val = getNestedValue(item, col.dataKey);
+                  if (col.dataKey.includes('fecha') || col.dataKey.includes('date')) {
+                       val = val ? new Date(val).toLocaleDateString() : '';
+                  }
+                  return val;
+              });
+          });
+
+          const tableHeaders = report.pdfColumns.map(col => col.title);
+
+          doc.autoTable({
+              head: [tableHeaders],
+              body: tableRows,
+              startY: 40,
+              styles: { fontSize: 8 },
+              headStyles: { fillColor: [74, 98, 116] }, 
+          });
+
+          doc.save(`${report.name}.pdf`);
 
       } catch (err) {
           console.error(err);
-          setReportError("Error al generar el documento de resguardo.");
+          setReportError("Error al generar PDF.");
       } finally {
           setDownloadingReport(null);
       }
   };
 
-  // Helper para detectar si el equipo seleccionado ya tiene dueño
+  // Lógica Resguardo
+  const handleGenerateResguardo = async () => {
+      if (!selectedDevice) { setReportError("Debes seleccionar un equipo."); return; }
+      if (!selectedDevice.usuario && !selectedUser) { setReportError("Este equipo no tiene dueño."); return; }
+      setReportError(''); setDownloadingReport("Generar Resguardo");
+      try {
+          let url = `/devices/export/resguardo/${selectedDevice.id}`;
+          if (!selectedDevice.usuario && selectedUser) url += `?userId=${selectedUser.id}`;
+          const response = await api.get(url, { responseType: 'blob' });
+          const urlObj = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement('a'); link.href = urlObj; link.setAttribute('download', `Resguardo_${selectedDevice.nombre_equipo}.docx`);
+          document.body.appendChild(link); link.click(); link.parentNode.removeChild(link);
+          setOpenResguardoModal(false); setSelectedDevice(null); setSelectedUser(null);
+      } catch (err) { console.error(err); setReportError("Error al generar el documento."); } finally { setDownloadingReport(null); }
+  };
   const hasOwner = selectedDevice && selectedDevice.usuario;
-
-  const reportList = [
-    { 
-      name: "Inventario Activo", 
-      description: "Listado de todos los equipos en operación.", 
-      url: `${apiBaseUrl}/devices/export/all`, 
-      icon: <InventoryIcon fontSize="large" />, 
-      color: theme.palette.primary.main, 
-      isFiltered: false 
-    },
-    { 
-      name: "Bajas de Equipos", 
-      description: "Histórico de equipos dados de baja.", 
-      url: `${apiBaseUrl}/devices/export/inactivos`, 
-      icon: <DeleteSweepIcon fontSize="large" />, 
-      color: theme.palette.error.main, 
-      isFiltered: true, 
-      isOptionalFilter: true
-    },
-    { 
-      name: "Análisis de Garantías", 
-      description: "Equipos con garantía vencida y sus mantenimientos.", 
-      url: `${apiBaseUrl}/devices/export/corrective-analysis`, 
-      icon: <AssessmentIcon fontSize="large" />, 
-      color: theme.palette.warning.main, 
-      isFiltered: true,
-      isOptionalFilter: false
-    },
-    { 
-      name: "Historial Mantenimientos", 
-      description: "Bitácora completa de servicios.", 
-      url: `${apiBaseUrl}/maintenances/export/all`, 
-      icon: <BuildIcon fontSize="large" />, 
-      color: theme.palette.info.main, 
-      isFiltered: false 
-    },
-    { 
-      name: "Directorio de usuarios", 
-      description: "Usuarios del hotel registrados.", 
-      url: `${apiBaseUrl}/users/export/all`, 
-      icon: <GroupIcon fontSize="large" />, 
-      color: theme.palette.success.main, 
-      isFiltered: false 
-    },
-    ...(user?.rol === ROLES.ROOT || user?.rol === "HOTEL_ADMIN" ? [{ 
-      name: "Usuarios del Sistema", 
-      description: "Usuarios con acceso al sistema.", 
-      url: `${apiBaseUrl}/auth/export/all`, 
-      icon: <AdminPanelSettingsIcon fontSize="large" />, 
-      color: theme.palette.secondary.main, 
-      isFiltered: false 
-    }] : []),
-  ];
 
   return (
     <Box sx={{ p: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight="bold" gutterBottom color="text.primary">Centro de Reportes</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="subtitle1" color="text.secondary">Descarga información clave en formato Excel.</Typography>
-            {selectedHotelId ? <Chip icon={<FilterAltIcon />} label="Filtrado por Hotel Activo" size="small" color="primary" variant="outlined" /> : isRoot && <Chip label="Vista Global" size="small" color="secondary" />}
-        </Box>
+        <Typography variant="subtitle1" color="text.secondary">Descarga información clave.</Typography>
       </Box>
-
-      <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'primary.main' }}><AccessTimeIcon sx={{ mr: 1 }} /><Typography variant="h6" fontWeight="bold">Filtro por Fechas</Typography></Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Selecciona un rango de fechas para filtrar los reportes compatibles. Si lo dejas vacío en reportes opcionales, se descargará todo el historial.</Typography>
-          <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={4}><TextField label="Fecha Inicio" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Grid>
-              <Grid item xs={12} sm={6} md={4}><TextField label="Fecha Fin" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Grid>
-          </Grid>
-      </Paper>
 
       {reportError && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setReportError('')}>{reportError}</Alert>}
 
       <Grid container spacing={3}>
-        {/* Tarjeta Especial: Generar Resguardo */}
+        {/* Tarjeta Resguardo */}
         <Grid item xs={12} sm={6} md={4}>
             <Card elevation={2} sx={{ height: '100%', borderRadius: 3, transition: '0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 } }}>
-                <CardActionArea 
-                    onClick={() => setOpenResguardoModal(true)} 
-                    sx={{ height: '100%', p: 2 }}
-                >
+                <CardActionArea onClick={() => setOpenResguardoModal(true)} sx={{ height: '100%', p: 2 }}>
                     <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                        <Avatar sx={{ bgcolor: theme.palette.info.dark + '22', color: theme.palette.info.dark, width: 64, height: 64, mb: 2 }}>
-                            <AssignmentIndIcon fontSize="large" />
-                        </Avatar>
-                        <Typography variant="h6" fontWeight="bold" gutterBottom>Documento de responsiva</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
-                            Genera el formato de responsiva de equipo.
-                        </Typography>
-                        <Box sx={{ mt: 'auto' }}>
-                            <Chip label="Word" size="small" icon={<DownloadIcon />} sx={{ bgcolor: '#e3f2fd', color: '#0288d1', fontWeight: 'bold' }} />
-                        </Box>
+                        <Avatar sx={{ bgcolor: theme.palette.info.dark + '22', color: theme.palette.info.dark, width: 64, height: 64, mb: 2 }}><AssignmentIndIcon fontSize="large" /></Avatar>
+                        <Typography variant="h6" fontWeight="bold">Formato de Responsiva</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Generar formato de responsiva.</Typography>
+                        <Chip label="Word (.docx)" size="small" icon={<DownloadIcon />} sx={{ mt: 'auto', bgcolor: '#e3f2fd', color: '#0288d1' }} />
                     </CardContent>
                 </CardActionArea>
             </Card>
         </Grid>
 
+        {/* Tarjetas Dinámicas */}
         {reportList.map((report) => (
           <Grid item xs={12} sm={6} md={4} key={report.name}>
             <Card elevation={2} sx={{ height: '100%', borderRadius: 3, transition: '0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 } }}>
               <CardActionArea 
-                onClick={() => handleExport(report.name, report.url, report.isFiltered, report.isOptionalFilter)} 
+                onClick={() => handleCardClick(report)} 
                 sx={{ height: '100%', p: 2 }}
                 disabled={downloadingReport !== null}
               >
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                   <Avatar sx={{ bgcolor: report.color + '22', color: report.color, width: 64, height: 64, mb: 2 }}>{report.icon}</Avatar>
                   <Typography variant="h6" fontWeight="bold" gutterBottom>{report.name}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>{report.description}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 20 }}>{report.description}</Typography>
                   
                   {downloadingReport === report.name ? (
-                      <Chip label="Generando..." icon={<CircularProgress size={16} />} sx={{ bgcolor: 'action.selected', fontWeight: 'bold' }} />
+                      <Chip label="Generando..." icon={<CircularProgress size={16} />} />
                   ) : (
                       <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
-                        <Chip label="Excel" size="small" icon={<DownloadIcon />} sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} />
-                        {report.isFiltered && !report.isOptionalFilter && <Chip label="Requiere Fechas" size="small" sx={{ bgcolor: '#fff3e0', color: '#ef6c00', fontWeight: 'bold' }} />}
-                        {report.isFiltered && report.isOptionalFilter && <Chip label="Fechas Opcionales" size="small" sx={{ bgcolor: '#e3f2fd', color: '#0288d1', fontWeight: 'bold' }} />}
+                         {/* CAMBIO AQUÍ: Etiqueta simplificada */}
+                         <Chip label="Descargar" size="small" icon={<DownloadIcon />} sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 'bold' }} />
                       </Box>
                   )}
                 </CardContent>
@@ -284,63 +382,100 @@ const Reportes = () => {
         ))}
       </Grid>
 
-      {/* Modal para generar Resguardo */}
+      {/* --- DIALOG UNIFICADO DE CONFIGURACIÓN --- */}
+      <Dialog open={configModalOpen} onClose={() => setConfigModalOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle sx={{ fontWeight: 'bold' }}>Configurar Descarga</DialogTitle>
+          <DialogContent>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  {currentReportConfig?.name}
+              </Typography>
+
+              {/* Selector de Formato */}
+              <FormControl component="fieldset" sx={{ mb: 3, width: '100%' }}>
+                  <FormLabel component="legend" sx={{ fontSize: '0.85rem', mb: 1 }}>Formato de Archivo</FormLabel>
+                  <RadioGroup row value={exportFormat} onChange={(e) => setExportFormat(e.target.value)}>
+                      <FormControlLabel 
+                        value="excel" 
+                        control={<Radio size="small" />} 
+                        label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><TableViewIcon color="success" fontSize="small"/> Excel</Box>} 
+                      />
+                      <FormControlLabel 
+                        value="pdf" 
+                        control={<Radio size="small" />} 
+                        label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><PictureAsPdfIcon color="error" fontSize="small"/> PDF</Box>} 
+                        disabled={!currentReportConfig?.dataUrl} 
+                      />
+                  </RadioGroup>
+              </FormControl>
+
+              {/* Filtro Fechas */}
+              {currentReportConfig?.requiresDate && (
+                  <Box sx={{ mb: 3, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: 'text.primary' }}>
+                          <DateRangeIcon fontSize="small" sx={{ mr: 1 }} />
+                          <Typography variant="subtitle2" fontWeight="bold">Periodo</Typography>
+                      </Box>
+                      <Typography variant="caption" display="block" sx={{ mb: 2, color: 'text.secondary' }}>
+                          {currentReportConfig.dateOptional ? "Opcional (Vacío = Todo)" : "Obligatorio *"}
+                      </Typography>
+                      <Grid container spacing={2}>
+                          <Grid item xs={6}><TextField label="Inicio" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Grid>
+                          <Grid item xs={6}><TextField label="Fin" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Grid>
+                      </Grid>
+                  </Box>
+              )}
+
+              {/* Filtro Tipos */}
+              {currentReportConfig?.requiresType && (
+                  <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: 'text.primary' }}>
+                          <DevicesOtherIcon fontSize="small" sx={{ mr: 1 }} />
+                          <Typography variant="subtitle2" fontWeight="bold">Tipo de Equipo</Typography>
+                      </Box>
+                      <Autocomplete
+                          multiple
+                          options={deviceTypes}
+                          getOptionLabel={(option) => option.nombre}
+                          value={selectedTypes}
+                          onChange={(event, newValue) => setSelectedTypes(newValue)}
+                          renderInput={(params) => <TextField {...params} label="Seleccionar (Vacío = Todos)" size="small" />}
+                          renderTags={(value, getTagProps) => value.map((option, index) => (<Chip variant="outlined" label={option.nombre} size="small" {...getTagProps({ index })} />))}
+                      />
+                  </Box>
+              )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+              <Button onClick={() => setConfigModalOpen(false)} color="inherit">Cancelar</Button>
+              <Button onClick={handleConfirmConfig} variant="contained" color="primary" startIcon={<DownloadIcon />}>
+                  Descargar
+              </Button>
+          </DialogActions>
+      </Dialog>
+      
+      {/* --- MODAL RESGUARDO --- */}
       <Modal open={openResguardoModal} onClose={() => setOpenResguardoModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openResguardoModal}>
-            <Box sx={modalStyle}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: 'bold' }}>Generar responsiva de equipo</Typography>
-                
-                {loadingData ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}><CircularProgress /></Box> : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        
-                        {/* Selector de Equipo */}
-                        <Autocomplete
+            <Box sx={resguardoModalStyle}>
+                <Typography variant="h6" sx={{ mb: 3, fontWeight: 'bold' }}>Generar Responsiva</Typography>
+                {loadingData ? <CircularProgress /> : (
+                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                       <Autocomplete
                             options={devices}
                             getOptionLabel={(option) => `${option.etiqueta || 'S/N'} - ${option.nombre_equipo}`}
                             value={selectedDevice}
-                            onChange={(event, newValue) => {
-                                setSelectedDevice(newValue);
-                                setSelectedUser(null); // Reset usuario manual al cambiar equipo
-                            }}
-                            renderInput={(params) => <TextField {...params} label="Seleccionar Equipo" placeholder="Buscar por etiqueta o nombre" />}
-                            noOptionsText="No se encontraron equipos"
-                        />
-
-                        {/* Alerta si ya tiene dueño */}
-                        {hasOwner && (
-                            <Alert severity="info" icon={<LockIcon fontSize="small"/>}>
-                                Este equipo ya está asignado a <b>{selectedDevice.usuario.nombre}</b>. Se usará este nombre en el documento.
-                            </Alert>
-                        )}
-
-                        {/* Selector de Usuario (Solo si no tiene dueño) */}
-                        {!hasOwner && (
-                            <Autocomplete
-                                options={usersList}
-                                getOptionLabel={(option) => option.nombre}
-                                value={selectedUser}
-                                onChange={(event, newValue) => setSelectedUser(newValue)}
-                                renderInput={(params) => <TextField {...params} label="Seleccionar Usuario para Asignar" required />}
-                                noOptionsText="No se encontraron usuarios"
-                                disabled={!selectedDevice} // Deshabilitado si no hay equipo seleccionado
-                            />
-                        )}
-
-                        <Button 
-                            variant="contained" 
-                            color="primary" 
-                            size="large" 
-                            startIcon={downloadingReport ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon />}
-                            onClick={handleGenerateResguardo}
-                            disabled={!selectedDevice || (!hasOwner && !selectedUser) || downloadingReport !== null}
-                        >
-                            {downloadingReport ? "Generando..." : "Descargar Documento"}
-                        </Button>
-                    </Box>
+                            onChange={(e, val) => { setSelectedDevice(val); setSelectedUser(null); }}
+                            renderInput={(params) => <TextField {...params} label="Equipo" />}
+                       />
+                       {hasOwner ? <Alert severity="info">Asignado a: {selectedDevice.usuario.nombre}</Alert> : 
+                        <Autocomplete options={usersList} getOptionLabel={o=>o.nombre} value={selectedUser} onChange={(e,v)=>setSelectedUser(v)} renderInput={(p)=><TextField {...p} label="Usuario Manual" />} disabled={!selectedDevice} />
+                       }
+                       <Button variant="contained" onClick={handleGenerateResguardo} disabled={!selectedDevice}>Descargar Word</Button>
+                   </Box>
                 )}
             </Box>
         </Fade>
       </Modal>
+
     </Box>
   );
 };

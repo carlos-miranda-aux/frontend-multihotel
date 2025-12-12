@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
   Button, Divider, Alert
@@ -18,18 +18,41 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     username: "",
     email: "",
     password: "",
-    rol: "",
+    rol: "", // Rol inicial vacío para obligar selección
     hotelIds: isContextActive ? [Number(contextHotelId)] : [] 
   });
+  
+  // Estado derivado para saber si el rol seleccionado es global
+  const [isGlobalRole, setIsGlobalRole] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
     if (name === "username") {
         const cleanValue = value.toLowerCase().replace(/\s/g, "");
-        setFormData({ ...formData, [name]: cleanValue });
-    } else {
-        setFormData({ ...formData, [name]: value });
+        setFormData(prev => ({ ...prev, [name]: cleanValue }));
+    } 
+    else if (name === "rol") {
+        // Lógica de limpieza automática
+        const isGlobal = [ROLES.ROOT, ROLES.CORP_VIEWER].includes(value);
+        setIsGlobalRole(isGlobal);
+        
+        setFormData(prev => ({ 
+            ...prev, 
+            [name]: value,
+            // Si es global, vaciamos los hoteles automáticamente
+            hotelIds: isGlobal ? [] : prev.hotelIds 
+        }));
     }
+    else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleHotelsChange = (event) => {
+      const { value } = event.target;
+      // En Material UI Select multiple, value es un array
+      setFormData(prev => ({ ...prev, hotelIds: typeof value === 'string' ? value.split(',') : value }));
   };
 
   const handleCreateUser = async (e) => {
@@ -37,15 +60,16 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     if (setError) setError("");
     if (setMessage) setMessage("");
 
-    // Validación para admins locales
-    if (isRoot && formData.hotelIds.length === 0 && ![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)) {
-        if(setError) setError("Para este rol, es obligatorio asignar al menos un Hotel.");
+    // Validación local antes de enviar
+    if (isRoot && !isGlobalRole && formData.hotelIds.length === 0) {
+        if(setError) setError("Para roles locales (Admin/Aux/Invitado), es obligatorio asignar al menos un Hotel.");
         return;
     }
 
     const payload = { ...formData };
     
-    if (!payload.hotelIds || payload.hotelIds.length === 0) {
+    // Limpieza final por seguridad
+    if (isGlobalRole || !payload.hotelIds || payload.hotelIds.length === 0) {
         delete payload.hotelIds;
     }
 
@@ -67,27 +91,20 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
 
       {isContextActive && (
           <Alert severity="info" sx={{ mb: 2 }}>
-              Creando usuario para el <b>Hotel Activo</b>. (Para asignar múltiples hoteles, usa la Vista Global).
+              Creando usuario vinculado al <b>Hotel Activo</b>.
+          </Alert>
+      )}
+      
+      {isGlobalRole && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+              Los usuarios globales tienen acceso a <b>todos los hoteles</b>. No es necesario asignar uno específico.
           </Alert>
       )}
 
       <Box component="form" onSubmit={handleCreateUser} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         
-        {isRoot && (
-            <HotelSelect 
-                value={formData.hotelIds} 
-                onChange={handleChange} 
-                name="hotelIds"
-                multiple={true}
-                required={![ROLES.ROOT, ROLES.CORP_VIEWER].includes(formData.rol)}
-                disabled={isContextActive}
-                helperText={isContextActive ? "Ubicación fijada por el contexto actual" : "Puedes seleccionar varios hoteles"}
-            />
-        )}
-
         <TextField label="Nombre completo" name="nombre" value={formData.nombre} onChange={handleChange} fullWidth required />
         
-        {/* Este campo ahora no permite espacios */}
         <TextField 
             label="Nombre de usuario" 
             name="username" 
@@ -102,24 +119,37 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
         <TextField label="Contraseña" name="password" type="password" value={formData.password} onChange={handleChange} fullWidth required />
         
         <FormControl fullWidth required>
-          <InputLabel>Rol</InputLabel>
+          <InputLabel>Rol del Sistema</InputLabel>
           <Select
             name="rol"
             value={formData.rol}
             onChange={handleChange}
-            label="Rol"
+            label="Rol del Sistema"
           >
             <MenuItem value={ROLES.HOTEL_ADMIN}>Admin de Hotel (IT Manager)</MenuItem>
             <MenuItem value={ROLES.HOTEL_AUX}>Auxiliar (Soporte)</MenuItem>
             <MenuItem value={ROLES.HOTEL_GUEST}>Invitado (Solo lectura)</MenuItem>
             
             {isRoot && <Divider />} 
-            {isRoot && <MenuItem value={ROLES.CORP_VIEWER}>Auditor Corporativo (Global)</MenuItem>}
-            {isRoot && <MenuItem value={ROLES.ROOT}>Super Usuario (Root)</MenuItem>}
+            {isRoot && <MenuItem value={ROLES.CORP_VIEWER} sx={{ color: 'warning.main' }}>Auditor Corporativo (Global)</MenuItem>}
+            {isRoot && <MenuItem value={ROLES.ROOT} sx={{ color: 'error.main', fontWeight: 'bold' }}>Super Usuario (Root)</MenuItem>}
           </Select>
         </FormControl>
+
+        {/* SELECTOR DE HOTELES (Solo visible para ROOT si no hay contexto fijo) */}
+        {isRoot && !isContextActive && (
+            <HotelSelect 
+                value={formData.hotelIds} 
+                onChange={handleHotelsChange} 
+                name="hotelIds"
+                multiple={true}
+                required={!isGlobalRole}
+                disabled={isGlobalRole} // 🔒 Se deshabilita si es Global
+                helperText={isGlobalRole ? "Acceso global automático" : "Selecciona los hoteles permitidos"}
+            />
+        )}
         
-        <Button type="submit" variant="contained" color="primary">
+        <Button type="submit" variant="contained" color="primary" size="large" sx={{ mt: 1 }}>
           Crear usuario
         </Button>
       </Box>

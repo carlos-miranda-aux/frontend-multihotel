@@ -1,141 +1,166 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
-  Box, Typography, Button, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Paper, IconButton, Alert, Modal, Fade,
-  Backdrop, TablePagination, CircularProgress, TableSortLabel, Chip, Skeleton
+  Box, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+  IconButton, Alert, Modal, Fade, Backdrop, TextField, Skeleton
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // 👈 IMPORTAR ICONO
+import { useNavigate } from "react-router-dom"; // 👈 IMPORTAR HOOK
 import api from "../../api/axios";
-import CreateAreaForm from "../CreateAreaForm";
-import { AuthContext } from "../../context/AuthContext"; 
-import { ROLES } from "../../config/constants"; 
+import { AuthContext } from "../../context/AuthContext";
 import ConfirmDialog from "../common/ConfirmDialog";
 import EmptyState from "../common/EmptyState";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-  width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
+  width: 400, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
 };
 
-const AreasTable = () => {
-  const [areas, setAreas] = useState([]);
+const DepartmentsTable = () => {
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-
+  const [formData, setFormData] = useState({ nombre: "" });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
 
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
-  const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
+  const { user } = useContext(AuthContext); // Para saber si es admin y mostrar contexto
+  const navigate = useNavigate(); // 👈 INICIALIZAR NAVIGATE
 
-  const { user, selectedHotelId } = useContext(AuthContext);
-  const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
-  const showHotelColumn = isGlobalUser && !selectedHotelId;
-
-  const fetchAreas = useCallback(async () => {
-    setLoading(true); setError("");
+  const fetchDepartments = async () => {
+    setLoading(true);
     try {
-      const sortParam = `&sortBy=${sortConfig.key}&order=${sortConfig.direction}`;
-      const response = await api.get(`/areas/get?page=${page + 1}&limit=${rowsPerPage}${sortParam}`);
-      if (response.data.data) { setAreas(response.data.data); setTotalCount(response.data.totalCount); } 
-      else { setAreas(response.data); setTotalCount(response.data.length); }
-    } catch (err) { console.error(err); setError("Error al cargar las áreas."); } 
-    finally { setLoading(false); }
-  }, [page, rowsPerPage, sortConfig, selectedHotelId]);
-
-  useEffect(() => { fetchAreas(); }, [fetchAreas]);
-
-  const handleOpenDelete = (item) => { setItemToDelete(item); setDeleteDialogOpen(true); };
-
-  const confirmDelete = async () => {
-    if (!itemToDelete) return;
-    setActionLoading(true);
-    try {
-        await api.delete(`/areas/delete/${itemToDelete.id}`);
-        setMessage("Área eliminada correctamente.");
-        fetchAreas();
-        setDeleteDialogOpen(false);
-    } catch (err) { setError(err.response?.data?.error || "Error al eliminar."); } 
-    finally { setActionLoading(false); setItemToDelete(null); }
+      const res = await api.get("/departments/get?limit=0");
+      setDepartments(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCreateClick = () => { setEditingItem(null); setOpenModal(true); };
-  const handleEditClick = (item) => { setEditingItem(item); setOpenModal(true); };
-  const handleCloseModal = () => { setOpenModal(false); setEditingItem(null); };
-  const handleRequestSort = (key) => { setSortConfig({ key, direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc' }); };
-  const handleChangePage = (event, newPage) => setPage(newPage);
-  const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
+  useEffect(() => { fetchDepartments(); }, []);
+
+  const handleOpen = (item = null) => {
+    setEditingItem(item);
+    setFormData({ nombre: item ? item.nombre : "" });
+    setError(""); setMessage("");
+    setOpenModal(true);
+  };
+
+  const handleClose = () => setOpenModal(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingItem) {
+        await api.put(`/departments/put/${editingItem.id}`, formData);
+        setMessage("Departamento actualizado.");
+      } else {
+        await api.post("/departments/post", formData);
+        setMessage("Departamento creado.");
+      }
+      fetchDepartments();
+      setTimeout(() => handleClose(), 1000);
+    } catch (err) {
+      setError(err.response?.data?.error || "Error al guardar.");
+    }
+  };
+
+  const handleDelete = (item) => {
+      setItemToDelete(item);
+      setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+      try {
+          await api.delete(`/departments/delete/${itemToDelete.id}`);
+          setMessage("Departamento eliminado.");
+          fetchDepartments();
+      } catch (err) {
+          setError("No se puede eliminar (posiblemente tiene áreas asignadas).");
+      } finally {
+          setDeleteDialogOpen(false);
+          setItemToDelete(null);
+      }
+  };
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" color="primary" fontWeight="bold">Gestión de Áreas</Typography>
-        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleCreateClick}>Nueva Área</Button>
+      {/* --- CABECERA CON BOTÓN DE REGRESAR --- */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton onClick={() => navigate('/admin-settings')} color="primary" aria-label="regresar">
+                <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="h5" fontWeight="bold" color="primary">
+                Departamentos
+            </Typography>
+        </Box>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpen()}>
+            Nuevo Depto
+        </Button>
       </Box>
 
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      
-      <Paper>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: 'background.default' }}>
-                {showHotelColumn && <TableCell>Hotel</TableCell>}
-                <TableCell><TableSortLabel active={sortConfig.key === 'nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('nombre')}>Nombre Área</TableSortLabel></TableCell>
-                <TableCell><TableSortLabel active={sortConfig.key === 'departamento.nombre'} direction={sortConfig.direction} onClick={() => handleRequestSort('departamento.nombre')}>Departamento</TableSortLabel></TableCell>
-                <TableCell>Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? Array.from(new Array(5)).map((_, i) => (
-                    <TableRow key={i}>
-                        {showHotelColumn && <TableCell><Skeleton variant="text" /></TableCell>}
-                        <TableCell><Skeleton variant="text" width="60%" /></TableCell>
-                        <TableCell><Skeleton variant="text" /></TableCell>
-                        <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
-                    </TableRow>
-                )) : areas.length === 0 ? (
-                <TableRow><TableCell colSpan={showHotelColumn ? 4 : 3}><EmptyState title="Sin áreas" description="No hay áreas registradas. Crea una nueva para comenzar." /></TableCell></TableRow>
-              ) : (
-                areas.map((area) => (
-                  <TableRow key={area.id} hover>
-                    {showHotelColumn && <TableCell><Chip label={area.hotel?.nombre || area.hotel?.codigo || `ID:${area.hotelId}`} size="small" variant="outlined" /></TableCell>}
-                    <TableCell>{area.nombre}</TableCell>
-                    <TableCell>{area.departamento?.nombre || "N/A"}</TableCell>
-                    <TableCell>
-                      <IconButton color="primary" onClick={() => handleEditClick(area)}><EditIcon /></IconButton>
-                      <IconButton color="error" onClick={() => handleOpenDelete(area)}><DeleteIcon /></IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
-      </Paper>
 
-      <Modal open={openModal} onClose={handleCloseModal} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}><Fade in={openModal}><Box sx={modalStyle}><CreateAreaForm onClose={handleCloseModal} onSuccess={() => { fetchAreas(); setMessage(editingItem ? "Actualizado." : "Creado."); }} initialData={editingItem} /></Box></Fade></Modal>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'background.default' }}>
+              <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
+              {/* Si es vista global mostramos el hotel */}
+              {(user.rol === 'ROOT' || user.rol === 'CORP_VIEWER') && !user.hotelId && (
+                  <TableCell sx={{ fontWeight: 'bold' }}>Hotel</TableCell>
+              )}
+              <TableCell sx={{ fontWeight: 'bold', width: 150 }}>Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? Array.from(new Array(3)).map((_, i) => (
+               <TableRow key={i}><TableCell><Skeleton /></TableCell><TableCell><Skeleton /></TableCell></TableRow>
+            )) : departments.length === 0 ? (
+               <TableRow><TableCell colSpan={3}><EmptyState title="Sin departamentos" /></TableCell></TableRow>
+            ) : departments.map((d) => (
+              <TableRow key={d.id} hover>
+                <TableCell>{d.nombre}</TableCell>
+                {(user.rol === 'ROOT' || user.rol === 'CORP_VIEWER') && !user.hotelId && (
+                    <TableCell>{d.hotel?.codigo || "N/A"}</TableCell>
+                )}
+                <TableCell>
+                  <IconButton color="primary" onClick={() => handleOpen(d)}><EditIcon /></IconButton>
+                  <IconButton color="error" onClick={() => handleDelete(d)}><DeleteIcon /></IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* MODAL FORM */}
+      <Modal open={openModal} onClose={handleClose} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
+        <Fade in={openModal}>
+          <Box sx={modalStyle} component="form" onSubmit={handleSubmit}>
+            <Typography variant="h6" mb={2}>{editingItem ? "Editar Departamento" : "Nuevo Departamento"}</Typography>
+            <TextField fullWidth label="Nombre" value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} required margin="normal" />
+            <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>Guardar</Button>
+          </Box>
+        </Fade>
+      </Modal>
 
       <ConfirmDialog 
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-        title="¿Eliminar Área?"
-        content={`¿Estás seguro de eliminar el área "${itemToDelete?.nombre}"?`}
-        isLoading={actionLoading}
+        open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} onConfirm={confirmDelete}
+        title="Eliminar Departamento" content={`¿Seguro que deseas eliminar "${itemToDelete?.nombre}"?`} 
       />
     </Box>
   );
 };
 
-export default AreasTable;
+export default DepartmentsTable;

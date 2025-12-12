@@ -47,9 +47,9 @@ const Sidebar = () => {
     {
       title: "ADMINISTRACIÓN",
       items: [
-        { text: "Configuraciones Maestras", icon: <SettingsSuggestIcon />, path: "/admin-settings", show: canConfig },
+        { text: "Configuraciones", icon: <SettingsSuggestIcon />, path: "/admin-settings", show: canConfig },
         { text: "Bitácora de Cambios", icon: <HistoryEduIcon />, path: "/audit", show: canConfig || user?.rol === ROLES.CORP_VIEWER },
-        { text: "Reportes", icon: <AssessmentIcon />, path: "/reports", show: true },
+        { text: "Control Administrativo", icon: <AssessmentIcon />, path: "/reports", show: true },
       ]
     }
     // (SE ELIMINÓ EL GRUPO AYUDA DE AQUÍ)

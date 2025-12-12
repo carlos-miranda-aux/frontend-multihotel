@@ -22,7 +22,7 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import WarningIcon from "@mui/icons-material/Warning";
 import BuildIcon from "@mui/icons-material/Build";
 import LogoutIcon from '@mui/icons-material/Logout';
-import SettingsIcon from '@mui/icons-material/Settings';
+import LockIcon from '@mui/icons-material/Lock';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'; // <--- IMPORTAR ICONO NUEVO
 
 import { AuthContext } from "../context/AuthContext";
@@ -200,8 +200,8 @@ const TopBar = ({ onMenuClick }) => {
               slotProps={{ paper: { sx: { width: 200, mt: 1 } } }}
             >
               <MenuItem onClick={handleSettings}>
-                 <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
-                 Configuración
+                 <ListItemIcon><LockIcon fontSize="small" /></ListItemIcon>
+                 Seguridad
               </MenuItem>
               
               {/* --- NUEVA OPCIÓN --- */}

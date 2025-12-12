@@ -27,7 +27,7 @@ import AuditLog from "./pages/AuditLog";
 import DepartmentsTable from "./components/admin/DepartmentsTable";
 
 // --- NUEVA PÁGINA ---
-import About from "./pages/About"; // <--- IMPORTAR
+import About from "./pages/About";
 
 import NotFound from "./pages/NotFound";
 

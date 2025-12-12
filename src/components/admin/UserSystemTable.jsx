@@ -9,7 +9,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PersonIcon from '@mui/icons-material/Person';
-import { useNavigate } from "react-router-dom";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // 👈 Icono de regresar
+import { useNavigate } from "react-router-dom"; // 👈 Hook de navegación
+
 import api from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 import CreateSystemUserForm from "../CreateSystemUserForm";
@@ -19,7 +21,7 @@ import EmptyState from "../common/EmptyState";
 
 const modalStyle = {
   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-  width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2
+  width: 500, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2, maxHeight: '90vh', overflowY: 'auto'
 };
 
 const UsersSystemTable = () => {
@@ -38,7 +40,7 @@ const UsersSystemTable = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // 👈 Inicializamos el hook
   const { user: currentUser, selectedHotelId } = useContext(AuthContext);
   
   const isGlobalUser = currentUser?.rol === ROLES.ROOT || currentUser?.rol === ROLES.CORP_VIEWER;
@@ -77,6 +79,8 @@ const UsersSystemTable = () => {
   };
   const handleChangePage = (e, p) => setPage(p);
   const handleChangeRowsPerPage = (e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); };
+  
+  // Asumiendo que tienes una ruta para editar, si no, puedes abrir un modal de edición aquí
   const handleEditUser = (id) => navigate(`/user-manager/edit/${id}`);
   
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };
@@ -102,10 +106,27 @@ const UsersSystemTable = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" color="primary" fontWeight="bold">Gestión de Usuarios del Sistema</Typography>
-        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => setOpenModal(true)}>Crear Usuario</Button>
+      {/* --- CABECERA CON BOTÓN REGRESAR --- */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Botón para volver a Admin Settings */}
+            <IconButton 
+                onClick={() => navigate('/admin-settings')} 
+                color="primary" 
+                aria-label="Regresar a configuraciones"
+            >
+                <ArrowBackIcon />
+            </IconButton>
+            
+            <Typography variant="h5" color="primary" fontWeight="bold">
+                Gestión de Usuarios del Sistema
+            </Typography>
+        </Box>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => setOpenModal(true)}>
+            Crear Usuario
+        </Button>
       </Box>
+
       {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -143,6 +164,7 @@ const UsersSystemTable = () => {
                     <TableCell>{u.email}</TableCell>
                     <TableCell>{getRoleChip(u.rol)}</TableCell>
                     <TableCell>
+                      {/* Aquí podrías conectar handleEditUser para abrir un modal de edición en lugar de navegar */}
                       <IconButton color="primary" onClick={() => handleEditUser(u.id)} disabled={currentUser.id === u.id}><EditIcon /></IconButton>
                       <IconButton color="error" onClick={() => handleOpenDelete(u)} disabled={currentUser.id === u.id}><DeleteIcon /></IconButton>
                     </TableCell>
@@ -155,7 +177,18 @@ const UsersSystemTable = () => {
         <TablePagination rowsPerPageOptions={[5, 10, 25]} component="div" count={totalCount} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
       </Paper>
 
-      <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}><Fade in={openModal}><Box sx={modalStyle}><CreateSystemUserForm onClose={() => setOpenModal(false)} onUserCreated={fetchUsers} setMessage={setMessage} setError={setError} /></Box></Fade></Modal>
+      <Modal open={openModal} onClose={() => setOpenModal(false)} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
+        <Fade in={openModal}>
+            <Box sx={modalStyle}>
+                <CreateSystemUserForm 
+                    onClose={() => setOpenModal(false)} 
+                    onUserCreated={fetchUsers} 
+                    setMessage={setMessage} 
+                    setError={setError} 
+                />
+            </Box>
+        </Fade>
+      </Modal>
 
       <ConfirmDialog 
         open={deleteDialogOpen}

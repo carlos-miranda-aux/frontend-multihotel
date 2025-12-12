@@ -332,7 +332,7 @@ const Reportes = () => {
   return (
     <Box sx={{ p: 4, bgcolor: 'background.default', minHeight: '100vh' }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom color="text.primary">Centro de Reportes</Typography>
+        <Typography variant="h4" fontWeight="bold" gutterBottom color="text.primary">Control Administrativo</Typography>
         <Typography variant="subtitle1" color="text.secondary">Descarga información clave.</Typography>
       </Box>
 

@@ -23,7 +23,6 @@ const HotelsTable = () => {
   const [openModal, setOpenModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   
-  // Estado del formulario
   const [formData, setFormData] = useState({ 
       nombre: "", codigo: "", direccion: "", ciudad: "", 
       razonSocial: "", diminutivo: "", 
@@ -42,23 +41,42 @@ const HotelsTable = () => {
 
   const fetchHotels = async () => {
     setLoading(true);
+    setError("");
     try {
+
       const res = await api.get("/hotels/admin/list");
-      setHotels(res.data);
+
+      let data = [];
+      if (Array.isArray(res)) {
+          data = res;
+      } else if (res && Array.isArray(res.data)) {
+          data = res.data;
+      } else if (res && res.data && Array.isArray(res.data.data)) {
+          data = res.data.data;
+      }
+
+      setHotels(data);
+      
+      if (!Array.isArray(data)) {
+          setError("Error: El formato de datos recibido no es válido.");
+      }
+
     } catch (err) {
-      console.error(err);
+      console.error("Error al cargar hoteles:", err);
+      const msg = err.response?.data?.error || err.response?.data?.message || "No se pudo conectar con el servidor.";
+      setError(`Error ${err.response?.status || ''}: ${msg}`);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchHotels(); }, []);
+  useEffect(() => { 
+      fetchHotels(); 
+  }, []);
 
   const handleOpen = (item = null) => {
     setEditingItem(item);
-    
     if (item) {
-        // Al editar, cargamos los datos existentes (autoStructure no aplica aquí)
         setFormData({ 
             ...item, 
             razonSocial: item.razonSocial || "", 
@@ -66,7 +84,6 @@ const HotelsTable = () => {
             ciudad: item.ciudad || "" 
         });
     } else {
-        // Al crear, limpiamos y activamos autoStructure por defecto
         setFormData({ 
             nombre: "", codigo: "", direccion: "", ciudad: "", 
             razonSocial: "", diminutivo: "", 
@@ -74,7 +91,6 @@ const HotelsTable = () => {
             autoStructure: true 
         });
     }
-    
     setError(""); setMessage("");
     setOpenModal(true);
   };
@@ -88,7 +104,6 @@ const HotelsTable = () => {
 
   const confirmDelete = async () => {
     if(!itemToDelete) return;
-    
     setActionLoading(true); 
     try {
       await api.delete(`/hotels/delete/${itemToDelete.id}`);
@@ -97,7 +112,7 @@ const HotelsTable = () => {
       refreshHotelList();
       setDeleteDialogOpen(false);
     } catch (err) { 
-        setError("Error al eliminar."); 
+        setError("Error al eliminar el hotel."); 
         setDeleteDialogOpen(false);
     } finally {
         setActionLoading(false); 
@@ -109,43 +124,41 @@ const HotelsTable = () => {
     e.preventDefault();
     try {
       if (editingItem) {
-        // Al editar, NO enviamos autoStructure
         const { autoStructure, ...updateData } = formData;
         await api.put(`/hotels/put/${editingItem.id}`, updateData);
-        setMessage("Hotel actualizado.");
+        setMessage("Hotel actualizado correctamente.");
       } else {
-        // Al crear, enviamos todo (incluyendo autoStructure)
         await api.post("/hotels/post", formData);
         setMessage("Hotel creado exitosamente.");
       }
       fetchHotels();
-      refreshHotelList(); // Actualiza el contexto global
+      refreshHotelList();
       handleClose();
     } catch (err) {
-      setError(err.response?.data?.error || "Error al guardar.");
+      setError(err.response?.data?.error || "Error al guardar los cambios.");
     }
   };
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
         <Typography variant="h5" fontWeight="bold" color="primary">Gestión de Hoteles</Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpen()}>Nuevo Hotel</Button>
       </Box>
 
-      {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {message && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMessage("")}>{message}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>{error}</Alert>}
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
         <Table>
           <TableHead>
-            <TableRow sx={{ bgcolor: 'background.default' }}>
+            <TableRow sx={{ bgcolor: 'action.hover' }}>
               <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Código</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Razón Social</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Ciudad</TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
-              <TableCell sx={{ fontWeight: 'bold' }}>Acciones</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', textAlign: 'right' }}>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -156,20 +169,31 @@ const HotelsTable = () => {
                     <TableCell><Skeleton variant="text" /></TableCell>
                     <TableCell><Skeleton variant="text" /></TableCell>
                     <TableCell><Skeleton variant="text" width={40} /></TableCell>
-                    <TableCell><Skeleton variant="circular" width={30} height={30} /></TableCell>
+                    <TableCell align="right"><Skeleton variant="circular" width={30} height={30} sx={{ ml: 'auto' }} /></TableCell>
                 </TableRow>
             )) : hotels.length === 0 ? (
-                <TableRow><TableCell colSpan={6}><EmptyState title="No hay hoteles" description="Registra la primera propiedad para comenzar." /></TableCell></TableRow>
+                <TableRow>
+                    <TableCell colSpan={6}>
+                        <EmptyState 
+                            title="No se encontraron hoteles" 
+                            description={error ? "Hubo un error al cargar los datos." : "Registra la primera propiedad para comenzar."} 
+                        />
+                    </TableCell>
+                </TableRow>
             ) : hotels.map(h => (
               <TableRow key={h.id} hover>
                 <TableCell>{h.nombre}</TableCell>
                 <TableCell>{h.codigo}</TableCell>
                 <TableCell>{h.razonSocial || "—"}</TableCell>
                 <TableCell>{h.ciudad || "—"}</TableCell>
-                <TableCell>{h.activo ? "Activo" : "Inactivo"}</TableCell>
                 <TableCell>
-                  <IconButton color="primary" onClick={() => handleOpen(h)}><EditIcon /></IconButton>
-                  <IconButton color="error" onClick={() => handleOpenDelete(h)}><DeleteIcon /></IconButton>
+                    <Box sx={{ color: h.activo ? 'success.main' : 'error.main', fontWeight: 'medium' }}>
+                        {h.activo ? "Activo" : "Inactivo"}
+                    </Box>
+                </TableCell>
+                <TableCell align="right">
+                  <IconButton color="primary" onClick={() => handleOpen(h)} size="small"><EditIcon fontSize="small" /></IconButton>
+                  <IconButton color="error" onClick={() => handleOpenDelete(h)} size="small"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -180,7 +204,7 @@ const HotelsTable = () => {
       <Modal open={openModal} onClose={handleClose} closeAfterTransition BackdropComponent={Backdrop} BackdropProps={{ timeout: 500 }}>
         <Fade in={openModal}>
           <Box sx={modalStyle} component="form" onSubmit={handleSubmit}>
-            <Typography variant="h6" mb={2}>{editingItem ? "Editar Hotel" : "Crear Hotel"}</Typography>
+            <Typography variant="h6" mb={2} fontWeight="bold">{editingItem ? "Editar Hotel" : "Crear Hotel"}</Typography>
             
             <TextField fullWidth label="Nombre" margin="normal" size="small" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} required />
             <TextField fullWidth label="Código" margin="normal" size="small" value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} required />
@@ -192,26 +216,27 @@ const HotelsTable = () => {
                 size="small"
                 value={formData.razonSocial} 
                 onChange={e => setFormData({...formData, razonSocial: e.target.value})} 
-                placeholder="Ej: HOTELERA CANCO S.A. DE C.V."
+                placeholder="Razón Social"
             />
             
             <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField 
                     fullWidth 
-                    label="Diminutivo (Alias)" 
+                    label="Diminutivo" 
                     margin="normal" 
                     size="small"
                     value={formData.diminutivo} 
                     onChange={e => setFormData({...formData, diminutivo: e.target.value})} 
-                    placeholder="Ej: CANCO"
+                    placeholder="Diminutivo"
                 />
                 <TextField 
                     fullWidth 
-                    label="Ciudad" 
+                    label="Dirección" 
                     margin="normal" 
                     size="small"
                     value={formData.ciudad} 
                     onChange={e => setFormData({...formData, ciudad: e.target.value})} 
+                    placeholder="Municiío, estado"
                 />
             </Box>
 
@@ -223,9 +248,8 @@ const HotelsTable = () => {
                     label="Hotel Activo en Sistema" 
                 />
 
-                {/* OPCIÓN DE ESTRUCTURA AUTOMÁTICA (Solo al crear) */}
                 {!editingItem && (
-                    <Tooltip title="Crea automáticamente los departamentos (RH, TI, Ventas...) y sus áreas estándar." arrow>
+                    <Tooltip title="Crea automáticamente los departamentos y sus áreas estándar." arrow>
                         <FormControlLabel 
                             control={<Switch checked={formData.autoStructure} onChange={e => setFormData({...formData, autoStructure: e.target.checked})} color="success" />} 
                             label={
@@ -242,7 +266,7 @@ const HotelsTable = () => {
                 )}
             </Box>
 
-            <Button type="submit" variant="contained" fullWidth sx={{ mt: 3 }}>
+            <Button type="submit" variant="contained" fullWidth sx={{ mt: 3, py: 1.2, fontWeight: 'bold' }}>
                 {editingItem ? "Actualizar Hotel" : "Registrar Hotel"}
             </Button>
           </Box>
@@ -254,7 +278,7 @@ const HotelsTable = () => {
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
         title="¿Eliminar Hotel?"
-        content={`Estás a punto de dar de baja el hotel "${itemToDelete?.nombre}".`}
+        content={`Estás a punto de dar de baja el hotel "${itemToDelete?.nombre}". Esta acción no se puede deshacer.`}
         isLoading={actionLoading}
       />
     </Box>

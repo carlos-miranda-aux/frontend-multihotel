@@ -3,7 +3,8 @@ import { useForm, Controller } from "react-hook-form";
 import {
   Box, Typography, TextField, Button, Grid, Fade, MenuItem, CircularProgress, 
   Chip, Checkbox, ListItemText, FormControlLabel, Switch, Alert, Avatar, Stack, Divider, 
-  FormControl, InputLabel, Select, OutlinedInput, ListSubheader, FormHelperText
+  FormControl, InputLabel, Select, OutlinedInput, ListSubheader, FormHelperText,
+  Autocomplete // 👈 Autocomplete importado
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -37,7 +38,7 @@ const EditDevice = () => {
   const { user, getHotelName } = useContext(AuthContext); 
   const isRoot = user?.rol === ROLES.ROOT;
 
-  const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
+  const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
       nombre_equipo: "", modelo: "", numero_serie: "", ip_equipo: "", etiqueta: "",
       descripcion: "", comentarios: "", usuarioId: "", perfiles_usuario: [], tipoId: "", 
@@ -53,6 +54,7 @@ const EditDevice = () => {
   const watchEstadoId = watch("estadoId");
   const watchHotelId = watch("hotelId");
   const watchUsuarioId = watch("usuarioId");
+  const watchAreaId = watch("areaId"); // 👈 Observamos el área para filtrar
   const isWarrantyApplied = watch("isWarrantyApplied");
 
   const [loading, setLoading] = useState(true);
@@ -74,7 +76,7 @@ const EditDevice = () => {
       
         const [deviceResponse, usersRes, deviceTypesRes, deviceStatusesRes, operatingSystemsRes, areasRes] = await Promise.all([
           api.get(`/devices/get/${id}`),
-          api.get("/users/get?limit=0"), 
+          api.get("/users/get/all"), // 👈 Usamos el endpoint optimizado que devuelve areaId
           api.get("/device-types/get?limit=0"),
           api.get("/device-status/get?limit=0"),
           api.get("/operating-systems/get?limit=0"),
@@ -125,6 +127,25 @@ const EditDevice = () => {
     fetchDeviceData();
   }, [id, reset]);
 
+  /**
+   * Lógica de filtrado de usuarios para el Autocomplete
+   */
+  const getFilteredUsers = () => {
+    let list = users;
+    
+    // 1. Filtrar por Hotel (si el usuario es ROOT)
+    if (isRoot && watchHotelId) {
+        list = list.filter(u => u.hotelId === Number(watchHotelId));
+    }
+    
+    // 2. Filtrar por Área si se seleccionó una manualmente
+    if (watchAreaId) {
+        list = list.filter(u => u.areaId === Number(watchAreaId));
+    }
+    
+    return list;
+  };
+
   const onSubmit = async (data) => {
     setError(""); setMessage("");
     const payload = { ...data };
@@ -132,11 +153,10 @@ const EditDevice = () => {
     const currentStatusObj = deviceStatuses.find(s => s.id === payload.estadoId);
     const isDisposing = currentStatusObj?.nombre === DEVICE_STATUS.DISPOSED;
 
-    // --- CORRECCIÓN AQUÍ: Agregado 'hotel' a la lista de eliminación ---
     const fieldsToRemove = [
         'id', 'created_at', 'updated_at', 'usuario', 'tipo', 'estado', 
         'sistema_operativo', 'area', 'maintenances', 'departamentoId', 
-        'departamento', 'isWarrantyApplied', 'hotelId', 'hotel' // <--- 'hotel' AGREGADO
+        'departamento', 'isWarrantyApplied', 'hotelId', 'hotel'
     ]; 
     fieldsToRemove.forEach(field => delete payload[field]); 
 
@@ -329,11 +349,86 @@ const EditDevice = () => {
                 <Stack spacing={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 2 }}>
                         <Avatar sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}>{assignedUser ? assignedUser.nombre.charAt(0) : "?"}</Avatar>
-                        <Box><Typography variant="subtitle1" fontWeight="bold">{assignedUser ? assignedUser.nombre : "Sin Asignar"}</Typography><Typography variant="caption" color="text.secondary">{assignedUser ? assignedUser.usuario_login : ""}</Typography></Box>
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight="bold">{assignedUser ? assignedUser.nombre : "Sin Asignar"}</Typography>
+                          <Typography variant="caption" color="text.secondary">{assignedUser ? assignedUser.usuario_login : ""}</Typography>
+                        </Box>
                     </Box>
-                    <FormControl fullWidth><InputLabel>Área</InputLabel><Controller name="areaId" control={control} render={({ field }) => (<Select {...field} label="Área"><MenuItem value=""><em>Ninguna</em></MenuItem>{renderAreaOptions()}</Select>)} /></FormControl>
-                    <FormControl fullWidth><InputLabel>Usuario</InputLabel><Controller name="usuarioId" control={control} render={({ field }) => (<Select {...field} label="Usuario"><MenuItem value=""><em>Ninguno</em></MenuItem>{users.filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId).map(u => <MenuItem key={u.id} value={u.id}>{u.nombre}</MenuItem>)}</Select>)} /></FormControl>
-                    <FormControl fullWidth><InputLabel>Perfiles de Usuario</InputLabel><Controller name="perfiles_usuario" control={control} render={({ field }) => (<Select {...field} multiple input={<OutlinedInput label="Perfiles de Usuario" />} renderValue={(selected) => (<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{selected.map((value) => <Chip key={value} label={value} size="small" />)}</Box>)} MenuProps={MenuProps}>{users.filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId).map((user) => (<MenuItem key={user.id} value={user.nombre}><Checkbox checked={field.value.indexOf(user.nombre) > -1} /><ListItemText primary={user.nombre} /></MenuItem>))}</Select>)} /></FormControl>
+                    
+                    <FormControl fullWidth>
+                      <InputLabel>Área</InputLabel>
+                      <Controller 
+                        name="areaId" 
+                        control={control} 
+                        render={({ field }) => (
+                          <Select {...field} label="Área">
+                            <MenuItem value=""><em>Ninguna</em></MenuItem>
+                            {renderAreaOptions()}
+                          </Select>
+                        )} 
+                      />
+                    </FormControl>
+
+                    {/* MODIFICADO: Ahora es un Autocomplete para búsqueda rápida en Edición */}
+                    <Controller
+                        name="usuarioId"
+                        control={control}
+                        render={({ field: { value, onChange } }) => (
+                            <Autocomplete
+                                options={getFilteredUsers()}
+                                getOptionLabel={(option) => option.nombre || ""}
+                                value={getFilteredUsers().find(u => u.id === value) || null}
+                                isOptionEqualToValue={(option, val) => option.id === val.id}
+                                onChange={(_, newValue) => {
+                                    onChange(newValue ? newValue.id : "");
+                                    // AUTO-RELLENO: Al cambiar el responsable, se ajusta el área automáticamente
+                                    if (newValue?.areaId) {
+                                        setValue("areaId", newValue.areaId);
+                                    }
+                                }}
+                                renderInput={(params) => (
+                                    <TextField 
+                                        {...params} 
+                                        label="Responsable (Staff)" 
+                                        placeholder="Buscar por nombre..."
+                                        error={!!errors.usuarioId}
+                                        helperText={errors.usuarioId?.message}
+                                    />
+                                )}
+                                noOptionsText="No se encontraron usuarios"
+                            />
+                        )}
+                    />
+
+                    <FormControl fullWidth>
+                      <InputLabel>Perfiles de Usuario</InputLabel>
+                      <Controller 
+                        name="perfiles_usuario" 
+                        control={control} 
+                        render={({ field }) => (
+                          <Select 
+                            {...field} 
+                            multiple 
+                            input={<OutlinedInput label="Perfiles de Usuario" />} 
+                            renderValue={(selected) => (
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {selected.map((value) => <Chip key={value} label={value} size="small" />)}
+                              </Box>
+                            )} 
+                            MenuProps={MenuProps}
+                          >
+                            {users
+                              .filter(u => !isRoot || !watchHotelId || u.hotelId == watchHotelId)
+                              .map((user) => (
+                                <MenuItem key={user.id} value={user.nombre}>
+                                    <Checkbox checked={field.value.indexOf(user.nombre) > -1} />
+                                    <ListItemText primary={user.nombre} />
+                                </MenuItem>
+                            ))}
+                          </Select>
+                        )} 
+                      />
+                    </FormControl>
                 </Stack>
               </SectionCard>
 

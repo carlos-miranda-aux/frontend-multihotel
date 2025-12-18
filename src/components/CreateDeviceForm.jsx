@@ -3,7 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import {
   Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, 
   Button, Divider, Stack, ListSubheader, OutlinedInput, Chip, Checkbox, ListItemText,
-  FormControlLabel, Switch, Fade, FormHelperText, Grid, Alert // 👈 AHORA SÍ ESTÁ GRID
+  FormControlLabel, Switch, Fade, FormHelperText, Grid, Alert, Autocomplete // 👈 Autocomplete importado
 } from "@mui/material";
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
@@ -49,6 +49,7 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
 
   const isWarrantyApplied = watch("isWarrantyApplied");
   const formHotelId = watch("hotelId"); 
+  const watchedAreaId = watch("areaId"); // 👈 Observamos el área seleccionada para filtrar usuarios
 
   const [users, setUsers] = useState([]);
   const [deviceTypes, setDeviceTypes] = useState([]);
@@ -115,6 +116,25 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     }
     
     return options;
+  };
+
+  /**
+   * Lógica de filtrado de usuarios para el Autocomplete
+   */
+  const getFilteredUsers = () => {
+    let list = users;
+    
+    // 1. Filtrar por Hotel seleccionado
+    if (isMultiHotelUser && formHotelId) {
+        list = list.filter(u => u.hotelId === Number(formHotelId));
+    }
+    
+    // 2. Filtrar por Área si ya se seleccionó una manualmente
+    if (watchedAreaId) {
+        list = list.filter(u => u.areaId === Number(watchedAreaId));
+    }
+    
+    return list;
   };
 
   const onSubmit = async (data) => {
@@ -267,21 +287,36 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                     </FormControl>
                 </Box>
                 <Box sx={{ width: '100%' }}>
-                    <FormControl fullWidth error={!!errors.usuarioId}>
-                        <InputLabel>Responsable</InputLabel>
-                        <Controller
-                            name="usuarioId" control={control}
-                            render={({ field }) => (
-                                <Select {...field} label="Responsable">
-                                    <MenuItem value=""><em>Ninguno</em></MenuItem>
-                                    {users
-                                      .filter(u => !isMultiHotelUser || (formHotelId && u.hotelId === Number(formHotelId)))
-                                      .map((user) => (<MenuItem key={user.id} value={user.id}>{user.nombre}</MenuItem>))
+                    {/* MODIFICADO: Ahora es un Autocomplete para búsqueda rápida */}
+                    <Controller
+                        name="usuarioId"
+                        control={control}
+                        render={({ field: { value, onChange } }) => (
+                            <Autocomplete
+                                options={getFilteredUsers()}
+                                getOptionLabel={(option) => option.nombre || ""}
+                                value={getFilteredUsers().find(u => u.id === value) || null}
+                                isOptionEqualToValue={(option, val) => option.id === val.id}
+                                onChange={(_, newValue) => {
+                                    onChange(newValue ? newValue.id : "");
+                                    // AUTO-RELLENO: Si el usuario tiene un área asociada, la ponemos automáticamente
+                                    if (newValue?.areaId) {
+                                        setValue("areaId", newValue.areaId);
                                     }
-                                </Select>
-                            )}
-                        />
-                    </FormControl>
+                                }}
+                                renderInput={(params) => (
+                                    <TextField 
+                                        {...params} 
+                                        label="Responsable (Staff)" 
+                                        placeholder="Buscar por nombre..."
+                                        error={!!errors.usuarioId}
+                                        helperText={errors.usuarioId?.message}
+                                    />
+                                )}
+                                noOptionsText="No se encontraron usuarios"
+                            />
+                        )}
+                    />
                 </Box>
             </Stack>
             

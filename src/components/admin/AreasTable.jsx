@@ -7,8 +7,8 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // 👈 IMPORTAR ICONO
-import { useNavigate } from "react-router-dom"; // 👈 IMPORTAR HOOK
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useNavigate } from "react-router-dom";
 
 import api from "../../api/axios";
 import CreateAreaForm from "../CreateAreaForm";
@@ -43,7 +43,7 @@ const AreasTable = () => {
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 
-  const navigate = useNavigate(); // 👈 INICIALIZAR HOOK
+  const navigate = useNavigate();
 
   const fetchAreas = useCallback(async () => {
     setLoading(true); setError("");

@@ -12,12 +12,12 @@ import EventIcon from '@mui/icons-material/Event';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import DomainIcon from '@mui/icons-material/Domain'; // 👈 Icono Hotel
+import DomainIcon from '@mui/icons-material/Domain'; 
 
 import api from "../api/axios";
 import { AlertContext } from "../context/AlertContext";
-import { AuthContext } from "../context/AuthContext"; // 👈 Importar Auth
-import { ROLES } from "../config/constants"; // 👈 Roles
+import { AuthContext } from "../context/AuthContext"; 
+import { ROLES } from "../config/constants"; 
 
 import PageHeader from "../components/common/PageHeader"; 
 import SectionCard from "../components/common/SectionCard";
@@ -33,7 +33,7 @@ const EditMaintenance = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { refreshAlerts } = useContext(AlertContext);
-  const { user, getHotelName } = useContext(AuthContext); // 👈 Extraer getHotelName
+  const { user, getHotelName } = useContext(AuthContext); 
   const isRoot = user?.rol === ROLES.ROOT;
 
   const { control, handleSubmit, reset, watch, setValue } = useForm({
@@ -109,7 +109,6 @@ const EditMaintenance = () => {
 
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
-  // CORRECCIÓN: Usar getHotelName para hacerlo dinámico
   const hotelLabel = getHotelName(deviceInfo?.hotelId);
 
   return (
@@ -131,7 +130,6 @@ const EditMaintenance = () => {
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         
-        {/* ALERTA VISUAL PARA ROOT */}
         {isRoot && (
             <Alert severity="info" icon={<DomainIcon />} sx={{ mb: 3 }}>
                 Este mantenimiento pertenece al hotel: <b>{hotelLabel}</b>.

@@ -17,7 +17,7 @@ const Disposals = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
-  const { user, selectedHotelId, getHotelName } = useContext(AuthContext); // 👈 Extraer getHotelName
+  const { user, selectedHotelId, getHotelName } = useContext(AuthContext);
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER || (user?.hotels && user.hotels.length > 1);
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 

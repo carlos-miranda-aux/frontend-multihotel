@@ -18,7 +18,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
     username: "",
     email: "",
     password: "",
-    rol: "", // Rol inicial vacío para obligar selección
+    rol: "",
     hotelIds: isContextActive ? [Number(contextHotelId)] : [] 
   });
   
@@ -126,13 +126,13 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
             onChange={handleChange}
             label="Rol del Sistema"
           >
-            <MenuItem value={ROLES.HOTEL_ADMIN}>Admin de Hotel (IT Manager)</MenuItem>
-            <MenuItem value={ROLES.HOTEL_AUX}>Auxiliar (Soporte)</MenuItem>
-            <MenuItem value={ROLES.HOTEL_GUEST}>Invitado (Solo lectura)</MenuItem>
+            <MenuItem value={ROLES.HOTEL_ADMIN}>Admin de Hotel</MenuItem>
+            <MenuItem value={ROLES.HOTEL_AUX}>Auxiliar</MenuItem>
+            <MenuItem value={ROLES.HOTEL_GUEST}>Invitado</MenuItem>
             
             {isRoot && <Divider />} 
-            {isRoot && <MenuItem value={ROLES.CORP_VIEWER} sx={{ color: 'warning.main' }}>Auditor Corporativo (Global)</MenuItem>}
-            {isRoot && <MenuItem value={ROLES.ROOT} sx={{ color: 'error.main', fontWeight: 'bold' }}>Super Usuario (Root)</MenuItem>}
+            {isRoot && <MenuItem value={ROLES.CORP_VIEWER} sx={{ color: 'primary.main', fontWeight: "bold " }}>Auditor</MenuItem>}
+            {isRoot && <MenuItem value={ROLES.ROOT} sx={{ color: 'info.main', fontWeight: 'bold' }}>Super Usuario</MenuItem>}
           </Select>
         </FormControl>
 
@@ -144,7 +144,7 @@ const CreateSystemUserForm = ({ onClose, onUserCreated, setMessage, setError }) 
                 name="hotelIds"
                 multiple={true}
                 required={!isGlobalRole}
-                disabled={isGlobalRole} // 🔒 Se deshabilita si es Global
+                disabled={isGlobalRole} 
                 helperText={isGlobalRole ? "Acceso global automático" : "Selecciona los hoteles permitidos"}
             />
         )}

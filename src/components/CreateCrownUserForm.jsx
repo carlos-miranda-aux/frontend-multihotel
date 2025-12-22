@@ -12,7 +12,7 @@ import HotelSelect from "./common/HotelSelect";
 const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) => {
   const { user, selectedHotelId: contextHotelId } = useContext(AuthContext); 
   
-  const isRoot = user?.rol === ROLES.ROOT; // O regional
+  const isRoot = user?.rol === ROLES.ROOT;
   const isContextActive = !!contextHotelId;
 
   const { control, handleSubmit, watch, formState: { errors } } = useForm({
@@ -113,7 +113,7 @@ const CreateCrownUserForm = ({ onClose, onUserCreated, setMessage, setError }) =
                         value={field.value} 
                         onChange={field.onChange} 
                         error={!!errors.hotelId}
-                        disabled={isContextActive} // 🔒 Bloqueado si hay contexto activo
+                        disabled={isContextActive}
                         helperText={isContextActive ? "Hotel definido por la vista actual" : "Selecciona el hotel"}
                     />
                 )}

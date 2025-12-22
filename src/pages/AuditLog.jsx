@@ -93,7 +93,7 @@ const DiffTable = ({ oldData, newData, catalogs }) => {
 };
 
 const AuditLog = () => {
-  const { user, selectedHotelId, getHotelName } = useContext(AuthContext); // 👇
+  const { user, selectedHotelId, getHotelName } = useContext(AuthContext);
   const isGlobalUser = user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER;
   const showHotelColumn = isGlobalUser && !selectedHotelId;
 

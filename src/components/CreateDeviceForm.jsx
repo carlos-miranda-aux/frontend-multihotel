@@ -149,7 +149,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
     if (payload.tipoId) payload.tipoId = Number(payload.tipoId);
     if (payload.sistemaOperativoId) payload.sistemaOperativoId = Number(payload.sistemaOperativoId); else payload.sistemaOperativoId = null;
     
-    // Validación de Hotel
     if (isMultiHotelUser) {
         if (!payload.hotelId) {
             if (setError) setError("Es obligatorio seleccionar un Hotel.");
@@ -160,12 +159,10 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
         delete payload.hotelId; 
     }
 
-    // Perfiles
     if (Array.isArray(payload.perfiles_usuario)) {
         payload.perfiles_usuario = payload.perfiles_usuario.length > 0 ? payload.perfiles_usuario.join(", ") : null;
     }
 
-    // Garantía aplicada
     if (!payload.isWarrantyApplied) {
         payload.garantia_numero_reporte = null;
         payload.garantia_notes = null;
@@ -287,7 +284,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                     </FormControl>
                 </Box>
                 <Box sx={{ width: '100%' }}>
-                    {/* MODIFICADO: Ahora es un Autocomplete para búsqueda rápida */}
                     <Controller
                         name="usuarioId"
                         control={control}
@@ -299,7 +295,6 @@ const CreateDeviceForm = ({ onClose, onDeviceCreated, setMessage, setError }) =>
                                 isOptionEqualToValue={(option, val) => option.id === val.id}
                                 onChange={(_, newValue) => {
                                     onChange(newValue ? newValue.id : "");
-                                    // AUTO-RELLENO: Si el usuario tiene un área asociada, la ponemos automáticamente
                                     if (newValue?.areaId) {
                                         setValue("areaId", newValue.areaId);
                                     }

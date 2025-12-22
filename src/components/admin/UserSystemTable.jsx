@@ -9,8 +9,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PersonIcon from '@mui/icons-material/Person';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // 👈 Icono de regresar
-import { useNavigate } from "react-router-dom"; // 👈 Hook de navegación
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useNavigate } from "react-router-dom";
 
 import api from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
@@ -40,7 +40,7 @@ const UsersSystemTable = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: 'nombre', direction: 'asc' });
 
-  const navigate = useNavigate(); // 👈 Inicializamos el hook
+  const navigate = useNavigate();
   const { user: currentUser, selectedHotelId } = useContext(AuthContext);
   
   const isGlobalUser = currentUser?.rol === ROLES.ROOT || currentUser?.rol === ROLES.CORP_VIEWER;
@@ -80,7 +80,6 @@ const UsersSystemTable = () => {
   const handleChangePage = (e, p) => setPage(p);
   const handleChangeRowsPerPage = (e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); };
   
-  // Asumiendo que tienes una ruta para editar, si no, puedes abrir un modal de edición aquí
   const handleEditUser = (id) => navigate(`/user-manager/edit/${id}`);
   
   const headerStyle = { fontWeight: 'bold', color: 'text.primary' };

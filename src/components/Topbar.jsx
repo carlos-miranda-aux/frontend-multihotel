@@ -23,7 +23,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import BuildIcon from "@mui/icons-material/Build";
 import LogoutIcon from '@mui/icons-material/Logout';
 import LockIcon from '@mui/icons-material/Lock';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline'; // <--- IMPORTAR ICONO NUEVO
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
@@ -65,8 +65,7 @@ const TopBar = ({ onMenuClick }) => {
     navigate("/settings");
     handleProfileClose();
   };
-  
-  // NUEVA FUNCIÓN DE NAVEGACIÓN
+
   const handleAbout = () => {
       navigate("/about");
       handleProfileClose();
@@ -203,13 +202,6 @@ const TopBar = ({ onMenuClick }) => {
                  <ListItemIcon><LockIcon fontSize="small" /></ListItemIcon>
                  Seguridad
               </MenuItem>
-              
-              {/* --- NUEVA OPCIÓN --- */}
-              <MenuItem onClick={handleAbout}>
-                 <ListItemIcon><HelpOutlineIcon fontSize="small" /></ListItemIcon>
-                 Info
-              </MenuItem>
-              {/* ------------------- */}
 
               <Divider />
               <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>

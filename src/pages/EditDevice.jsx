@@ -4,7 +4,7 @@ import {
   Box, Typography, TextField, Button, Grid, Fade, MenuItem, CircularProgress, 
   Chip, Checkbox, ListItemText, FormControlLabel, Switch, Alert, Avatar, Stack, Divider, 
   FormControl, InputLabel, Select, OutlinedInput, ListSubheader, FormHelperText,
-  Autocomplete // 👈 Autocomplete importado
+  Autocomplete
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -54,7 +54,7 @@ const EditDevice = () => {
   const watchEstadoId = watch("estadoId");
   const watchHotelId = watch("hotelId");
   const watchUsuarioId = watch("usuarioId");
-  const watchAreaId = watch("areaId"); // 👈 Observamos el área para filtrar
+  const watchAreaId = watch("areaId");
   const isWarrantyApplied = watch("isWarrantyApplied");
 
   const [loading, setLoading] = useState(true);
@@ -76,7 +76,7 @@ const EditDevice = () => {
       
         const [deviceResponse, usersRes, deviceTypesRes, deviceStatusesRes, operatingSystemsRes, areasRes] = await Promise.all([
           api.get(`/devices/get/${id}`),
-          api.get("/users/get/all"), // 👈 Usamos el endpoint optimizado que devuelve areaId
+          api.get("/users/get/all"),
           api.get("/device-types/get?limit=0"),
           api.get("/device-status/get?limit=0"),
           api.get("/operating-systems/get?limit=0"),
@@ -369,7 +369,6 @@ const EditDevice = () => {
                       />
                     </FormControl>
 
-                    {/* MODIFICADO: Ahora es un Autocomplete para búsqueda rápida en Edición */}
                     <Controller
                         name="usuarioId"
                         control={control}

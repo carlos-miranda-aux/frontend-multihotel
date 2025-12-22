@@ -12,9 +12,8 @@ import { AuthContext } from "../context/AuthContext";
 import { AlertContext } from "../context/AlertContext";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
-import html2canvas from "html2canvas"; // Importamos la librería de captura
+import html2canvas from "html2canvas";
 
-// Iconos
 import ComputerIcon from '@mui/icons-material/Computer';
 import SecurityIcon from '@mui/icons-material/Security';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -218,11 +217,10 @@ const Home = () => {
   const handleCaptureScreenshot = async () => {
       if (dashboardRef.current) {
           try {
-              // Usamos html2canvas para renderizar el div 'dashboardRef' como imagen
               const canvas = await html2canvas(dashboardRef.current, { 
-                  scale: 2, // Mejor resolución
-                  backgroundColor: '#f4f6f8', // Fondo del tema
-                  ignoreElements: (element) => element.id === 'export-btn' // Opcional: ignorar el propio botón si se quisiera
+                  scale: 2,
+                  backgroundColor: '#f4f6f8',
+                  ignoreElements: (element) => element.id === 'export-btn'
               });
               
               const link = document.createElement('a');
@@ -238,7 +236,6 @@ const Home = () => {
   if (error) return <Box sx={{ p: 3 }}><Alert severity="error">{error}</Alert></Box>;
 
   return (
-    // Agregamos la referencia aquí para capturar todo este bloque
     <Box ref={dashboardRef} sx={{ p: 3, maxWidth: 1600, margin: '0 auto', bgcolor: 'background.default', minHeight: '100vh' }}>
       
       <Box sx={{ mb: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

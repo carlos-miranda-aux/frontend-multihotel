@@ -23,7 +23,6 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        // Obtenemos nombres de dispositivos (el backend ya filtra por hotel)
         const res = await api.get("/devices/get/all-names");
         setDevices(res.data || []);
       } catch (err) {
@@ -47,9 +46,8 @@ const CreateMaintenanceForm = ({ onClose, onMaintenanceCreated, setMessage, setE
         return;
     }
 
-    // Preparar payload
     const payload = {
-        deviceId: formData.deviceId.id, // Autocomplete devuelve objeto
+        deviceId: formData.deviceId.id,
         tipo_mantenimiento: formData.tipo_mantenimiento,
         descripcion: formData.descripcion,
         fecha_programada: new Date(formData.fecha_programada).toISOString()

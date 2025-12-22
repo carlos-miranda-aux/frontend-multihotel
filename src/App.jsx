@@ -26,8 +26,6 @@ import EditUser from "./pages/EditUser";
 import AuditLog from "./pages/AuditLog"; 
 import DepartmentsTable from "./components/admin/DepartmentsTable";
 
-// --- NUEVA PÁGINA ---
-import About from "./pages/About";
 
 import NotFound from "./pages/NotFound";
 
@@ -70,9 +68,6 @@ function App() {
         <Route path="/user-manager/edit/:id" element={<EditUser />} />
         <Route path="/audit" element={<AuditLog />} />
         <Route path="/departments" element={<DepartmentsTable />} />
-        
-        {/* NUEVA RUTA */}
-        <Route path="/about" element={<About />} /> 
 
       </Route>
       <Route path="*" element={<NotFound />} />

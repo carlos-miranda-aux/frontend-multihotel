@@ -13,7 +13,7 @@ import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
-// (Eliminado HelpOutlineIcon)
+
 import LogoImg from "../assets/simetv2.png"; 
 
 const drawerWidth = 280; 
@@ -52,7 +52,6 @@ const Sidebar = () => {
         { text: "Control Administrativo", icon: <AssessmentIcon />, path: "/reports", show: true },
       ]
     }
-    // (SE ELIMINÓ EL GRUPO AYUDA DE AQUÍ)
   ];
 
   return (

@@ -5,8 +5,8 @@ import {
   TablePagination, Chip, TableSortLabel, Skeleton, Alert, TextField 
 } from "@mui/material";
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // 👈 IMPORTAR ICONO
-import { useNavigate } from "react-router-dom"; // 👈 IMPORTAR HOOK
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useNavigate } from "react-router-dom";
 
 import api from "../../api/axios";
 import CreateDepartmentForm from "../CreateDepartmentForm";
@@ -35,7 +35,7 @@ const DepartmentsTable = () => {
   const { user, selectedHotelId } = useContext(AuthContext);
   const showHotelColumn = (user?.rol === ROLES.ROOT || user?.rol === ROLES.CORP_VIEWER) && !selectedHotelId;
 
-  const navigate = useNavigate(); // 👈 INICIALIZAR HOOK
+  const navigate = useNavigate();
 
   const fetchDepts = useCallback(async () => {
     setLoading(true);

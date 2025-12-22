@@ -27,10 +27,8 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel", extraData
         headers: { "Content-Type": "multipart/form-data" },
       });
       
-      // Extraemos también 'warnings' y 'successCount' de la respuesta del Backend
       const { message, errors, warnings, successCount } = res.data;
-      
-      // Construimos el mensaje base si no viene uno explícito
+
       let finalMessage = message || `Proceso finalizado. Registros importados: ${successCount || 0}.`;
       let finalSeverity = "success";
 
@@ -84,7 +82,7 @@ const ImportButton = ({ endpoint, onSuccess, label = "Importar Excel", extraData
 
       <Snackbar 
         open={toast.open} 
-        autoHideDuration={8000} // Aumenté un poco el tiempo para leer las advertencias
+        autoHideDuration={8000}
         onClose={() => setToast({ ...toast, open: false })}
       >
         <Alert severity={toast.severity} sx={{ width: '100%' }}>

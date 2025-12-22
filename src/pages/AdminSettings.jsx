@@ -5,20 +5,18 @@ import { AuthContext } from '../context/AuthContext';
 import { ROLES } from '../config/constants';
 
 // Iconos
-import DomainAddIcon from '@mui/icons-material/DomainAdd';     // Hotel
-import AccountTreeIcon from '@mui/icons-material/AccountTree'; // Areas
-import CorporateFareIcon from '@mui/icons-material/CorporateFare'; // Departamentos
-import DevicesOtherIcon from '@mui/icons-material/DevicesOther'; // Tipos Equipo
-import SettingsSystemDaydreamIcon from '@mui/icons-material/SettingsSystemDaydream'; // SO
-import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'; // Usuarios Sistema
+import DomainAddIcon from '@mui/icons-material/DomainAdd';     
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import CorporateFareIcon from '@mui/icons-material/CorporateFare';
+import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
+import SettingsSystemDaydreamIcon from '@mui/icons-material/SettingsSystemDaydream';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 // Componentes (Tablas / Modales)
 import HotelsTable from '../components/admin/HotelsTable';
 import CrudTable from '../components/CrudTable'; 
-// Nota: Usamos CrudTable para catálogos simples, las rutas deben coincidir con backend
-// Nota 2: Para Area, Depto y Usuarios, redirigiremos a sus paginas dedicadas para tener más espacio visual.
 
 const AdminSettings = () => {
   const navigate = useNavigate();
@@ -57,7 +55,7 @@ const AdminSettings = () => {
       title: "Departamentos",
       desc: "Estructura organizacional base.",
       icon: <CorporateFareIcon fontSize="large" />,
-      action: () => navigate("/departments"), // Nueva ruta
+      action: () => navigate("/departments"),
       color: theme.palette.primary.main,
       show: true
     },
